@@ -1,10 +1,8 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useReducer, useRef, useState } from "react";
-import { AppState } from "react-native";
 import { useAuth } from "@/lib/auth";
 import { acceptGiftCloud, applyMutation, fetchCloudState, makeMutationId, redeemRewardCloud, sendGiftCloud, submitCampaign, subscribeToUser, validateRedemption } from "@/lib/backend";
 import type { PendingMutation, SyncStatus } from "@/lib/cloud.types";
-import { supabase } from "@/utils/supabase";
 
 export type RedemptionMode = "online" | "inStore";
 export type RedemptionStatus = "warning" | "pin" | "code" | "success" | "expired";
@@ -109,7 +107,7 @@ export function StoreProvider({children}:{children:React.ReactNode}) {
     else{setCloudStatus("loading-cloud");const [cached,pending]=await Promise.all([AsyncStorage.getItem(userKey(id)),AsyncStorage.getItem(queueKey(id))]);if(cached)dispatch({type:"hydrate",state:migrateState(JSON.parse(cached))});queueRef.current=pending?JSON.parse(pending):[];await refreshCloud();}}
     catch{if(id)setCloudStatus("offline");}finally{if(active)setHydrated(true)}})();return()=>{active=false}},[user?.id,refreshCloud]);
   useEffect(()=>{if(!hydrated)return;const key=user?.id?userKey(user.id):KEY;AsyncStorage.setItem(key,JSON.stringify(state)).catch(()=>{})},[state,hydrated,user?.id]);
-  useEffect(()=>{if(!user)return;const channel=subscribeToUser(user.id,()=>void refreshCloud());const app=AppState.addEventListener('change',next=>next==='active'&&void refreshCloud());return()=>{void supabase.removeChannel(channel);app.remove()}},[user?.id,refreshCloud]);
+  useEffect(()=>{},[]);
   const notify = useCallback((message:string)=>{ setToast(message); setTimeout(()=>setToast(""),2200); },[]);
   const value = useMemo<StoreValue>(()=>({
     state,hydrated,toast,notify,cloudStatus,

@@ -29,7 +29,7 @@ import {
 import { AccessiblePressable, AppHeader, PrimaryButton, Screen } from "@/components/ui";
 import { campaigns, deals } from "@/lib/data";
 import { useStore } from "@/lib/store";
-import { C, F, shadow } from "@/lib/theme";
+import { C, dynamicStyles, F, shadow } from "@/lib/theme";
 import { useAuth } from "@/lib/auth";
 import { pickCampaignMedia } from "@/lib/media";
 import { removeCampaignAttachment, uploadStorageAsset } from "@/lib/backend";
@@ -256,7 +256,7 @@ export default function WorkScreen() {
               >
                 {label}
               </Text>
-              <Text style={[s.trackNote, track === id && { color: "#3A3A3C" }]}>
+              <Text style={[s.trackNote, track === id && { color: C.inkOnAccent }]}>
                 {copy}
               </Text>
             </AccessiblePressable>
@@ -536,7 +536,7 @@ export default function WorkScreen() {
     </>
   );
 }
-const s = StyleSheet.create({
+const s = dynamicStyles(() => StyleSheet.create({
   intro: {
     fontFamily: F.body,
     fontSize: 13,
@@ -547,7 +547,8 @@ const s = StyleSheet.create({
   },
   trackGrid: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
   track: {
-    width: "48.8%",
+    flex: 1,
+    minWidth: 0,
     minHeight: 105,
     borderRadius: 21,
     backgroundColor: C.card,
@@ -584,7 +585,7 @@ const s = StyleSheet.create({
     marginTop: 4,
   },
   acceptedEyebrow: { color: C.lime },
-  body: { fontFamily: F.body, color: "#BBB", fontSize: 11, marginTop: 4 },
+  body: { fontFamily: F.body, color: C.onDarkMuted, fontSize: 11, marginTop: 4 },
   earnings: {
     minHeight: 92,
     marginTop: 10,
@@ -673,8 +674,8 @@ const s = StyleSheet.create({
     fontSize: 12,
     letterSpacing: 1.2,
   },
-  goldTitle: { fontFamily: F.heading, color: "white", fontSize: 35 },
-  goldCopy: { fontFamily: F.body, color: "#BBB", fontSize: 11 },
+  goldTitle: { fontFamily: F.heading, color: C.onDark, fontSize: 35 },
+  goldCopy: { fontFamily: F.body, color: C.onDarkMuted, fontSize: 11 },
   points: { marginBottom: 15 },
   point: {
     flexDirection: "row",
@@ -687,7 +688,7 @@ const s = StyleSheet.create({
   pointText: { fontFamily: F.bodySemi, fontSize: 13 },
   backdrop: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(0,0,0,.52)",
+    backgroundColor: C.backdrop,
   },
   sheet: {
     position: "absolute",
@@ -807,4 +808,4 @@ const s = StyleSheet.create({
     marginTop: 7,
     marginBottom: 14,
   },
-});
+}));

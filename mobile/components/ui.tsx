@@ -6,7 +6,7 @@ import type { SFSymbol } from "sf-symbols-typescript";
 import { router } from "expo-router";
 import { ArrowLeft, ChevronRight, Heart, MapPin, Star } from "lucide-react-native";
 import React, { useEffect, useMemo } from "react";
-import { AccessibilityInfo, Image, Platform, Pressable, ScrollView, StyleProp, StyleSheet, Text, TextProps, TextStyle, View, ViewStyle, type PressableProps } from "react-native";
+import { AccessibilityInfo, Image, Platform, Pressable, ScrollView, StyleProp, StyleSheet, Text, TextProps, TextStyle, View, ViewStyle, useWindowDimensions, type PressableProps } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import type { Deal, DirectoryItem } from "@/lib/data";
 import { F,layout,shadow,typography,type ThemeColors,type TypographyVariant,useAppTheme } from "@/lib/theme";
@@ -39,27 +39,28 @@ export function AccessiblePressable({style,onPress,haptic="light",accessibilityR
 }
 
 export function Screen({children,scroll=true,style,testID,includeTopInset=false}:{children:React.ReactNode;scroll?:boolean;style?:StyleProp<ViewStyle>;testID?:string;includeTopInset?:boolean}) {
-  const insets=useSafeAreaInsets(); const {colors:C}=useAppTheme();
+  const insets=useSafeAreaInsets(); const {width}=useWindowDimensions(); const {colors:C}=useAppTheme();
   // iOS ScrollView applies the top safe-area inset automatically. Only fixed
   // screens need the inset here; adding it to scrollable screens creates a
   // duplicate blank band above the header.
   const topPadding=!scroll||includeTopInset||Platform.OS!=="ios"?insets.top:0;
-  const content=<View style={[{paddingHorizontal:layout.gutter,minHeight:"100%",paddingTop:topPadding},style]} testID={testID}>{children}</View>;
-  return scroll ? <ScrollView style={{flex:1,backgroundColor:C.paper}} contentContainerStyle={{paddingBottom:110}} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled" automaticallyAdjustKeyboardInsets>{content}</ScrollView> : <View style={{flex:1,backgroundColor:C.paper}}>{content}</View>;
+  const gutter=width<360?14:width>700?28:layout.gutter;
+  const content=<View style={[{width:"100%",maxWidth:layout.maxWidth,alignSelf:"center",paddingHorizontal:gutter,minHeight:"100%",paddingTop:topPadding},style]} testID={testID}>{children}</View>;
+  return scroll ? <ScrollView style={{flex:1,backgroundColor:C.paper}} contentContainerStyle={{paddingBottom:110,paddingHorizontal:width>layout.maxWidth?gutter:0}} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled" automaticallyAdjustKeyboardInsets>{content}</ScrollView> : <View style={{flex:1,backgroundColor:C.paper}}>{content}</View>;
 }
 
 export function AppHeader({eyebrow,title,back,right}:{eyebrow?:string;title:string;back?:boolean;right?:React.ReactNode}) {
-  const {colors:C}=useAppTheme(); const styles=useMemo(()=>makeStyles(C),[C]);
+  const theme=useAppTheme(); const {colors:C}=theme; const styles=useMemo(()=>makeStyles(C),[theme.mode,theme.highContrast]);
   return <GlassSurface style={styles.header} intensity={70}>{back?<AccessiblePressable accessibilityLabel="Go back" accessibilityHint="Returns to the previous screen" onPress={()=>router.back()} style={styles.iconButton}><AppIcon sf="chevron.left" fallback={<ArrowLeft size={21} color={C.ink}/>}/></AccessiblePressable>:null}<View style={styles.headerCopy}>{eyebrow?<AppText variant="eyebrow">{eyebrow}</AppText>:null}<AppText accessibilityRole="header" variant="largeTitle" style={styles.headerTitle}>{title}</AppText></View>{right??<View style={{width:44}}/>}</GlassSurface>;
 }
 
 export function SectionTitle({eyebrow,title,action,onAction}:{eyebrow:string;title:string;action?:string;onAction?:()=>void}) {
-  const {colors:C}=useAppTheme(); const styles=useMemo(()=>makeStyles(C),[C]);
+  const theme=useAppTheme(); const {colors:C}=theme; const styles=useMemo(()=>makeStyles(C),[theme.mode,theme.highContrast]);
   return <View style={styles.sectionTitle}><View style={{flexShrink:1}}><AppText variant="eyebrow">{eyebrow}</AppText><AppText accessibilityRole="header" variant="title" style={styles.sectionHeading}>{title}</AppText></View>{action?<AccessiblePressable accessibilityLabel={action} haptic="selection" onPress={onAction} style={styles.sectionActionButton}><AppText variant="caption" style={styles.sectionAction}>{action}</AppText></AccessiblePressable>:null}</View>;
 }
 
 export function DealCard({deal,compact=false}:{deal:Deal;compact?:boolean}) {
-  const {state,toggleSaved,notify}=useStore(); const {colors:C}=useAppTheme(); const styles=useMemo(()=>makeStyles(C),[C]); const saved=state.saved.includes(deal.id);
+  const {state,toggleSaved,notify}=useStore(); const theme=useAppTheme(); const {colors:C}=theme; const styles=useMemo(()=>makeStyles(C),[theme.mode,theme.highContrast]); const saved=state.saved.includes(deal.id);
   return <View style={[styles.dealCard,compact&&styles.dealCompact]}>
     <AccessiblePressable testID={`deal-${deal.id}`} accessibilityLabel={`${deal.name}. ${deal.offer}. ${deal.saving}. ${deal.distance}`} accessibilityHint="Opens partner details" onPress={()=>router.push(`/deal/${deal.id}`)} style={[styles.dealLink,compact&&styles.dealLinkCompact]}>
       <View><Image accessible={false} source={{uri:deal.image}} style={[styles.dealImage,compact&&styles.dealImageCompact]}/><View style={styles.distance}><MapPin size={12} color="white"/><AppText variant="caption" style={styles.distanceText}>{deal.distance}</AppText></View></View>
@@ -70,13 +71,13 @@ export function DealCard({deal,compact=false}:{deal:Deal;compact?:boolean}) {
 }
 
 export function ListingRow({item}:{item:DirectoryItem}) {
-  const {colors:C}=useAppTheme(); const styles=useMemo(()=>makeStyles(C),[C]);
+  const theme=useAppTheme(); const {colors:C}=theme; const styles=useMemo(()=>makeStyles(C),[theme.mode,theme.highContrast]);
   return <AccessiblePressable testID={`listing-${item.id}`} accessibilityLabel={`${item.title}. ${item.subtitle}. ${item.tag}`} accessibilityHint="Opens details" onPress={()=>item.dealId?router.push(`/deal/${item.dealId}`):router.push(`/listing/${item.id}`)} style={styles.listingRow}><Image accessible={false} source={{uri:item.image}} style={styles.listingImage}/><View style={{flex:1}}><AppText variant="eyebrow">{item.type.toUpperCase()}</AppText><AppText variant="headline" style={styles.listingTitle}>{item.title}</AppText><AppText variant="caption" color="muted" numberOfLines={2}>{item.subtitle}</AppText><AppText variant="caption" style={styles.listingTag}>{item.tag}</AppText></View><AppIcon sf="chevron.right" fallback={<ChevronRight size={18} color={C.muted}/>}/></AccessiblePressable>;
 }
 
-export function PrimaryButton({label,onPress,disabled=false,testID,loading=false}:{label:string;onPress:()=>void;disabled?:boolean;testID?:string;loading?:boolean}) { const {colors:C}=useAppTheme();const styles=useMemo(()=>makeStyles(C),[C]);return <AccessiblePressable testID={testID} disabled={disabled||loading} accessibilityLabel={label} accessibilityState={{disabled:disabled||loading,busy:loading}} haptic="light" onPress={onPress} style={[styles.primary,(disabled||loading)&&styles.disabled]}><AppText variant="callout" style={styles.primaryText}>{loading?"Working…":label}</AppText><AppIcon sf="chevron.right" color={C.onDark} fallback={<ChevronRight size={18} color={C.onDark}/>}/></AccessiblePressable>; }
-export function Empty({icon="♡",title,body}:{icon?:string;title:string;body:string}) { const {colors:C}=useAppTheme();const styles=useMemo(()=>makeStyles(C),[C]);return <View style={styles.empty} accessibilityRole="summary"><AppText style={styles.emptyIcon}>{icon}</AppText><AppText variant="title" style={styles.emptyTitle}>{title}</AppText><AppText variant="body" color="muted" style={styles.emptyBody}>{body}</AppText></View>; }
-export function Toast() { const {toast}=useStore();const {colors:C}=useAppTheme();const styles=useMemo(()=>makeStyles(C),[C]);useEffect(()=>{if(toast)AccessibilityInfo.announceForAccessibility(toast)},[toast]); if(!toast)return null; return <View pointerEvents="none" accessibilityRole="alert" accessibilityLiveRegion="polite" style={styles.toast}><Text style={styles.toastDot}>●</Text><AppText variant="callout" style={styles.toastText}>{toast}</AppText></View>; }
+export function PrimaryButton({label,onPress,disabled=false,testID,loading=false}:{label:string;onPress:()=>void;disabled?:boolean;testID?:string;loading?:boolean}) { const theme=useAppTheme(); const {colors:C}=theme;const styles=useMemo(()=>makeStyles(C),[theme.mode,theme.highContrast]);return <AccessiblePressable testID={testID} disabled={disabled||loading} accessibilityLabel={label} accessibilityState={{disabled:disabled||loading,busy:loading}} haptic="light" onPress={onPress} style={[styles.primary,(disabled||loading)&&styles.disabled]}><AppText variant="callout" style={styles.primaryText}>{loading?"Working…":label}</AppText><AppIcon sf="chevron.right" color={C.onDark} fallback={<ChevronRight size={18} color={C.onDark}/>}/></AccessiblePressable>; }
+export function Empty({icon="♡",title,body}:{icon?:string;title:string;body:string}) { const theme=useAppTheme(); const {colors:C}=theme;const styles=useMemo(()=>makeStyles(C),[theme.mode,theme.highContrast]);return <View style={styles.empty} accessibilityRole="summary"><AppText style={styles.emptyIcon}>{icon}</AppText><AppText variant="title" style={styles.emptyTitle}>{title}</AppText><AppText variant="body" color="muted" style={styles.emptyBody}>{body}</AppText></View>; }
+export function Toast() { const {toast}=useStore();const theme=useAppTheme(); const {colors:C}=theme;const styles=useMemo(()=>makeStyles(C),[theme.mode,theme.highContrast]);useEffect(()=>{if(toast)AccessibilityInfo.announceForAccessibility(toast)},[toast]); if(!toast)return null; return <View pointerEvents="none" accessibilityRole="alert" accessibilityLiveRegion="polite" style={styles.toast}><Text style={styles.toastDot}>●</Text><AppText variant="callout" style={styles.toastText}>{toast}</AppText></View>; }
 export const Txt=({children,style}:{children:React.ReactNode;style?:StyleProp<TextStyle>})=><AppText style={style}>{children}</AppText>;
 
 const makeStyles=(C:ThemeColors)=>StyleSheet.create({

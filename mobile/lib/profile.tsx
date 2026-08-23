@@ -7,7 +7,6 @@ import React, {
   useState,
 } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { AppState } from "react-native";
 import type { StorageAsset } from "@/lib/cloud.types";
 import {
   fetchPreferences,
@@ -20,7 +19,6 @@ import {
 } from "@/lib/backend";
 import { useAuth } from "@/lib/auth";
 import { pickAvatar } from "@/lib/media";
-import { supabase } from "@/utils/supabase";
 
 type Profile = {
   full_name: string;
@@ -131,21 +129,7 @@ export function ProfileProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     void refresh().catch(() => {});
     if (!user) return;
-    let timer: ReturnType<typeof setTimeout> | undefined;
-    const changed = () => {
-      if (timer) clearTimeout(timer);
-      timer = setTimeout(() => void refresh().catch(() => {}), 180);
-    };
-    const channel = supabase
-      .channel(`profile:${user.id}`)
-      .on("postgres_changes", { event: "*", schema: "public", table: "profiles", filter: `user_id=eq.${user.id}` }, changed)
-      .on("postgres_changes", { event: "*", schema: "public", table: "user_preferences", filter: `user_id=eq.${user.id}` }, changed)
-      .subscribe();
-    const app = AppState.addEventListener("change", (state) => state === "active" && changed());
     return () => {
-      if (timer) clearTimeout(timer);
-      void supabase.removeChannel(channel);
-      app.remove();
     };
   }, [refresh, user?.id]);
   const saveProfile = useCallback(

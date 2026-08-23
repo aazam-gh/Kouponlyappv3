@@ -437,6 +437,7 @@ function dialogForMessage(message: string): UtilityDialogData | null {
 }
 
 export default function HomePage() {
+  const [theme, setTheme] = useState<"light" | "dark">(() => typeof window !== "undefined" && window.localStorage.getItem("kouponly-theme") === "dark" ? "dark" : "light");
   const [activeTab, setActiveTab] = useState<Tab>("explore");
   const [selectedDeal, setSelectedDeal] = useState<Deal | null>(null);
   const [selectedListing, setSelectedListing] = useState<DirectoryItem | null>(null);
@@ -452,6 +453,14 @@ export default function HomePage() {
   const [toast, setToast] = useState("");
   const [utilityDialog, setUtilityDialog] = useState<UtilityDialogData | null>(null);
   const [profileRewardsOpen, setProfileRewardsOpen] = useState(false);
+
+  useEffect(() => { document.documentElement.dataset.theme = theme; }, [theme]);
+
+  const changeTheme = (nextTheme: "light" | "dark") => {
+    setTheme(nextTheme);
+    window.localStorage.setItem("kouponly-theme", nextTheme);
+    document.documentElement.dataset.theme = nextTheme;
+  };
 
   useEffect(() => {
     document.getElementById("app-scroll")?.scrollTo({ top: 0, behavior: "auto" });
@@ -531,7 +540,7 @@ export default function HomePage() {
   };
 
   return (
-    <main className="site-stage">
+    <main className="site-stage" data-theme={theme}>
       <aside className="brand-panel" aria-label="Kouponly brand introduction">
         <div className="brand-mark"><span>K</span></div>
         <p className="eyebrow">LIGHT MODE CONCEPT</p>
@@ -551,7 +560,7 @@ export default function HomePage() {
           ) : selectedListing ? (
             <ListingDetail item={selectedListing} onBack={() => setSelectedListing(null)} notify={notify} />
           ) : accountPage ? (
-            <AccountPage page={accountPage} onBack={() => setAccountPage(null)} notify={notify} />
+            <AccountPage page={accountPage} onBack={() => setAccountPage(null)} notify={notify} theme={theme} onThemeChange={changeTheme} />
           ) : workOpen ? (
             <WorkWithUs initialTrack={workTrack} onBack={() => setWorkOpen(false)} onEarnings={() => setAccountPage("earnings")} notify={notify} appliedCampaigns={appliedCampaigns} onToggleCampaign={toggleCampaign} />
           ) : selectedCategory ? (
@@ -752,7 +761,7 @@ function EmptyState() {
   return <div className="empty-state"><span><Bookmark size={28} /></span><h3>Nothing here yet</h3><p>Tap the heart on an offer you love and it will wait for you here.</p></div>;
 }
 
-function AccountPage({ page, onBack, notify }: { page: AccountPageKey; onBack: () => void; notify: (message: string) => void }) {
+function AccountPage({ page, onBack, notify, theme, onThemeChange }: { page: AccountPageKey; onBack: () => void; notify: (message: string) => void; theme: "light" | "dark"; onThemeChange: (theme: "light" | "dark") => void }) {
   const [feedback, setFeedback] = useState("");
   const [feedbackSent, setFeedbackSent] = useState(false);
   const [editingProfile, setEditingProfile] = useState(false);
@@ -796,7 +805,7 @@ function AccountPage({ page, onBack, notify }: { page: AccountPageKey; onBack: (
 
     {page === "gifts" && <section className="account-card gifts-page"><div className="gift-tabs">{(["Received", "Sent"] as const).map((tab) => <button key={tab} className={giftTab === tab ? "active" : ""} onClick={() => { setGiftTab(tab); setGiftComposer(false); }}>{tab}</button>)}</div>{giftTab === "Received" ? <article><span><Gift size={22} /></span><div><small>FROM ANU</small><b>Coffee for two at Starbucks</b><p>{giftAccepted ? "Saved and ready to use" : "Use before 12 August"}</p></div><button disabled={giftAccepted} onClick={() => { setGiftAccepted(true); notify("Gift added to Saved"); }}>{giftAccepted ? "Accepted" : "Accept"}</button></article> : <div className="gift-sent-list">{sentGift && <article><span><Check size={21} /></span><div><small>SENT TO {giftRecipient || "RECIPIENT"}</small><b>{sentGift}</b><p>Claim link sent just now</p></div></article>}<article><span><Check size={21} /></span><div><small>SENT TO MAYA</small><b>PVR tickets for two</b><p>Accepted · 30 July</p></div></article></div>}{giftComposer ? <form className="gift-composer" onSubmit={(event) => { event.preventDefault(); setSentGift(giftChoice); setGiftComposer(false); setGiftTab("Sent"); notify("Gift claim link sent"); }}><label><span>Choose a saved offer</span><select value={giftChoice} onChange={(event) => setGiftChoice(event.target.value)}><option>Starbucks coffee for two</option><option>PVR tickets for two</option><option>Wonderla day pass</option></select></label><label><span>Recipient mobile</span><input inputMode="tel" value={giftRecipient} onChange={(event) => setGiftRecipient(event.target.value)} placeholder="+91" required /></label><button className="feedback-submit" type="submit">Create & send claim link</button></form> : <button className="full-outline" onClick={() => setGiftComposer(true)}>Send a gift</button>}</section>}
 
-    {page === "settings" && <section className="account-card preference-list"><button onClick={() => setSettingPicker(settingPicker === "location" ? null : "location")} aria-expanded={settingPicker === "location"}><span><MapPin size={18} /><b>Location</b></span><em>{location} <ChevronRight size={16} /></em></button>{settingPicker === "location" && <div className="setting-options" aria-label="Choose location">{["Kochi", "Thrissur", "Kozhikode", "Thiruvananthapuram"].map((city) => <button key={city} className={location === city ? "active" : ""} onClick={() => { setLocation(city); setSettingPicker(null); notify(`Location changed to ${city}`); }}>{city}{location === city && <Check size={14} />}</button>)}</div>}<button onClick={() => setSettingPicker(settingPicker === "language" ? null : "language")} aria-expanded={settingPicker === "language"}><span><MessageCircle size={18} /><b>Language</b></span><em>{language} <ChevronRight size={16} /></em></button>{settingPicker === "language" && <div className="setting-options" aria-label="Choose language">{["English", "Malayalam"].map((item) => <button key={item} className={language === item ? "active" : ""} onClick={() => { setLanguage(item); setSettingPicker(null); notify(`Language changed to ${item}`); }}>{item}{language === item && <Check size={14} />}</button>)}</div>}<button onClick={() => { setOfferAlerts((value) => !value); notify(`Offer alerts turned ${offerAlerts ? "off" : "on"}`); }} aria-pressed={offerAlerts}><span><Bell size={18} /><b>Offer alerts</b></span><i className={`toggle ${offerAlerts ? "on" : ""}`} /></button><button onClick={() => { setCreatorUpdates((value) => !value); notify(`Creator updates turned ${creatorUpdates ? "off" : "on"}`); }} aria-pressed={creatorUpdates}><span><Clapperboard size={18} /><b>Creator updates</b></span><i className={`toggle ${creatorUpdates ? "on" : ""}`} /></button><button onClick={() => notify("Kouponly appearance opened")}><span><Sparkles size={18} /><b>Appearance</b></span><em>Light <ChevronRight size={16} /></em></button></section>}
+    {page === "settings" && <section className="account-card preference-list"><button onClick={() => setSettingPicker(settingPicker === "location" ? null : "location")} aria-expanded={settingPicker === "location"}><span><MapPin size={18} /><b>Location</b></span><em>{location} <ChevronRight size={16} /></em></button>{settingPicker === "location" && <div className="setting-options" aria-label="Choose location">{["Kochi", "Thrissur", "Kozhikode", "Thiruvananthapuram"].map((city) => <button key={city} className={location === city ? "active" : ""} onClick={() => { setLocation(city); setSettingPicker(null); notify(`Location changed to ${city}`); }}>{city}{location === city && <Check size={14} />}</button>)}</div>}<button onClick={() => setSettingPicker(settingPicker === "language" ? null : "language")} aria-expanded={settingPicker === "language"}><span><MessageCircle size={18} /><b>Language</b></span><em>{language} <ChevronRight size={16} /></em></button>{settingPicker === "language" && <div className="setting-options" aria-label="Choose language">{["English", "Malayalam"].map((item) => <button key={item} className={language === item ? "active" : ""} onClick={() => { setLanguage(item); setSettingPicker(null); notify(`Language changed to ${item}`); }}>{item}{language === item && <Check size={14} />}</button>)}</div>}<button onClick={() => { setOfferAlerts((value) => !value); notify(`Offer alerts turned ${offerAlerts ? "off" : "on"}`); }} aria-pressed={offerAlerts}><span><Bell size={18} /><b>Offer alerts</b></span><i className={`toggle ${offerAlerts ? "on" : ""}`} /></button><button onClick={() => { setCreatorUpdates((value) => !value); notify(`Creator updates turned ${creatorUpdates ? "off" : "on"}`); }} aria-pressed={creatorUpdates}><span><Clapperboard size={18} /><b>Creator updates</b></span><i className={`toggle ${creatorUpdates ? "on" : ""}`} /></button><div className="appearance-control"><span><Sparkles size={18} /><b>Appearance</b></span><div className="setting-options compact"><button className={theme === "light" ? "active" : ""} onClick={() => onThemeChange("light")} aria-pressed={theme === "light"}>Light</button><button className={theme === "dark" ? "active" : ""} onClick={() => onThemeChange("dark")} aria-pressed={theme === "dark"}>Dark</button></div></div></section>}
 
     {page === "help" && <><section className="help-actions"><a href="mailto:hello@kouponly.com?subject=Kouponly%20support"><MessageCircle size={21} /><span><b>Chat with us</b><small>Usually replies in 5 min</small></span></a><a href="tel:+914844002400"><Phone size={21} /><span><b>Call support</b><small>9am–8pm, every day</small></span></a></section><section className="account-card faq-list"><h3>Popular questions</h3>{["How does in-store redemption work?", "Where is my online offer code?", "How do creator payments work?", "What does the Gold Card include?"].map((question) => <div className="faq-item" key={question}><button onClick={() => setOpenFaq(openFaq === question ? null : question)} aria-expanded={openFaq === question}><b>{question}</b><ChevronRight size={17} /></button>{openFaq === question && <p>{question.startsWith("How does") ? "At the venue, a staff member confirms availability and enters the private four-digit partner PIN on your phone." : question.startsWith("Where") ? "Confirm the online redemption to reveal a ten-minute code and a direct partner-site button." : question.startsWith("How do creator") ? "Approved, posted work moves to payout processing and appears in Creator earnings with an expected date." : "Selected campus ambassadors unlock rotating food, experience and member freebies at participating partners."}</p>}</div>)}</section></>}
 

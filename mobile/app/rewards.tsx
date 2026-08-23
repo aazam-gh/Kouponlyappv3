@@ -23,7 +23,7 @@ import {
 import { AppHeader, PrimaryButton, Screen } from "@/components/ui";
 import { Reward, rewards } from "@/lib/data";
 import { useStore } from "@/lib/store";
-import { C, F, shadow } from "@/lib/theme";
+import { C, dynamicStyles, F, shadow } from "@/lib/theme";
 export default function RewardsScreen() {
   const { state, redeemReward, notify } = useStore();
   const [reward, setReward] = useState<Reward | null>(null);
@@ -203,7 +203,7 @@ export default function RewardsScreen() {
     </>
   );
 }
-const s = StyleSheet.create({
+const s = dynamicStyles(() => StyleSheet.create({
   lead: {
     fontFamily: F.body,
     fontSize: 13,
@@ -228,7 +228,7 @@ const s = StyleSheet.create({
   },
   overLabel: {
     fontFamily: F.bodyBold,
-    color: "#AAA",
+    color: C.onDarkMuted,
     fontSize: 11,
     letterSpacing: 0.7,
     textAlign: "center",
@@ -257,13 +257,13 @@ const s = StyleSheet.create({
     fontFamily: F.body,
     fontSize: 11,
     lineHeight: 15,
-    color: "#3A3A3C",
+    color: C.inkOnAccent,
     marginTop: 4,
   },
   track: {
     height: 7,
     borderRadius: 4,
-    backgroundColor: "rgba(0,0,0,.14)",
+    backgroundColor: C.line,
     marginTop: 11,
     overflow: "hidden",
   },
@@ -330,7 +330,7 @@ const s = StyleSheet.create({
   missionValue: { fontFamily: F.headingSemi, fontSize: 13 },
   backdrop: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(0,0,0,.5)",
+    backgroundColor: C.backdrop,
   },
   sheet: {
     position: "absolute",
@@ -383,4 +383,4 @@ const s = StyleSheet.create({
     textAlign: "center",
     marginBottom: 14,
   },
-});
+}));

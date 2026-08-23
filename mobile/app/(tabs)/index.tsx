@@ -130,8 +130,9 @@ const growOpportunities = [
   },
 ] as const;
 export default function HomeScreen() {
-  const { colors: C } = useAppTheme();
-  const s = useMemo(() => makeStyles(C), [C]);
+  const theme = useAppTheme();
+  const { colors: C } = theme;
+  const s = useMemo(() => makeStyles(C), [theme.mode, theme.highContrast]);
   const [mode, setMode] = useState<Mode>("save");
   const [hero, setHero] = useState(0);
   const [menu, setMenu] = useState(false);
@@ -615,8 +616,9 @@ export default function HomeScreen() {
 }
 
 function AccountDrawer({ open, close }: { open: boolean; close: () => void }) {
-  const { colors: C } = useAppTheme();
-  const s = useMemo(() => makeStyles(C), [C]);
+  const theme = useAppTheme();
+  const { colors: C } = theme;
+  const s = useMemo(() => makeStyles(C), [theme.mode, theme.highContrast]);
   const links = [
     { label: "Savings history", to: "/account/savings", Icon: BadgePercent },
     { label: "Creator earnings", to: "/account/earnings", Icon: WalletCards },
@@ -764,7 +766,7 @@ const makeStyles = (C: ThemeColors) =>
       borderWidth: 1,
       borderColor: C.ink,
     },
-    micro: { fontFamily: F.bodyBold, fontSize: 12, color: C.ink },
+    micro: { fontFamily: F.bodyBold, fontSize: 12, color: C.muted },
     title: {
       fontFamily: F.heading,
       fontSize: 30,

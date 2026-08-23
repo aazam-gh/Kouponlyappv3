@@ -10,6 +10,9 @@ import {
   Send,
   ShieldCheck,
   Camera,
+  Moon,
+  Sun,
+  Monitor,
 } from "lucide-react-native";
 import React, { useEffect, useState } from "react";
 import {
@@ -28,7 +31,7 @@ import { useStore } from "@/lib/store";
 import { useAuth } from "@/lib/auth";
 import { sendFeedback } from "@/lib/backend";
 import { useProfile } from "@/lib/profile";
-import { C, F, shadow } from "@/lib/theme";
+import { C, dynamicStyles, F, shadow, type ThemePreference, useAppTheme } from "@/lib/theme";
 const titles: Record<AccountSection, [string, string, string]> = {
   personal: [
     "YOUR ACCOUNT",
@@ -100,6 +103,7 @@ export default function AccountPage() {
   const [giftTab, setGiftTab] = useState<"Received" | "Sent">("Received");
   const [giftComposer, setGiftComposer] = useState(false);
   const { state, notify, acceptGift, sendGift } = useStore();
+  const theme = useAppTheme();
   useEffect(()=>{if(!editing)setProfile({name:account.profile.full_name,email:account.profile.email,mobile:account.profile.mobile,city:account.profile.city})},[account.profile,editing]);
   const savePrefs=(next:Partial<typeof account.preferences>)=>void account.savePreferences({...account.preferences,...next}).catch(()=>notify("Preference saved locally; cloud retry needed."));
   const [eye, title, copy] = titles[page];
@@ -148,6 +152,8 @@ export default function AccountPage() {
         setSecurityPassword={setSecurityPassword}
         updatePassword={updatePassword}
         deleteAccount={deleteAccount}
+        themePreference={theme.preference}
+        setThemePreference={theme.setPreference}
       />
     </Screen>
   );
@@ -350,6 +356,25 @@ function Content(p: any) {
             set={(value:boolean)=>{p.setCreator(value);p.savePrefs({creator_updates:value})}}
           />
         </View>
+        <Text style={s.subheading}>APPEARANCE</Text>
+        <View style={s.options} accessibilityRole="radiogroup">
+          {([
+            ["system", "System", Monitor],
+            ["light", "Light", Sun],
+            ["dark", "Dark", Moon],
+          ] as const).map(([value, label, Icon]) => (
+            <Pressable
+              key={value}
+              accessibilityRole="radio"
+              accessibilityState={{ selected: p.themePreference === value }}
+              onPress={() => p.setThemePreference(value as ThemePreference)}
+              style={[s.option, p.themePreference === value && s.optionActive]}
+            >
+              <Icon size={15} />
+              <Text style={s.optionText}>{label}</Text>
+            </Pressable>
+          ))}
+        </View>
         <Text style={s.subheading}>LOCATION</Text>
         <View style={s.options}>
           {["Kochi", "Thiruvananthapuram", "Kozhikode"].map((x) => (
@@ -544,7 +569,7 @@ function Accordion({
     </View>
   );
 }
-const s = StyleSheet.create({
+const s = dynamicStyles(() => StyleSheet.create({
   intro: {
     fontFamily: F.body,
     fontSize: 11,
@@ -581,7 +606,7 @@ const s = StyleSheet.create({
     borderRadius: 14,
     backgroundColor: C.paper,
     borderWidth: 1,
-    borderColor: "#DDD",
+    borderColor: C.line,
     padding: 12,
     fontFamily: F.body,
     marginTop: 7,
@@ -712,4 +737,4 @@ const s = StyleSheet.create({
     backgroundColor: C.lime,
     borderRadius: 25,
   },
-});
+}));

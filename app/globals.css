@@ -175,6 +175,107 @@ img { display: block; }
   .hero-card { height: 220px; }.hero-copy { width: 68%; padding-left: 18px; }.hero-copy h3 { font-size: 21px; }
 }
 
+/* Responsive and appearance contract. The web preview shares the same
+   semantic surfaces as the native app, so dark mode does not depend on a
+   component-by-component rewrite. */
+:root[data-theme="dark"],
+[data-theme="dark"] {
+  --coral: #f4f4f5;
+  --coral-dark: #ffffff;
+  --teal: #f4f4f5;
+  --ink: #f5f5f7;
+  --muted: #b8b8be;
+  --line: rgba(255,255,255,.16);
+  --paper: #000000;
+  --cream: #1c1c1e;
+  --mist: rgba(28,28,30,.72);
+}
+
+[data-theme="dark"] .round-btn { background: var(--cream); border-color: var(--line); color: var(--ink); box-shadow: 0 6px 16px rgba(0,0,0,.28); }
+[data-theme="dark"] .round-btn i { border-color: var(--cream); }
+
+[data-theme="dark"] .site-stage { background: radial-gradient(circle at 8% 18%, rgba(40,40,44,.8) 0 3%, transparent 29%), #000; }
+[data-theme="dark"] .brand-copy,
+[data-theme="dark"] .brand-note,
+[data-theme="dark"] .profile-hero > p,
+[data-theme="dark"] .utility-details li,
+[data-theme="dark"] .redeem-sheet > p:not(.eyebrow) { color: var(--muted); }
+[data-theme="dark"] .app-shell,
+[data-theme="dark"] .app-scroll,
+[data-theme="dark"] .map-screen,
+[data-theme="dark"] .account-page,
+[data-theme="dark"] .category-page { background: var(--paper); color: var(--ink); }
+[data-theme="dark"] .search-entry,
+[data-theme="dark"] .deal-card,
+[data-theme="dark"] .saved-card,
+[data-theme="dark"] .saved-offers > button,
+[data-theme="dark"] .streak-card,
+[data-theme="dark"] .profile-menu,
+[data-theme="dark"] .account-card,
+[data-theme="dark"] .map-preview,
+[data-theme="dark"] .redeem-sheet,
+[data-theme="dark"] .quick-searches button,
+[data-theme="dark"] .search-field,
+[data-theme="dark"] .action-row a,
+[data-theme="dark"] .action-row button { background: var(--cream); color: var(--ink); border-color: var(--line); }
+[data-theme="dark"] .account-drawer { background: rgba(28,28,30,.97); color: var(--ink); }
+[data-theme="dark"] .account-drawer nav { border-color: var(--line); }
+[data-theme="dark"] .account-drawer nav > button { color: var(--ink); border-color: var(--line); }
+[data-theme="dark"] .drawer-links button,
+[data-theme="dark"] .redeem-secondary,
+[data-theme="dark"] .redeem-close,
+[data-theme="dark"] .form-actions button,
+[data-theme="dark"] .setting-options button { background: #2c2c2e; color: var(--ink); border-color: var(--line); }
+[data-theme="dark"] .redeem-overlay { background: rgba(0,0,0,.7); }
+[data-theme="dark"] .bottom-nav,
+[data-theme="dark"] .detail-footer { background: rgba(20,20,22,.94); }
+[data-theme="dark"] .profile-screen { background: #0b0b0d; }
+[data-theme="dark"] .faq-item > p,
+[data-theme="dark"] .legal-item > p,
+[data-theme="dark"] .redeem-warning,
+[data-theme="dark"] .redeem-sheet ol { background: #2c2c2e; color: var(--muted); }
+[data-theme="dark"] .profile-edit-form input,
+[data-theme="dark"] .gift-composer input,
+[data-theme="dark"] .gift-composer select,
+[data-theme="dark"] .application-note textarea { background: #1c1c1e; color: var(--ink); border-color: var(--line); }
+[data-theme="dark"] .appearance-control { border-top-color: var(--line); }
+.appearance-control { display: grid; gap: 9px; padding: 12px 0; border-top: 1px solid #e8e8e8; }
+.appearance-control > span { display: flex; align-items: center; gap: 9px; font-size: 8px; font-weight: 800; }
+.setting-options.compact { padding: 0; border: 0; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+
+@media (min-width: 881px) {
+  .site-stage { padding: clamp(24px, 5vw, 72px); }
+  .app-shell { width: min(430px, 42vw); }
+}
+
+@media (max-width: 520px) {
+  .screen { padding-left: clamp(14px, 5vw, 20px); padding-right: clamp(14px, 5vw, 20px); }
+  .hero-card { min-height: 220px; height: auto; }
+  .hero-copy { width: 69%; padding-left: clamp(16px, 5vw, 22px); }
+  .hero-copy h3 { font-size: clamp(21px, 7vw, 29px); }
+  .category-scroll { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .category-scroll button { height: 92px; }
+  .action-row { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .offer-ticket { align-items: flex-start; }
+  .offer-ticket-copy b { overflow-wrap: anywhere; }
+  .offer-ticket > .offer-ticket-actions { flex-basis: 76px; }
+  .offer-ticket-actions .offer-redeem { width: 76px; }
+  .savings-overview { grid-template-columns: 1fr; }
+  .savings-overview > span { min-height: 88px; }
+  .help-actions { grid-template-columns: 1fr; }
+  .redeem-overlay { align-items: flex-end; padding: 10px; }
+  .redeem-sheet { max-height: min(88dvh, 720px); border-radius: 26px 26px 18px 18px; padding: 23px 17px 17px; }
+}
+
+@media (max-width: 360px) {
+  .mode-picker { grid-template-columns: 1fr; }
+  .mode-picker button { min-height: 52px; }
+  .hero-copy p { font-size: 10px; }
+  .category-scroll button { height: 82px; }
+  .category-scroll b { font-size: 8px; }
+  .action-row span { font-size: 9px; }
+}
+
 .saved-tip { width: 100%; border: 1px solid #e5e5e5; text-align: left; }
 .saved-offers { display: grid; gap: 9px; }
 .saved-offers > button { width: 100%; min-height: 86px; border: 1px solid #e4e4e4; border-radius: 19px; padding: 12px; display: flex; align-items: center; gap: 11px; background: white; text-align: left; }
@@ -373,7 +474,7 @@ h4,
 .app-shell { border-width: 6px; border-radius: 46px; }
 .screen { padding-left: 18px; padding-right: 18px; background: #faf9f8; }
 .home-header h2 { font-size: 25px; font-weight: 700; letter-spacing: -.035em; }
-.micro { color: var(--coral); font-weight: 800; font-size: 11px; }
+.micro { color: var(--muted); font-weight: 800; font-size: 11px; }
 .saving-pill { background: #f3eeef; border: 1px solid rgba(100,1,26,.08); color: var(--coral); font-weight: 800; }
 .saving-pill svg { color: var(--coral); }
 .round-btn { background: white; border: 1px solid rgba(100,1,26,.08); box-shadow: 0 6px 16px rgba(100,1,26,.07); }

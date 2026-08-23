@@ -1,7 +1,9 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from "react";
-import { AccessibilityInfo, DynamicColorIOS, Platform, PlatformColor, Pressable, Text, TextInput, useColorScheme } from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { AccessibilityInfo, Platform, Pressable, Text, TextInput, useColorScheme } from "react-native";
 
 export type ThemeMode = "light" | "dark";
+export type ThemePreference = ThemeMode | "system";
 
 export interface ThemeColors {
   ink: string;
@@ -31,11 +33,13 @@ export interface MotionPreferences {
 
 export interface Theme {
   mode: ThemeMode;
+  preference: ThemePreference;
   dark: boolean;
   highContrast: boolean;
   boldText: boolean;
   colors: ThemeColors;
   motion: MotionPreferences;
+  setPreference: (preference: ThemePreference) => void;
 }
 
 const light: ThemeColors = {
@@ -61,18 +65,38 @@ function withContrast(colors: ThemeColors, mode: ThemeMode): ThemeColors {
 }
 
 const fallback: Theme = {
-  mode: "light", dark: false, highContrast: false, boldText: false, colors: light,
+  mode: "light", preference: "system", dark: false, highContrast: false, boldText: false, colors: light,
   motion: { reduceMotion: false, reduceTransparency: false },
+  setPreference: () => undefined,
 };
 
 const ThemeContext = createContext<Theme>(fallback);
+let activeThemeColors: ThemeColors = light;
+const THEME_STORAGE_KEY = "kouponly.theme-preference";
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const system = useColorScheme();
+  const [preference, setPreference] = useState<ThemePreference>("system");
+  const [hydrated, setHydrated] = useState(false);
   const [reduceMotion, setReduceMotion] = useState(false);
   const [reduceTransparency, setReduceTransparency] = useState(false);
   const [highContrast, setHighContrast] = useState(false);
   const [boldText, setBoldText] = useState(false);
+
+  useEffect(() => {
+    let mounted = true;
+    void AsyncStorage.getItem(THEME_STORAGE_KEY).then((value) => {
+      if (!mounted) return;
+      if (value === "light" || value === "dark" || value === "system") setPreference(value);
+      setHydrated(true);
+    }).catch(() => setHydrated(true));
+    return () => { mounted = false; };
+  }, []);
+
+  useEffect(() => {
+    if (!hydrated) return;
+    void AsyncStorage.setItem(THEME_STORAGE_KEY, preference);
+  }, [hydrated, preference]);
 
   useEffect(() => {
     AccessibilityInfo.isReduceMotionEnabled().then(setReduceMotion);
@@ -95,17 +119,28 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const value = useMemo<Theme>(() => {
-    const mode: ThemeMode = system === "dark" ? "dark" : "light";
+    const mode: ThemeMode = preference === "system" ? (system === "dark" ? "dark" : "light") : preference;
     const base = mode === "dark" ? dark : light;
+    const colors = highContrast ? withContrast(base, mode) : base;
     return {
       mode,
+      preference,
       dark: mode === "dark",
       highContrast,
       boldText,
-      colors: highContrast ? withContrast(base, mode) : base,
+      colors,
       motion: { reduceMotion, reduceTransparency },
+      setPreference: (next) => {
+        const nextMode: ThemeMode = next === "system" ? (system === "dark" ? "dark" : "light") : next;
+        activeThemeColors = highContrast ? withContrast(nextMode === "dark" ? dark : light, nextMode) : (nextMode === "dark" ? dark : light);
+        setPreference(next);
+      },
     };
-  }, [system, highContrast, boldText, reduceMotion, reduceTransparency]);
+  }, [system, preference, highContrast, boldText, reduceMotion, reduceTransparency]);
+
+  useEffect(() => {
+    activeThemeColors = value.colors;
+  }, [value.colors]);
 
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
 }
@@ -116,27 +151,27 @@ export function getTheme(mode: ThemeMode, highContrast = false): ThemeColors {
   return highContrast ? withContrast(colors, mode) : colors;
 }
 
+/**
+ * Legacy screens can keep their StyleSheet API while resolving theme values
+ * when a style is read, instead of freezing the initial appearance at import.
+ */
+export function dynamicStyles<T extends Record<string, unknown>>(
+  factory: (colors: ThemeColors) => T,
+): T {
+  return new Proxy({} as T, {
+    get: (_target, property: string) => factory(C)[property as keyof T],
+  });
+}
+
 function channel(value:number){const normalized=value/255;return normalized<=0.03928?normalized/12.92:Math.pow((normalized+0.055)/1.055,2.4)}
 export function contrastRatio(foreground:string,background:string){const parse=(color:string)=>{const hex=color.replace("#","");const expanded=hex.length===3?hex.split("").map(x=>x+x).join(""):hex;const [r,g,b]=[0,2,4].map(index=>parseInt(expanded.slice(index,index+2),16));return .2126*channel(r)+.7152*channel(g)+.0722*channel(b)};const a=parse(foreground),b=parse(background);return (Math.max(a,b)+.05)/(Math.min(a,b)+.05)}
 
-// Legacy static styles receive platform-semantic colors while screens migrate to useAppTheme.
-const adaptive=(lightColor:string,darkColor:string,android?:string)=>Platform.OS==="ios"
-  ? DynamicColorIOS({light:lightColor,dark:darkColor,highContrastLight:lightColor,highContrastDark:darkColor})
-  : Platform.OS==="android"&&android?PlatformColor(android):lightColor;
-export const C:any = {
-  ...light,
-  ink:adaptive(light.ink,dark.ink,"?android:attr/textColorPrimary"),
-  blackSoft:adaptive(light.blackSoft,dark.blackSoft,"?android:attr/textColorPrimary"),
-  paper:adaptive(light.paper,dark.paper,"?android:attr/colorBackground"),
-  elevated:adaptive(light.elevated,dark.elevated,"?android:attr/colorBackgroundFloating"),
-  card:adaptive(light.card,dark.card,"?android:attr/colorBackgroundFloating"),
-  muted:adaptive(light.muted,dark.muted,"?android:attr/textColorSecondary"),
-  line:adaptive("rgba(10,10,10,0.12)","rgba(255,255,255,0.16)"),
-  soft:adaptive(light.soft,dark.soft),
-  glass:adaptive(light.glass,dark.glass),
-  glassSolid:adaptive(light.glassSolid,dark.glassSolid,"?android:attr/colorBackgroundFloating"),
-  input:adaptive(light.input,dark.input,"?android:attr/colorBackgroundFloating"),
-};
+// Legacy screens import C directly. Resolve each property at read time so the
+// explicit appearance choice updates those screens too, without a rewrite of
+// every existing StyleSheet declaration.
+export const C: ThemeColors = new Proxy({ ...light }, {
+  get: (_target, property: string) => activeThemeColors[property as keyof ThemeColors],
+}) as ThemeColors;
 
 // Ensure legacy screen copy follows appearance even before every Text node adopts AppText.
 (Text as any).defaultProps = { ...(Text as any).defaultProps, allowFontScaling: true, maxFontSizeMultiplier: 2.4, style: [{ color: C.ink }, (Text as any).defaultProps?.style] };
@@ -175,4 +210,4 @@ export const darkShadow = Platform.select({
   default: {},
 });
 
-export const layout = { gutter: 18, radius: 22, tabHeight: 76, maxWidth: 430, minTarget: 44 } as const;
+export const layout = { gutter: 18, radius: 22, tabHeight: 76, maxWidth: 560, minTarget: 44 } as const;

@@ -18,12 +18,13 @@ import { Image, Pressable, StyleSheet, Text, View } from "react-native";
 import { AccessiblePressable, Screen } from "@/components/ui";
 import { useStore } from "@/lib/store";
 import { useAuth } from "@/lib/auth";
-import { F, shadow, type ThemeColors, useAppTheme } from "@/lib/theme";
+import { dynamicStyles, F, shadow, type ThemeColors, useAppTheme } from "@/lib/theme";
 import { useProfile } from "@/lib/profile";
 
 export default function ProfileScreen() {
-  const { colors: C } = useAppTheme();
-  const s = React.useMemo(() => makeStyles(C), [C]);
+  const theme = useAppTheme();
+  const { colors: C } = theme;
+  const s = React.useMemo(() => makeStyles(C), [theme.mode, theme.highContrast]);
   const { state, notify, cloudStatus, retrySync } = useStore();
   const { user, isGuest, signOut } = useAuth();
   const account = useProfile();
@@ -236,14 +237,9 @@ export default function ProfileScreen() {
 }
 
 function Metric({ value, label }: { value: string; label: string }) {
-  return <View style={sMetric.item}><Text style={sMetric.value}>{value}</Text><Text style={sMetric.label}>{label}</Text></View>;
+  const { colors: C } = useAppTheme();
+  return <View style={{ flex: 1, minWidth: 0 }}><Text style={{ fontFamily: F.headingSemi, fontSize: 18, color: C.inkOnAccent }}>{value}</Text><Text style={{ fontFamily: F.bodyBold, fontSize: 9, letterSpacing: .7, color: C.inkOnAccent, marginTop: 3 }}>{label}</Text></View>;
 }
-
-const sMetric = StyleSheet.create({
-  item: { flex: 1, minWidth: 0 },
-  value: { fontFamily: F.headingSemi, fontSize: 18, color: "#101010" },
-  label: { fontFamily: F.bodyBold, fontSize: 9, letterSpacing: .7, color: "#30312C", marginTop: 3 },
-});
 
 const makeStyles = (C: ThemeColors) =>
   StyleSheet.create({

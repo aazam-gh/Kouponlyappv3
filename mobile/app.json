@@ -8,7 +8,14 @@
     "userInterfaceStyle": "automatic",
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "com.kouponly.app"
+      "bundleIdentifier": "com.kouponly.app",
+      "infoPlist": {
+        "UIBackgroundModes": [
+          "fetch",
+          "remote-notification"
+        ]
+      },
+      "appleTeamId": "2396PCT42P"
     },
     "android": {
       "package": "com.kouponly.app",

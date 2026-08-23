@@ -16,5 +16,3 @@ jest.mock("lucide-react-native", () => {
   const { View } = require("react-native");
   return new Proxy({}, { get: () => (props: any) => React.createElement(View, { ...props, testID: props.testID ?? "icon" }) });
 });
-process.env.EXPO_PUBLIC_SUPABASE_URL ??= "https://example.supabase.co";
-process.env.EXPO_PUBLIC_SUPABASE_KEY ??= "sb_publishable_test";

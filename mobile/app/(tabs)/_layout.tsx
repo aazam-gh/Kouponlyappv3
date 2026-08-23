@@ -11,7 +11,7 @@ function AppleTabs(){
   const {colors:C,dark}=useAppTheme();
   return <NativeTabs tintColor={C.ink} iconColor={{default:C.muted,selected:C.ink}} labelStyle={{fontFamily:F.bodySemi,fontSize:11,color:C.muted}} blurEffect={dark?"systemChromeMaterialDark":"systemChromeMaterialLight"} minimizeBehavior="onScrollDown" shadowColor={C.line}>
     <NativeTabs.Trigger name="index"><NativeTabs.Trigger.Icon sf={{default:"house",selected:"house.fill"}}/><NativeTabs.Trigger.Label>Home</NativeTabs.Trigger.Label></NativeTabs.Trigger>
-    <NativeTabs.Trigger name="search" role="search"><NativeTabs.Trigger.Icon sf="magnifyingglass"/><NativeTabs.Trigger.Label>Search</NativeTabs.Trigger.Label></NativeTabs.Trigger>
+    <NativeTabs.Trigger name="search"><NativeTabs.Trigger.Icon sf="magnifyingglass"/><NativeTabs.Trigger.Label>Search</NativeTabs.Trigger.Label></NativeTabs.Trigger>
     <NativeTabs.Trigger name="map"><NativeTabs.Trigger.Icon sf={{default:"map",selected:"map.fill"}}/><NativeTabs.Trigger.Label>Map</NativeTabs.Trigger.Label></NativeTabs.Trigger>
     <NativeTabs.Trigger name="saved" hidden><NativeTabs.Trigger.Icon sf="bookmark.fill"/><NativeTabs.Trigger.Label>Saved</NativeTabs.Trigger.Label></NativeTabs.Trigger>
     <NativeTabs.Trigger name="me"><NativeTabs.Trigger.Icon sf={{default:"person",selected:"person.fill"}}/><NativeTabs.Trigger.Label>Me</NativeTabs.Trigger.Label></NativeTabs.Trigger>
