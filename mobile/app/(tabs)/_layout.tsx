@@ -9,7 +9,7 @@ const icons={index:Home,search:Search,map:Map,saved:Bookmark,me:UserRound};
 
 function AppleTabs(){
   const {colors:C,dark}=useAppTheme();
-  return <NativeTabs tintColor={C.ink} iconColor={{default:C.muted,selected:C.ink}} labelStyle={{fontFamily:F.bodySemi,fontSize:11,color:C.muted}} blurEffect={dark?"systemChromeMaterialDark":"systemChromeMaterialLight"} minimizeBehavior="onScrollDown" shadowColor={C.line}>
+  return <NativeTabs key={dark?"dark":"light"} tintColor={C.ink} iconColor={{default:C.muted,selected:C.ink}} labelStyle={{fontFamily:F.bodySemi,fontSize:11,color:C.muted}} blurEffect={dark?"systemChromeMaterialDark":"systemChromeMaterialLight"} minimizeBehavior="onScrollDown" shadowColor={C.line}>
     <NativeTabs.Trigger name="index"><NativeTabs.Trigger.Icon sf={{default:"house",selected:"house.fill"}}/><NativeTabs.Trigger.Label>Home</NativeTabs.Trigger.Label></NativeTabs.Trigger>
     <NativeTabs.Trigger name="search"><NativeTabs.Trigger.Icon sf="magnifyingglass"/><NativeTabs.Trigger.Label>Search</NativeTabs.Trigger.Label></NativeTabs.Trigger>
     <NativeTabs.Trigger name="map"><NativeTabs.Trigger.Icon sf={{default:"map",selected:"map.fill"}}/><NativeTabs.Trigger.Label>Map</NativeTabs.Trigger.Label></NativeTabs.Trigger>

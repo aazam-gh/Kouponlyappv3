@@ -129,7 +129,7 @@ export default function ProfileScreen() {
         onPress={() => router.push("/account/savings")}
         style={s.streak}
       >
-        <View style={s.streakNumber}>
+        <View style={[s.streakNumber, theme.dark && s.darkIconSurface]}>
           <Text style={s.streakNumberText}>{state.saved.length}</Text>
         </View>
         <View style={{ flex: 1 }}>
@@ -137,15 +137,15 @@ export default function ProfileScreen() {
           <Text style={s.streakTitle}>You’re on a roll</Text>
           <Text style={s.linkNote}>{state.saved.length ? "Keep exploring places you love." : "Save your first place to start."}</Text>
         </View>
-        <ChevronRight size={18} />
+        <ChevronRight size={18} color={C.ink} />
       </Pressable>
       <Pressable
         testID="rewards-card"
         onPress={() => router.push("/rewards")}
         style={s.streak}
       >
-        <View style={s.streakIcon}>
-          <Gift size={23} color="white" />
+        <View style={[s.streakIcon, theme.dark && s.darkIconSurface]}>
+          <Gift size={23} color={theme.dark ? C.ink : C.onDark} />
         </View>
         <View style={{ flex: 1 }}>
           <Text style={s.eyebrow}>REWARDS READY</Text>
@@ -153,16 +153,16 @@ export default function ProfileScreen() {
             Turn your {state.points} points into a plan
           </Text>
         </View>
-        <ChevronRight size={18} />
+        <ChevronRight size={18} color={C.ink} />
       </Pressable>
       <View style={s.creatorDashboard}>
         <View style={s.creatorHeading}>
-          <View style={s.creatorIcon}><Rocket size={21} color={C.ink} /></View>
+          <View style={s.creatorIcon}><Rocket size={21} color={C.inkOnAccent} /></View>
           <View style={{ flex: 1 }}>
-            <Text style={s.eyebrow}>CREATOR DASHBOARD</Text>
+            <Text style={[s.eyebrow, s.onAccent]}>CREATOR DASHBOARD</Text>
             <Text style={s.creatorTitle}>Your creator momentum</Text>
           </View>
-          <TrendingUp size={21} color={C.ink} />
+          <TrendingUp size={21} color={C.inkOnAccent} />
         </View>
         <View style={s.creatorMetrics}>
           <Metric value="—" label="EARNED" />
@@ -338,6 +338,7 @@ const makeStyles = (C: ThemeColors) =>
       alignItems: "center",
       justifyContent: "center",
     },
+    darkIconSurface: { backgroundColor: C.soft },
     streakNumberText: { fontFamily: F.heading, color: C.lime, fontSize: 24 },
     streakIcon: {
       width: 52,
@@ -353,6 +354,7 @@ const makeStyles = (C: ThemeColors) =>
       color: C.ink,
       letterSpacing: 0.8,
     },
+    onAccent: { color: C.inkOnAccent },
     streakTitle: {
       fontFamily: F.headingSemi,
       fontSize: 17,
@@ -371,7 +373,7 @@ const makeStyles = (C: ThemeColors) =>
     creatorMetrics: { flexDirection: "row", marginTop: 18, paddingVertical: 13, gap: 10, borderTopWidth: 1, borderBottomWidth: 1, borderColor: "rgba(16,16,16,.16)" },
     creatorNote: { fontFamily: F.body, color: C.inkOnAccent, fontSize: 12, lineHeight: 17, marginTop: 12 },
     creatorActions: { flexDirection: "row", gap: 9, marginTop: 14 },
-    creatorPrimaryAction: { flex: 1, minHeight: 44, borderRadius: 14, paddingHorizontal: 12, backgroundColor: C.ink, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 7 },
+    creatorPrimaryAction: { flex: 1, minHeight: 44, borderRadius: 14, paddingHorizontal: 12, backgroundColor: "#101010", flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 7 },
     creatorPrimaryText: { fontFamily: F.bodyBold, fontSize: 13, color: C.onDark },
     creatorSecondaryAction: { flex: 1, minHeight: 44, borderRadius: 14, paddingHorizontal: 10, backgroundColor: "rgba(255,255,255,.48)", flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 3 },
     creatorSecondaryText: { fontFamily: F.bodyBold, fontSize: 13, color: C.inkOnAccent },

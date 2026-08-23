@@ -2,6 +2,7 @@ import * as Linking from "expo-linking";
 import { useLocalSearchParams } from "expo-router";
 import {
   Check,
+  Bell,
   ChevronDown,
   Gift,
   Mail,
@@ -349,6 +350,13 @@ function Content(p: any) {
     return (
       <>
         <View style={s.card}>
+          <View style={s.settingsIntro}>
+            <View style={s.settingsIcon}><Bell size={18} color={C.ink} /></View>
+            <View style={{ flex: 1 }}>
+              <Text style={s.settingsTitle}>Stay in the loop</Text>
+              <Text style={s.settingsNote}>Choose which updates matter to you.</Text>
+            </View>
+          </View>
           <Setting label="Offer alerts" value={p.alerts} set={(value:boolean)=>{p.setAlerts(value);p.savePrefs({offer_alerts:value})}} />
           <Setting
             label="Creator updates"
@@ -368,9 +376,11 @@ function Content(p: any) {
               accessibilityRole="radio"
               accessibilityState={{ selected: p.themePreference === value }}
               onPress={() => p.setThemePreference(value as ThemePreference)}
-              style={[s.option, p.themePreference === value && s.optionActive]}
+              style={[s.option, s.appearanceOption, p.themePreference === value && s.optionActive]}
             >
-              <Icon size={15} />
+              <View style={s.appearanceIcon}>
+                <Icon size={18} color={p.themePreference === value ? C.inkOnAccent : C.ink} />
+              </View>
               <Text style={[s.optionText, p.themePreference === value && s.optionTextActive]}>{label}</Text>
             </Pressable>
           ))}
@@ -529,13 +539,15 @@ function Setting({
 }) {
   return (
     <View style={s.setting}>
-      <Text style={s.rowTitle}>{label}</Text>
-      <Switch
-        value={value}
-        onValueChange={set}
-        trackColor={{ true: C.lime }}
-        thumbColor={C.ink}
-      />
+      <Text style={[s.rowTitle, { flex: 1 }]}>{label}</Text>
+      <View style={s.settingControl}>
+        <Switch
+          value={value}
+          onValueChange={set}
+          trackColor={{ false: C.soft, true: C.lime }}
+          thumbColor={C.ink}
+        />
+      </View>
     </View>
   );
 }
@@ -680,30 +692,40 @@ const s = dynamicStyles(() => StyleSheet.create({
   },
   giftTabActive: { backgroundColor: C.card },
   setting: {
-    height: 58,
+    minHeight: 62,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
+    paddingHorizontal: 2,
     borderBottomWidth: 1,
     borderBottomColor: C.line,
   },
+  settingControl: { width: 58, height: 40, alignItems: "center", justifyContent: "center" },
+  settingsIntro: { flexDirection: "row", alignItems: "center", gap: 10, paddingBottom: 13, marginBottom: 1, borderBottomWidth: 1, borderBottomColor: C.line },
+  settingsIcon: { width: 38, height: 38, borderRadius: 13, backgroundColor: C.soft, alignItems: "center", justifyContent: "center" },
+  settingsTitle: { fontFamily: F.headingSemi, fontSize: 15, color: C.ink },
+  settingsNote: { fontFamily: F.body, fontSize: 11, color: C.muted, marginTop: 2 },
   subheading: {
     fontFamily: F.bodyBold,
     fontSize: 11,
     letterSpacing: 1,
     marginTop: 13,
     marginBottom: 9,
+    color: C.muted,
   },
-  options: { flexDirection: "row", flexWrap: "wrap", gap: 7, marginBottom: 10 },
+  options: { flexDirection: "row", flexWrap: "wrap", gap: 10, padding: 8, backgroundColor: C.card, borderRadius: 21, borderWidth: 1, borderColor: C.line, marginBottom: 12 },
   option: {
-    minHeight: 38,
-    borderRadius: 13,
+    minHeight: 50,
+    borderRadius: 16,
     backgroundColor: C.card,
     borderWidth: 1,
     borderColor: C.line,
-    paddingHorizontal: 12,
+    paddingHorizontal: 16,
+    alignItems: "center",
     justifyContent: "center",
   },
+  appearanceOption: { minHeight: 58, flexDirection: "row", gap: 9, paddingHorizontal: 17 },
+  appearanceIcon: { width: 24, height: 24, alignItems: "center", justifyContent: "center" },
   optionActive: { backgroundColor: C.lime, borderColor: C.ink },
   optionText: { fontFamily: F.bodyBold, fontSize: 12, color: C.ink },
   optionTextActive: { color: C.inkOnAccent },

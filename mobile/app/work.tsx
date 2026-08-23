@@ -250,7 +250,7 @@ export default function WorkScreen() {
               onPress={() => setTrack(id)}
               style={[s.track, track === id && s.trackActive]}
             >
-              <Icon size={21} />
+              <Icon size={21} color={track === id ? C.inkOnAccent : C.ink} />
               <Text
                 style={[s.trackTitle, track === id && { color: C.inkOnAccent }]}
               >
@@ -285,13 +285,13 @@ export default function WorkScreen() {
               onPress={() => router.push("/account/earnings")}
               style={s.earnings}
             >
-              <View style={s.earningsIcon}><WalletCards size={21} color={C.ink} /></View>
+              <View style={s.earningsIcon}><WalletCards size={21} color={C.inkOnAccent} /></View>
               <View style={{ flex: 1 }}>
                 <Text style={s.earningsEyebrow}>CREATOR EARNINGS</Text>
                 <Text style={s.earningsTitle}>{user ? "View your earnings" : "Sign in to view earnings"}</Text>
                 <Text style={s.earningsCopy}>{user ? "Track approved work and payouts" : "Your applications can continue in demo mode"}</Text>
               </View>
-              <ChevronRight size={18} color={C.ink} />
+              <ChevronRight size={18} color={C.inkOnAccent} />
             </AccessiblePressable>
             <View testID="creator-process" style={s.process} accessibilityLabel="How creator work gets paid">
               <Text accessibilityRole="header" style={s.processTitle}>How creator work gets paid</Text>
@@ -356,7 +356,7 @@ export default function WorkScreen() {
             <View style={s.points}>
               {role.points.map((p: string) => (
                 <View key={p} style={s.point}>
-                  <Check size={16} />
+                  <Check size={16} color={C.ink} />
                   <Text style={s.pointText}>{p}</Text>
                 </View>
               ))}
@@ -392,7 +392,7 @@ export default function WorkScreen() {
               return (
                 <View style={s.sheet}>
                   <AccessiblePressable accessibilityLabel="Close campaign brief" haptic="none" style={s.close} onPress={() => setSelected(null)}>
-                    <X size={18} />
+                    <X size={18} color={C.ink} />
                   </AccessiblePressable>
                   <Image source={{ uri: c.image }} style={s.sheetImage} />
                   <Text style={s.micro}>
@@ -495,10 +495,10 @@ export default function WorkScreen() {
         <View style={s.sheet}>
           <ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false} contentContainerStyle={s.roleSheetContent}>
             <AccessiblePressable accessibilityLabel="Close quick application" haptic="none" style={s.close} onPress={() => setRoleOpen(false)}>
-              <X size={18} />
+              <X size={18} color={C.ink} />
             </AccessiblePressable>
             <View style={s.roleSymbol}>
-              <BriefcaseBusiness size={25} />
+              <BriefcaseBusiness size={25} color={C.ink} />
             </View>
             <Text style={s.micro}>QUICK APPLICATION</Text>
             <Text style={s.sheetTitle}>{role?.title}</Text>
@@ -513,6 +513,8 @@ export default function WorkScreen() {
               value={note}
               onChangeText={setNote}
               placeholder="A short note about you, your college or relevant experience"
+              placeholderTextColor={C.muted}
+              selectionColor={C.lime}
               multiline
               accessibilityLabel="Why are you interested?"
               accessibilityHint="Enter at least 20 characters"
@@ -558,11 +560,11 @@ const s = dynamicStyles(() => StyleSheet.create({
     ...shadow,
   },
   trackActive: { backgroundColor: C.lime, borderColor: C.ink },
-  trackTitle: { fontFamily: F.headingSemi, fontSize: 14, marginTop: 9 },
+  trackTitle: { fontFamily: F.headingSemi, fontSize: 14, marginTop: 9, color: C.ink },
   trackNote: { fontFamily: F.body, fontSize: 11, color: C.muted, marginTop: 4 },
   accepted: {
     borderRadius: 21,
-    backgroundColor: C.ink,
+    backgroundColor: "#101010",
     padding: 15,
     flexDirection: "row",
     alignItems: "center",
@@ -577,10 +579,10 @@ const s = dynamicStyles(() => StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  micro: { fontFamily: F.bodyBold, fontSize: 11, letterSpacing: 0.8 },
+  micro: { fontFamily: F.bodyBold, fontSize: 11, letterSpacing: 0.8, color: C.ink },
   acceptedTitle: {
     fontFamily: F.headingSemi,
-    color: C.paper,
+    color: C.onDark,
     fontSize: 14,
     marginTop: 4,
   },
@@ -605,7 +607,7 @@ const s = dynamicStyles(() => StyleSheet.create({
   processTitle: { fontFamily: F.headingSemi, fontSize: 18, color: C.ink },
   stepRow: { flexDirection: "row", alignItems: "flex-start", marginTop: 16 },
   step: { width: 57, alignItems: "center" },
-  stepNumber: { width: 28, height: 28, borderRadius: 14, overflow: "hidden", backgroundColor: C.ink, color: C.lime, textAlign: "center", textAlignVertical: "center", fontFamily: F.bodyBold, fontSize: 12 },
+  stepNumber: { width: 28, height: 28, borderRadius: 14, overflow: "hidden", backgroundColor: "#101010", color: C.lime, textAlign: "center", textAlignVertical: "center", fontFamily: F.bodyBold, fontSize: 12 },
   stepLabel: { marginTop: 6, fontFamily: F.bodyBold, fontSize: 9, lineHeight: 12, color: C.ink, textAlign: "center" },
   stepLine: { flex: 1, minWidth: 7, height: 1, backgroundColor: C.line, marginTop: 14 },
   processCopy: { marginTop: 15, fontFamily: F.body, fontSize: 12, lineHeight: 17, color: C.muted },
@@ -616,7 +618,7 @@ const s = dynamicStyles(() => StyleSheet.create({
     marginTop: 25,
     marginBottom: 12,
   },
-  headingTitle: { fontFamily: F.headingSemi, fontSize: 21, marginTop: 3 },
+  headingTitle: { fontFamily: F.headingSemi, fontSize: 21, marginTop: 3, color: C.ink },
   badge: {
     fontFamily: F.bodyBold,
     color: C.inkOnAccent,
@@ -641,8 +643,8 @@ const s = dynamicStyles(() => StyleSheet.create({
     ...shadow,
   },
   campaignImage: { width: 86, height: 92, borderRadius: 16 },
-  campaignTitle: { fontFamily: F.headingSemi, fontSize: 14, marginTop: 4 },
-  campaignMeta: { fontFamily: F.bodyBold, fontSize: 11, marginTop: 5 },
+  campaignTitle: { fontFamily: F.headingSemi, fontSize: 14, marginTop: 4, color: C.ink },
+  campaignMeta: { fontFamily: F.bodyBold, fontSize: 11, marginTop: 5, color: C.ink },
   appliedText: {
     fontFamily: F.bodyBold,
     fontSize: 11,
@@ -651,7 +653,7 @@ const s = dynamicStyles(() => StyleSheet.create({
   },
   role: { marginTop: 20 },
   roleImage: { width: "100%", height: 210, borderRadius: 27, marginBottom: 17 },
-  roleTitle: { fontFamily: F.heading, fontSize: 26, marginTop: 6 },
+  roleTitle: { fontFamily: F.heading, fontSize: 26, marginTop: 6, color: C.ink },
   roleCopy: {
     fontFamily: F.body,
     fontSize: 13,
@@ -663,7 +665,7 @@ const s = dynamicStyles(() => StyleSheet.create({
   gold: {
     height: 145,
     borderRadius: 24,
-    backgroundColor: C.ink,
+    backgroundColor: "#101010",
     padding: 18,
     marginVertical: 12,
     justifyContent: "flex-end",
@@ -685,7 +687,7 @@ const s = dynamicStyles(() => StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: C.line,
   },
-  pointText: { fontFamily: F.bodySemi, fontSize: 13 },
+  pointText: { fontFamily: F.bodySemi, fontSize: 13, color: C.ink, flex: 1 },
   backdrop: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: C.backdrop,
@@ -724,6 +726,7 @@ const s = dynamicStyles(() => StyleSheet.create({
   sheetTitle: {
     fontFamily: F.heading,
     fontSize: 25,
+    color: C.ink,
     marginTop: 6,
     maxWidth: "88%",
   },
@@ -796,7 +799,7 @@ const s = dynamicStyles(() => StyleSheet.create({
     justifyContent: "center",
     marginBottom: 15,
   },
-  noteLabel: { fontFamily: F.bodyBold, fontSize: 11, letterSpacing: 0.8 },
+  noteLabel: { fontFamily: F.bodyBold, fontSize: 11, letterSpacing: 0.8, color: C.ink },
   noteHint: { fontFamily: F.body, fontSize: 11, color: C.muted, marginTop: 4 },
   note: {
     minHeight: 100,
@@ -806,6 +809,7 @@ const s = dynamicStyles(() => StyleSheet.create({
     backgroundColor: C.card,
     padding: 13,
     fontFamily: F.body,
+    color: C.ink,
     textAlignVertical: "top",
     marginTop: 7,
     marginBottom: 14,

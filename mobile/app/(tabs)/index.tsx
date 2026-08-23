@@ -38,6 +38,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import {
   Image,
   Modal,
+  PanResponder,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -45,6 +46,7 @@ import {
   View,
   Linking,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
   AccessiblePressable,
   DealCard,
@@ -167,6 +169,22 @@ export default function HomeScreen() {
     [mode],
   );
   const active = heroSlides[hero];
+  const heroResponder = useMemo(
+    () =>
+      PanResponder.create({
+        onMoveShouldSetPanResponder: (_, gesture) =>
+          Math.abs(gesture.dx) > 10 && Math.abs(gesture.dx) > Math.abs(gesture.dy),
+        onPanResponderRelease: (_, gesture) => {
+          if (Math.abs(gesture.dx) < 40) return;
+          setHero((current) =>
+            gesture.dx < 0
+              ? (current + 1) % heroSlides.length
+              : (current - 1 + heroSlides.length) % heroSlides.length,
+          );
+        },
+      }),
+    [],
+  );
   return (
     <>
       <Screen testID="home-screen">
@@ -236,7 +254,7 @@ export default function HomeScreen() {
           ))}
         </View>
         {mode === "save" ? (
-          <View style={s.hero}>
+          <View style={s.hero} {...heroResponder.panHandlers}>
             <View style={s.heroCopy}>
               <Text style={s.heroKicker}>{active.kicker}</Text>
               <Text style={s.heroTitle}>{active.title}</Text>
@@ -251,13 +269,13 @@ export default function HomeScreen() {
               </Pressable>
             </View>
             <Image source={{ uri: active.image }} style={s.heroImage} />
-            <View style={s.dots}>
+            <View style={s.indicator} accessibilityLabel={`Banner ${hero + 1} of ${heroSlides.length}`}>
               {heroSlides.map((_, i) => (
                 <Pressable
                   accessibilityLabel={`Show slide ${i + 1}`}
                   key={i}
                   onPress={() => setHero(i)}
-                  style={[s.dot, i === hero && s.dotActive]}
+                  style={[s.indicatorDot, i === hero && s.indicatorDotActive]}
                 />
               ))}
             </View>
@@ -292,7 +310,7 @@ export default function HomeScreen() {
           </View>
         ) : (
           <>
-            <View style={[s.modeHero, s.growHero, { backgroundColor: C.ink }]}>
+            <View style={[s.modeHero, s.growHero, { backgroundColor: "#101010" }]}>
               <View style={{ flex: 1 }}>
                 <Text style={s.heroKicker}>WORK WITH KOUPONLY</Text>
                 <Text style={s.heroTitle}>
@@ -392,20 +410,26 @@ export default function HomeScreen() {
           contentContainerStyle={s.categories}
         >
           {shown.map((c) => {
-            const Icon = categoryIcons[c.icon] ?? ShoppingBag;
+            const image = "image" in c ? c.image : categories[15]?.image;
             return (
               <Pressable
                 testID={`category-${c.search}`}
                 key={c.name}
                 onPress={() =>
                   router.push(
-                    `/category/${c.name.toLowerCase().replace(/\s+/g, "-")}`,
+                  `/category/${c.name.toLowerCase().replace(/\s+/g, "-")}`,
                   )
                 }
               >
                 <View style={s.categoryIcon}>
-                  <Icon size={31} color={C.ink} />
-                  <Text style={s.categoryInIcon}>{c.name}</Text>
+                    <Image
+                      testID={`category-image-${c.search}`}
+                      source={{ uri: image }}
+                    style={s.categoryImage}
+                  />
+                  <View style={s.categoryLabel}>
+                    <Text style={s.categoryInIcon}>{c.name}</Text>
+                  </View>
                 </View>
               </Pressable>
             );
@@ -436,11 +460,11 @@ export default function HomeScreen() {
                   style={s.vendor}
                 >
                   <View style={s.vendorLogo}>
-                    {d.logo ? (
-                      <Image source={{ uri: d.logo }} style={s.logo} />
-                    ) : (
-                      <Text style={s.logoLetter}>{d.name[0]}</Text>
-                    )}
+                    <Image
+                      testID={`popular-partner-image-${d.id}`}
+                      source={{ uri: d.image }}
+                      style={s.vendorImage}
+                    />
                   </View>
                   <Text style={s.vendorName} numberOfLines={1}>
                     {d.name}
@@ -470,10 +494,12 @@ export default function HomeScreen() {
               action="My offers"
               onAction={() => router.push("/(tabs)/saved")}
             />
-            <Pressable onPress={() => router.push("/deal/2")} style={s.repeat}>
-              <View style={s.repeatLogo}>
-              <Text style={s.logoLetter}>S</Text>
-              </View>
+            <Pressable testID="use-again-starbucks" onPress={() => router.push("/deal/2")} style={s.repeat}>
+              <Image
+                testID="use-again-starbucks-image"
+                source={{ uri: deals[1].image }}
+                style={s.repeatLogoImage}
+              />
               <View style={{ flex: 1 }}>
                 <Text style={s.eyebrow}>STARBUCKS · PANAMPILLY NAGAR</Text>
                 <Text style={s.repeatTitle}>Buy 1 coffee, get 1 free</Text>
@@ -604,8 +630,10 @@ export default function HomeScreen() {
               onPress={() => router.push("/(tabs)/me")}
               style={s.progress}
             >
-              <Text style={s.progressRing}>62%</Text>
-              <View style={{ flex: 1 }}>
+              <View style={s.progressRing} accessibilityLabel="Opportunity profile 62 percent complete">
+                <Text style={s.progressPercent}>62%</Text>
+              </View>
+              <View style={s.progressCopy}>
                 <Text style={[s.eyebrow, s.onAccent]}>YOUR OPPORTUNITY PROFILE</Text>
                 <Text style={[s.repeatTitle, s.onAccent]}>Two steps from standing out</Text>
                 <Text style={[s.modeNote, s.onAccent]}>
@@ -628,18 +656,34 @@ function AccountDrawer({ open, close }: { open: boolean; close: () => void }) {
   const { state } = useStore();
   const { user } = useAuth();
   const account = useProfile();
+  const insets = useSafeAreaInsets();
   const displayName = user ? account.profile.full_name.trim() || "there" : "there";
   const savedValue = state.saved.length;
   const s = useMemo(() => makeStyles(C), [theme.mode, theme.highContrast]);
-  const links = [
-    { label: "Savings history", to: "/account/savings", Icon: BadgePercent },
-    { label: "Creator earnings", to: "/account/earnings", Icon: WalletCards },
-    { label: "Saved offers", to: { pathname: "/(tabs)/saved", params: { segment: "Offers" } }, Icon: Heart },
-    { label: "Explore partners", to: "/(tabs)/search", Icon: Store },
-    { label: "Map near me", to: "/(tabs)/map", Icon: Map },
-    { label: "Work with Kouponly", to: "/work", Icon: Rocket },
-    { label: "Help & support", to: "/account/help", Icon: HelpCircle },
-    { label: "Settings", to: "/account/settings", Icon: Settings },
+  const linkGroups = [
+    {
+      label: "YOUR KOUPONLY",
+      links: [
+        { label: "Savings history", to: "/account/savings", Icon: BadgePercent },
+        { label: "Creator earnings", to: "/account/earnings", Icon: WalletCards },
+        { label: "Saved offers", to: { pathname: "/(tabs)/saved", params: { segment: "Offers" } }, Icon: Heart },
+      ],
+    },
+    {
+      label: "DISCOVER MORE",
+      links: [
+        { label: "Explore partners", to: "/(tabs)/search", Icon: Store },
+        { label: "Map near me", to: "/(tabs)/map", Icon: Map },
+        { label: "Work with Kouponly", to: "/work", Icon: Rocket },
+      ],
+    },
+    {
+      label: "NEED A HAND?",
+      links: [
+        { label: "Help & support", to: "/account/help", Icon: HelpCircle },
+        { label: "Settings", to: "/account/settings", Icon: Settings },
+      ],
+    },
   ] as const;
   return (
     <Modal
@@ -654,18 +698,30 @@ function AccountDrawer({ open, close }: { open: boolean; close: () => void }) {
         onPress={close}
         style={s.backdrop}
       />
-      <View style={s.drawer}>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+        style={[
+          s.drawer,
+          {
+            paddingTop: insets.top + 14,
+            paddingBottom: insets.bottom + 14,
+          },
+        ]}
+      >
         <View style={s.drawerProfile}>
           <View style={s.avatar}>
-            <Text style={{ color: C.ink }}>N</Text>
+            <Text style={s.avatarText}>N</Text>
           </View>
           <View style={{ flex: 1 }}>
-            <Text style={s.repeatTitle}>{user ? displayName : "Your Kouponly account"}</Text>
-            <Text style={s.modeNote}>{user ? account.profile.city || "Kochi, Kerala" : "Your saved plans and rewards"}</Text>
+            <Text style={s.drawerEyebrow}>KOUPONLY ACCOUNT</Text>
+            <Text style={s.drawerTitle}>{user ? displayName : "Your Kouponly account"}</Text>
+            <Text style={s.drawerSubtitle}>{user ? account.profile.city || "Kochi, Kerala" : "Your saved plans and rewards"}</Text>
           </View>
           <AccessiblePressable
             accessibilityLabel="Close account menu"
             onPress={close}
+            style={s.drawerClose}
           >
             <X size={20} color={C.ink} />
           </AccessiblePressable>
@@ -691,20 +747,31 @@ function AccountDrawer({ open, close }: { open: boolean; close: () => void }) {
             <Text style={s.stat}>{state.points}</Text>
           </View>
         </Pressable>
-        {links.map(({ label, to, Icon }) => (
-          <AccessiblePressable
-            accessibilityLabel={label}
-            key={label}
-            onPress={() => {
-              close();
-              router.push(to as any);
-            }}
-            style={s.drawerLink}
-          >
-            <Icon size={19} color={C.ink} />
-            <Text style={s.drawerLinkText}>{label}</Text>
-            <ChevronRight size={17} color={C.muted} />
-          </AccessiblePressable>
+        {linkGroups.map((group) => (
+          <View key={group.label} style={s.drawerGroup}>
+            <Text style={s.drawerGroupLabel}>{group.label}</Text>
+            <View style={s.drawerLinksCard}>
+              {group.links.map(({ label, to, Icon }) => (
+                <AccessiblePressable
+                  accessibilityLabel={label}
+                  key={label}
+                  onPress={() => {
+                    close();
+                    router.push(to as any);
+                  }}
+                  style={s.drawerLink}
+                >
+                  <View style={s.drawerIconWrap}>
+                    <Icon size={18} color={C.ink} />
+                  </View>
+                  <Text style={s.drawerLinkText}>{label}</Text>
+                  <View style={s.drawerChevron}>
+                    <ChevronRight size={15} color={C.muted} />
+                  </View>
+                </AccessiblePressable>
+              ))}
+            </View>
+          </View>
         ))}
         <View style={s.drawerFooterLinks}>
           {[
@@ -729,10 +796,10 @@ function AccountDrawer({ open, close }: { open: boolean; close: () => void }) {
           onPress={() => notifySupport(close)}
           style={s.support}
         >
-          <Phone size={18} color={C.ink} />
-          <Text style={s.drawerLinkText}>Call support</Text>
+          <Phone size={19} color={C.inkOnAccent} />
+          <Text style={s.supportText}>Call support</Text>
         </AccessiblePressable>
-      </View>
+      </ScrollView>
     </Modal>
   );
 }
@@ -821,6 +888,7 @@ const makeStyles = (C: ThemeColors) =>
       padding: 9,
       flexDirection: "row",
       alignItems: "center",
+      justifyContent: "center",
       gap: 6,
       borderWidth: 1,
       borderColor: "transparent",
@@ -893,24 +961,25 @@ const makeStyles = (C: ThemeColors) =>
       height: 215,
       borderRadius: 80,
     },
-    dots: {
+    indicator: {
       position: "absolute",
-      bottom: 5,
-      left: 16,
+      bottom: 14,
+      left: 20,
+      right: 20,
       flexDirection: "row",
-      gap: 1,
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 6,
     },
-    dot: {
-      width: 44,
-      height: 44,
-      borderRadius: 22,
-      backgroundColor: "transparent",
-      borderWidth: 0,
+    indicatorDot: {
+      width: 20,
+      height: 5,
+      borderRadius: 3,
+      backgroundColor: "rgba(255,255,255,.38)",
     },
-    dotActive: {
-      borderBottomWidth: 5,
-      borderBottomColor: C.lime,
-      borderRadius: 0,
+    indicatorDotActive: {
+      width: 34,
+      backgroundColor: C.lime,
     },
     modeHero: {
       minHeight: 230,
@@ -948,7 +1017,7 @@ const makeStyles = (C: ThemeColors) =>
       alignItems: "center",
       gap: 10,
     },
-    pathIcon: { width: 36, height: 36, borderRadius: 12, backgroundColor: C.ink, alignItems: "center", justifyContent: "center" },
+    pathIcon: { width: 44, height: 44, borderRadius: 14, backgroundColor: "#101010", alignItems: "center", justifyContent: "center" },
     pathText: { fontFamily: F.bodyBold, fontSize: 13, color: C.ink },
     pathNote: { fontFamily: F.body, fontSize: 11, color: C.muted, marginTop: 2 },
     categories: { gap: 12, paddingRight: 18 },
@@ -959,12 +1028,22 @@ const makeStyles = (C: ThemeColors) =>
       backgroundColor: C.soft,
       alignItems: "center",
       justifyContent: "center",
+      overflow: "hidden",
+    },
+    categoryImage: { ...StyleSheet.absoluteFillObject },
+    categoryLabel: {
+      position: "absolute",
+      left: 0,
+      right: 0,
+      bottom: 0,
+      backgroundColor: "rgba(0,0,0,.62)",
+      paddingHorizontal: 5,
+      paddingVertical: 7,
     },
     categoryInIcon: {
       fontFamily: F.bodyBold,
       fontSize: 12,
-      color: C.ink,
-      marginTop: 8,
+      color: "#FFFFFF",
       textAlign: "center",
     },
     vendors: { gap: 12, paddingRight: 18 },
@@ -980,8 +1059,7 @@ const makeStyles = (C: ThemeColors) =>
       borderColor: C.line,
       ...shadow,
     },
-    logo: { width: 40, height: 40, resizeMode: "contain" },
-    logoLetter: { fontFamily: F.heading, fontSize: 24, color: C.ink },
+    vendorImage: { width: "100%", height: "100%", borderRadius: 23 },
     vendorName: {
       fontFamily: F.bodyBold,
       fontSize: 12,
@@ -1009,13 +1087,11 @@ const makeStyles = (C: ThemeColors) =>
       gap: 12,
       ...shadow,
     },
-    repeatLogo: {
+    repeatLogoImage: {
       width: 68,
       height: 68,
       borderRadius: 22,
-      backgroundColor: C.ink,
-      alignItems: "center",
-      justifyContent: "center",
+      backgroundColor: C.soft,
     },
     repeatTitle: {
       fontFamily: F.headingSemi,
@@ -1085,25 +1161,35 @@ const makeStyles = (C: ThemeColors) =>
     opportunityIcon: { width: 42, height: 42, borderRadius: 15, backgroundColor: C.soft, alignItems: "center", justifyContent: "center" },
     opportunityType: { fontFamily: F.bodyBold, fontSize: 10, letterSpacing: 0.8, color: C.muted },
     progress: {
-      minHeight: 96,
+      minHeight: 108,
       borderRadius: 24,
       backgroundColor: C.lime,
       padding: 15,
       flexDirection: "row",
       alignItems: "center",
-      gap: 13,
+      gap: 14,
       marginTop: 18,
     },
     progressRing: {
-      width: 62,
-      height: 62,
-      borderRadius: 31,
+      width: 66,
+      height: 66,
+      borderRadius: 33,
       borderWidth: 5,
-      borderColor: C.ink,
-      color: C.ink,
-      textAlign: "center",
-      textAlignVertical: "center",
+      borderColor: C.inkOnAccent,
+      alignItems: "center",
+      justifyContent: "center",
+      flexShrink: 0,
+    },
+    progressPercent: {
+      color: C.inkOnAccent,
       fontFamily: F.bodyBold,
+      fontSize: 16,
+      textAlign: "center",
+    },
+    progressCopy: {
+      flex: 1,
+      minWidth: 0,
+      justifyContent: "center",
     },
     backdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: C.backdrop },
     drawer: {
@@ -1131,13 +1217,41 @@ const makeStyles = (C: ThemeColors) =>
       alignItems: "center",
       justifyContent: "center",
     },
+    avatarText: {
+      fontFamily: F.headingSemi,
+      fontSize: 21,
+      color: C.inkOnAccent,
+    },
+    drawerTitle: {
+      fontFamily: F.headingSemi,
+      fontSize: 17,
+      color: C.ink,
+      marginTop: 2,
+    },
+    drawerSubtitle: {
+      fontFamily: F.body,
+      fontSize: 11,
+      color: C.muted,
+      marginTop: 2,
+    },
+    drawerClose: {
+      width: 44,
+      height: 44,
+      borderRadius: 15,
+      backgroundColor: C.soft,
+      alignItems: "center",
+      justifyContent: "center",
+    },
     drawerStats: {
       backgroundColor: "#101010",
-      borderRadius: 20,
-      padding: 14,
+      borderRadius: 23,
+      paddingHorizontal: 14,
+      paddingVertical: 16,
       flexDirection: "row",
       justifyContent: "space-between",
-      marginBottom: 10,
+      marginBottom: 4,
+      borderWidth: 1,
+      borderColor: "rgba(255,255,255,.08)",
     },
     stat: {
       fontFamily: F.headingSemi,
@@ -1145,20 +1259,54 @@ const makeStyles = (C: ThemeColors) =>
       fontSize: 17,
       marginTop: 4,
     },
+    drawerGroup: {
+      marginTop: 14,
+    },
+    drawerGroupLabel: {
+      fontFamily: F.bodyBold,
+      fontSize: 10,
+      letterSpacing: 1,
+      color: C.muted,
+      marginBottom: 7,
+    },
+    drawerLinksCard: {
+      backgroundColor: C.card,
+      borderRadius: 19,
+      borderWidth: 1,
+      borderColor: C.line,
+      overflow: "hidden",
+    },
     drawerLink: {
       minHeight: 52,
       flexDirection: "row",
       alignItems: "center",
       justifyContent: "flex-start",
-      gap: 12,
+      gap: 10,
       borderBottomWidth: 1,
       borderBottomColor: C.line,
+      paddingHorizontal: 10,
+    },
+    drawerIconWrap: {
+      width: 34,
+      height: 34,
+      borderRadius: 11,
+      backgroundColor: C.soft,
+      alignItems: "center",
+      justifyContent: "center",
     },
     drawerLinkText: {
       fontFamily: F.bodyBold,
       fontSize: 13,
       color: C.ink,
       flex: 1,
+    },
+    drawerChevron: {
+      width: 30,
+      height: 30,
+      borderRadius: 10,
+      backgroundColor: C.soft,
+      alignItems: "center",
+      justifyContent: "center",
     },
     drawerFooterLinks: {
       flexDirection: "row",
@@ -1180,5 +1328,12 @@ const makeStyles = (C: ThemeColors) =>
       alignItems: "center",
       justifyContent: "center",
       gap: 8,
+      borderWidth: 1,
+      borderColor: C.inkOnAccent,
+    },
+    supportText: {
+      fontFamily: F.bodyBold,
+      fontSize: 14,
+      color: C.inkOnAccent,
     },
   });

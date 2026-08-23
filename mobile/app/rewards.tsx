@@ -267,7 +267,7 @@ const s = dynamicStyles(() => StyleSheet.create({
     marginTop: 11,
     overflow: "hidden",
   },
-  progress: { width: "66%", height: "100%", backgroundColor: C.ink },
+  progress: { width: "66%", height: "100%", backgroundColor: C.inkOnAccent },
   progressText: {
     fontFamily: F.bodyBold,
     color: C.inkOnAccent,
