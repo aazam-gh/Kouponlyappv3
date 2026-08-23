@@ -4,6 +4,7 @@
     "slug": "kouponly",
     "version": "1.0.0",
     "orientation": "portrait",
+    "icon": "./assets/kouponly-app-icon.png",
     "scheme": "kouponly",
     "userInterfaceStyle": "automatic",
     "ios": {
@@ -20,7 +21,8 @@
     "android": {
       "package": "com.kouponly.app",
       "adaptiveIcon": {
-        "backgroundColor": "#0A0A0A"
+        "backgroundColor": "#0A0A0A",
+        "foregroundImage": "./assets/kouponly-app-icon.png"
       },
       "predictiveBackGestureEnabled": true,
       "permissions": [
