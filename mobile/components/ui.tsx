@@ -43,10 +43,17 @@ export function Screen({children,scroll=true,style,testID,includeTopInset=false}
   // iOS ScrollView applies the top safe-area inset automatically. Only fixed
   // screens need the inset here; adding it to scrollable screens creates a
   // duplicate blank band above the header.
-  const topPadding=!scroll||includeTopInset||Platform.OS!=="ios"?insets.top:0;
+  // Scrollable iOS screens receive the status-bar inset from the ScrollView;
+  // only fixed layouts need manual top padding. This prevents stacked insets
+  // from creating a blank band above account and support headers.
+  const topPadding=!scroll||Platform.OS!=="ios"?insets.top:0;
+  // Native iOS tabs float above the content and their bottom safe-area inset
+  // differs between iPhone generations. Keep the final content reachable
+  // without hard-coding one device's tab-bar geometry.
+  const bottomPadding=Platform.OS==="ios"?Math.max(110,insets.bottom+layout.tabHeight+18):24;
   const gutter=width<360?14:width>700?28:layout.gutter;
-  const content=<View style={[{width:"100%",maxWidth:layout.maxWidth,alignSelf:"center",paddingHorizontal:gutter,minHeight:"100%",paddingTop:topPadding},style]} testID={testID}>{children}</View>;
-  return scroll ? <ScrollView style={{flex:1,backgroundColor:C.paper}} contentContainerStyle={{paddingBottom:110,paddingHorizontal:width>layout.maxWidth?gutter:0}} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled" automaticallyAdjustKeyboardInsets>{content}</ScrollView> : <View style={{flex:1,backgroundColor:C.paper}}>{content}</View>;
+  const content=<View style={[{width:"100%",maxWidth:layout.maxWidth,alignSelf:"center",paddingHorizontal:gutter,minHeight:"100%",paddingTop:topPadding,paddingBottom:scroll?0:bottomPadding},style]} testID={testID}>{children}</View>;
+  return scroll ? <ScrollView style={{flex:1,backgroundColor:C.paper}} contentInsetAdjustmentBehavior="automatic" contentContainerStyle={{paddingBottom:bottomPadding,paddingHorizontal:width>layout.maxWidth?gutter:0}} showsVerticalScrollIndicator={false} scrollIndicatorInsets={{bottom:bottomPadding}} keyboardShouldPersistTaps="handled" automaticallyAdjustKeyboardInsets>{content}</ScrollView> : <View style={{flex:1,backgroundColor:C.paper}}>{content}</View>;
 }
 
 export function AppHeader({eyebrow,title,back,right}:{eyebrow?:string;title:string;back?:boolean;right?:React.ReactNode}) {

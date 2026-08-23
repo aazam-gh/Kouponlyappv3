@@ -70,7 +70,7 @@ export function reducer(state: KouponlyState, action: Action): KouponlyState {
   if (action.type === "updateRedemption") {
     const current = state.redemptions[action.id];
     if (!current) return state;
-    const consuming=!current.consumedAt&&((current.mode==="online"&&action.patch.status==="code")||action.patch.status==="success");
+    const consuming=!current.consumedAt&&action.patch.status==="success";
     const next = { ...current, ...action.patch, ...(consuming?{consumedAt:Date.now()}:{}) };
     const dealMatch=action.id.match(/^deal-(\d+)(?:-(\d+))?/);const dealId=dealMatch?Number(dealMatch[1]):null;const offerKey=dealMatch?`${dealMatch[1]}-${dealMatch[2]??0}`:null;
     const used = consuming&&dealId ? [...new Set([...state.used,dealId])] : state.used;
@@ -118,7 +118,7 @@ export function StoreProvider({children}:{children:React.ReactNode}) {
     startRedemption:(id,mode)=>dispatch({type:"startRedemption",session:{id,mode,status:mode==="online"?"warning":"pin"}}),
     updateRedemption:(id,patch)=>dispatch({type:"updateRedemption",id,patch}),
     revealRedemption:async id=>{const session=state.redemptions[id];if(!session||session.status!=="warning")return false;if(!user){dispatch({type:"updateRedemption",id,patch:{status:"code",code:makeCode(id),expiresAt:Date.now()+600000}});return true}try{const result=await validateRedemption(id,"online");dispatch({type:"updateRedemption",id,patch:{status:result.status,code:result.code??undefined,expiresAt:result.expiresAt??undefined}});return true}catch(error){setCloudStatus("error");notify(error instanceof Error?error.message:"Redemption could not be verified");return false}},
-    verifyPartnerPin:async(id,pin)=>{if(!user){if(pin!=="2468")return false;dispatch({type:"updateRedemption",id,patch:{status:"success",completedAt:Date.now()}});return true}try{await validateRedemption(id,"inStore",pin);dispatch({type:"updateRedemption",id,patch:{status:"success",completedAt:Date.now()}});return true}catch{setCloudStatus("error");return false}},
+    verifyPartnerPin:async(id,pin)=>{if(!user){if(pin!=="0000")return false;dispatch({type:"updateRedemption",id,patch:{status:"success",completedAt:Date.now()}});return true}try{await validateRedemption(id,"inStore",pin);dispatch({type:"updateRedemption",id,patch:{status:"success",completedAt:Date.now()}});return true}catch{setCloudStatus("error");return false}},
     redeemReward:async(id,points)=>{if(state.points<points||state.redeemedRewards.includes(id))return false;if(!user){dispatch({type:"redeemReward",id,points});return true}try{const result=await redeemRewardCloud(id);dispatch({type:"redeemReward",id,points:result.cost});return true}catch(error){setCloudStatus("error");notify(error instanceof Error?error.message:"Reward could not be redeemed");return false}},
     acceptGift:id=>{if(!user){dispatch({type:"acceptGift",id});return}void acceptGiftCloud(id).then(()=>dispatch({type:"acceptGift",id})).catch(error=>{setCloudStatus("error");notify(error instanceof Error?error.message:"Gift could not be accepted")})},
     sendGift:(offer,recipient)=>{if(!user){dispatch({type:"sendGift",offer,recipient});return}void sendGiftCloud(offer,recipient).then(()=>dispatch({type:"sendGift",offer,recipient})).catch(error=>{setCloudStatus("error");notify(error instanceof Error?error.message:"Gift could not be sent")})},retrySync:flushQueue,

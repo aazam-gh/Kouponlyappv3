@@ -168,7 +168,7 @@ revoke execute on function public.redeem_reward_atomic(text,uuid) from anon, pub
 revoke execute on function public.validate_redemption_atomic(text,text,text,uuid) from anon, public;
 
 insert into public.partner_redemption_pins(partner_id,pin_hash)
-values('prototype',extensions.crypt('2468',extensions.gen_salt('bf')))
+values('prototype',extensions.crypt('0000',extensions.gen_salt('bf')))
 on conflict(partner_id) do nothing;
 
 insert into public.catalogue_campaigns(id,payload,sort_order) values

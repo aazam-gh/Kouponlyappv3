@@ -28,7 +28,7 @@ export default function ProfileScreen() {
   const { state, notify, cloudStatus, retrySync } = useStore();
   const { user, isGuest, signOut } = useAuth();
   const account = useProfile();
-  const displayName = user ? account.profile.full_name : "Neil Jose Pillard";
+  const displayName = user ? account.profile.full_name.trim() || "Your Kouponly profile" : "Your Kouponly profile";
   const displayEmail = user?.email ?? "Demo profile · stored on this device";
   const initials = displayName
     .split(/\s+/)
@@ -116,8 +116,8 @@ export default function ProfileScreen() {
         ) : null}
         <View style={s.stats}>
           <View>
-            <Text style={s.stat}>₹2,400</Text>
-            <Text style={s.statLabel}>SAVED THIS MONTH</Text>
+            <Text style={s.stat}>₹12,500</Text>
+            <Text style={s.statLabel}>EARNINGS</Text>
           </View>
           <View>
             <Text style={s.stat}>{state.used.length}</Text>
@@ -130,12 +130,12 @@ export default function ProfileScreen() {
         style={s.streak}
       >
         <View style={s.streakNumber}>
-          <Text style={s.streakNumberText}>6</Text>
+          <Text style={s.streakNumberText}>{state.saved.length}</Text>
         </View>
         <View style={{ flex: 1 }}>
           <Text style={s.eyebrow}>MONTHLY STREAK</Text>
           <Text style={s.streakTitle}>You’re on a roll</Text>
-          <Text style={s.linkNote}>One more saving to beat July.</Text>
+          <Text style={s.linkNote}>{state.saved.length ? "Keep exploring places you love." : "Save your first place to start."}</Text>
         </View>
         <ChevronRight size={18} />
       </Pressable>
@@ -165,9 +165,9 @@ export default function ProfileScreen() {
           <TrendingUp size={21} color={C.ink} />
         </View>
         <View style={s.creatorMetrics}>
-          <Metric value="₹12.5K" label="EARNED" />
+          <Metric value="—" label="EARNED" />
           <Metric value={String(activeApplications)} label="ACTIVE" />
-          <Metric value="₹6K" label="NEXT PAYOUT" />
+          <Metric value="—" label="NEXT PAYOUT" />
         </View>
         <Text style={s.creatorNote}>
           {activeApplications
@@ -182,7 +182,7 @@ export default function ProfileScreen() {
             onPress={() => router.push("/account/earnings")}
             style={s.creatorPrimaryAction}
           >
-            <WalletCards size={17} color={C.inkOnAccent} />
+            <WalletCards size={17} color={C.onDark} />
             <Text style={s.creatorPrimaryText}>Earnings</Text>
           </AccessiblePressable>
           <AccessiblePressable
@@ -367,14 +367,14 @@ const makeStyles = (C: ThemeColors) =>
     },
     creatorHeading: { flexDirection: "row", alignItems: "center", gap: 10 },
     creatorIcon: { width: 42, height: 42, borderRadius: 14, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(255,255,255,.48)" },
-    creatorTitle: { fontFamily: F.headingSemi, fontSize: 18, color: C.ink, marginTop: 3 },
+    creatorTitle: { fontFamily: F.headingSemi, fontSize: 18, color: C.inkOnAccent, marginTop: 3 },
     creatorMetrics: { flexDirection: "row", marginTop: 18, paddingVertical: 13, gap: 10, borderTopWidth: 1, borderBottomWidth: 1, borderColor: "rgba(16,16,16,.16)" },
-    creatorNote: { fontFamily: F.body, color: C.ink, fontSize: 12, lineHeight: 17, marginTop: 12 },
+    creatorNote: { fontFamily: F.body, color: C.inkOnAccent, fontSize: 12, lineHeight: 17, marginTop: 12 },
     creatorActions: { flexDirection: "row", gap: 9, marginTop: 14 },
     creatorPrimaryAction: { flex: 1, minHeight: 44, borderRadius: 14, paddingHorizontal: 12, backgroundColor: C.ink, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 7 },
-    creatorPrimaryText: { fontFamily: F.bodyBold, fontSize: 13, color: C.inkOnAccent },
+    creatorPrimaryText: { fontFamily: F.bodyBold, fontSize: 13, color: C.onDark },
     creatorSecondaryAction: { flex: 1, minHeight: 44, borderRadius: 14, paddingHorizontal: 10, backgroundColor: "rgba(255,255,255,.48)", flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 3 },
-    creatorSecondaryText: { fontFamily: F.bodyBold, fontSize: 13, color: C.ink },
+    creatorSecondaryText: { fontFamily: F.bodyBold, fontSize: 13, color: C.inkOnAccent },
     menu: {
       backgroundColor: C.card,
       borderRadius: 23,

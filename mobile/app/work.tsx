@@ -229,7 +229,7 @@ export default function WorkScreen() {
   const interested = state.interests.includes(track);
   return (
     <>
-      <Screen testID="work-screen">
+      <Screen testID="work-screen" includeTopInset>
         <AppHeader
           eyebrow="WORK WITH KOUPONLY"
           title="Make your next move."
@@ -280,7 +280,7 @@ export default function WorkScreen() {
             </View>
             <AccessiblePressable
               testID="creator-earnings"
-              accessibilityLabel="Creator earnings. ₹12,500 earned. ₹6,000 payout processing."
+              accessibilityLabel={user ? "View your creator earnings" : "Sign in to view creator earnings"}
               accessibilityHint="Opens your creator earnings"
               onPress={() => router.push("/account/earnings")}
               style={s.earnings}
@@ -288,8 +288,8 @@ export default function WorkScreen() {
               <View style={s.earningsIcon}><WalletCards size={21} color={C.ink} /></View>
               <View style={{ flex: 1 }}>
                 <Text style={s.earningsEyebrow}>CREATOR EARNINGS</Text>
-                <Text style={s.earningsTitle}>₹12,500 earned</Text>
-                <Text style={s.earningsCopy}>₹6,000 payout processing</Text>
+                <Text style={s.earningsTitle}>{user ? "View your earnings" : "Sign in to view earnings"}</Text>
+                <Text style={s.earningsCopy}>{user ? "Track approved work and payouts" : "Your applications can continue in demo mode"}</Text>
               </View>
               <ChevronRight size={18} color={C.ink} />
             </AccessiblePressable>
@@ -416,16 +416,16 @@ export default function WorkScreen() {
                         </View>
                         <Pressable
                           accessibilityRole="button"
-                          disabled={
-                            !user || attachments.length >= 5 || submitting
-                          }
+                          accessibilityLabel={user ? "Add portfolio media" : "Sign in to add portfolio media"}
+                          disabled={attachments.length >= 5 || submitting}
                           onPress={() => void addMedia(c.id)}
                           style={s.addMedia}
                         >
                           <ImagePlus size={18} />
-                          <Text style={s.addMediaText}>Add</Text>
+                          <Text style={s.addMediaText}>{user ? "Add" : "Sign in"}</Text>
                         </Pressable>
                       </View>
+                      {!user ? <Text style={s.mediaHint}>Sign in to attach photos or videos. You can still apply without media.</Text> : null}
                       {attachments.map((asset) => (
                         <View key={asset.id} style={s.attachment}>
                           <Image
@@ -507,6 +507,7 @@ export default function WorkScreen() {
               attached automatically.
             </Text>
             <Text style={s.noteLabel}>WHY ARE YOU INTERESTED?</Text>
+            <Text style={s.noteHint}>20 characters minimum · {note.trim().length}/20</Text>
             <TextInput
               testID="role-note"
               value={note}
@@ -547,8 +548,7 @@ const s = dynamicStyles(() => StyleSheet.create({
   },
   trackGrid: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
   track: {
-    flex: 1,
-    minWidth: 0,
+    width: "48%",
     minHeight: 105,
     borderRadius: 21,
     backgroundColor: C.card,
@@ -580,7 +580,7 @@ const s = dynamicStyles(() => StyleSheet.create({
   micro: { fontFamily: F.bodyBold, fontSize: 11, letterSpacing: 0.8 },
   acceptedTitle: {
     fontFamily: F.headingSemi,
-    color: "white",
+    color: C.paper,
     fontSize: 14,
     marginTop: 4,
   },
@@ -598,9 +598,9 @@ const s = dynamicStyles(() => StyleSheet.create({
     ...shadow,
   },
   earningsIcon: { width: 42, height: 42, borderRadius: 15, backgroundColor: "rgba(255,255,255,.58)", alignItems: "center", justifyContent: "center" },
-  earningsEyebrow: { fontFamily: F.bodyBold, fontSize: 10, letterSpacing: .8, color: C.ink },
-  earningsTitle: { fontFamily: F.headingSemi, fontSize: 18, color: C.ink, marginTop: 2 },
-  earningsCopy: { fontFamily: F.body, fontSize: 11, color: C.ink, marginTop: 2 },
+  earningsEyebrow: { fontFamily: F.bodyBold, fontSize: 10, letterSpacing: .8, color: C.inkOnAccent },
+  earningsTitle: { fontFamily: F.headingSemi, fontSize: 18, color: C.inkOnAccent, marginTop: 2 },
+  earningsCopy: { fontFamily: F.body, fontSize: 11, color: C.inkOnAccent, marginTop: 2 },
   process: { marginTop: 24, borderRadius: 22, backgroundColor: C.card, borderWidth: 1, borderColor: C.line, padding: 15, ...shadow },
   processTitle: { fontFamily: F.headingSemi, fontSize: 18, color: C.ink },
   stepRow: { flexDirection: "row", alignItems: "flex-start", marginTop: 16 },
@@ -749,6 +749,7 @@ const s = dynamicStyles(() => StyleSheet.create({
     gap: 8,
   },
   mediaNote: { fontFamily: F.body, fontSize: 11, color: C.muted, marginTop: 3 },
+  mediaHint: { fontFamily: F.body, fontSize: 11, lineHeight: 16, color: C.muted, marginTop: 9 },
   addMedia: {
     minHeight: 44,
     paddingHorizontal: 12,
@@ -796,6 +797,7 @@ const s = dynamicStyles(() => StyleSheet.create({
     marginBottom: 15,
   },
   noteLabel: { fontFamily: F.bodyBold, fontSize: 11, letterSpacing: 0.8 },
+  noteHint: { fontFamily: F.body, fontSize: 11, color: C.muted, marginTop: 4 },
   note: {
     minHeight: 100,
     borderRadius: 16,

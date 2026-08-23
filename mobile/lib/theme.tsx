@@ -72,11 +72,15 @@ const fallback: Theme = {
 
 const ThemeContext = createContext<Theme>(fallback);
 let activeThemeColors: ThemeColors = light;
-const THEME_STORAGE_KEY = "kouponly.theme-preference";
+// Versioned so devices that previously stored "system" receive the product's
+// light default once, without disturbing the user's other app data.
+const THEME_STORAGE_KEY = "kouponly.theme-preference-v2";
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const system = useColorScheme();
-  const [preference, setPreference] = useState<ThemePreference>("system");
+  // Keep the product's light visual language consistent across devices until
+  // someone explicitly chooses another appearance in Settings.
+  const [preference, setPreference] = useState<ThemePreference>("light");
   const [hydrated, setHydrated] = useState(false);
   const [reduceMotion, setReduceMotion] = useState(false);
   const [reduceTransparency, setReduceTransparency] = useState(false);
@@ -140,6 +144,21 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     activeThemeColors = value.colors;
+    // Legacy screens still use React Native Text directly. Refresh the
+    // inherited foreground color whenever the selected theme changes so text
+    // does not stay black after switching to dark mode.
+    (Text as any).defaultProps = {
+      ...(Text as any).defaultProps,
+      allowFontScaling: true,
+      maxFontSizeMultiplier: 2.4,
+      style: [{ color: value.colors.ink }],
+    };
+    (TextInput as any).defaultProps = {
+      ...(TextInput as any).defaultProps,
+      allowFontScaling: true,
+      maxFontSizeMultiplier: 2.4,
+      style: [{ color: value.colors.ink }],
+    };
   }, [value.colors]);
 
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;

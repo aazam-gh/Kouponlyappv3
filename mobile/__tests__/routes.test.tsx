@@ -27,7 +27,7 @@ afterEach(() => {
 describe("reachable route coverage", () => {
   it("covers Me navigation and guest actions", async () => {
     const view = await wrap(<MeScreen />);
-    expect(view.getByText("Neil Jose Pillard")).toBeTruthy();
+    expect(view.getByText("Your Kouponly profile")).toBeTruthy();
     await fireEvent.press(view.getByTestId("profile-sign-in"));
     expect(router.push).toHaveBeenCalledWith("/auth");
     await fireEvent.press(view.getByTestId("rewards-card"));
@@ -43,7 +43,7 @@ describe("reachable route coverage", () => {
     expect(view.getByText("Starbucks")).toBeTruthy();
     await fireEvent.press(view.getByLabelText("Clear map search"));
     await fireEvent.press(view.getByText("Food"));
-    await fireEvent.press(view.getByLabelText("Centre on my location"));
+    await fireEvent.press(view.getByLabelText("Show Centre Square partners"));
     await fireEvent.press(view.getByTestId("map-preview"));
     expect(router.push).toHaveBeenCalledWith(expect.stringMatching(/^\/deal\//));
   });

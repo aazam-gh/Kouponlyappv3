@@ -43,6 +43,7 @@ import {
   StyleSheet,
   Text,
   View,
+  Linking,
 } from "react-native";
 import {
   AccessiblePressable,
@@ -53,6 +54,8 @@ import {
 } from "@/components/ui";
 import { categories, deals, heroSlides } from "@/lib/data";
 import { useStore } from "@/lib/store";
+import { useAuth } from "@/lib/auth";
+import { useProfile } from "@/lib/profile";
 import { F, shadow, type ThemeColors, useAppTheme } from "@/lib/theme";
 
 type Mode = "save" | "play" | "grow";
@@ -137,7 +140,13 @@ export default function HomeScreen() {
   const [hero, setHero] = useState(0);
   const [menu, setMenu] = useState(false);
   const [paths, setPaths] = useState(false);
-  const { notify } = useStore();
+  const [studentExpanded, setStudentExpanded] = useState(false);
+  const [mealsExpanded, setMealsExpanded] = useState(false);
+  const { notify, state } = useStore();
+  const { user } = useAuth();
+  const account = useProfile();
+  const displayName = user ? account.profile.full_name.trim() || "there" : "there";
+  const savedValue = state.saved.length;
   useEffect(() => {
     const timer = setInterval(
       () => setHero((i) => (i + 1) % heroSlides.length),
@@ -161,7 +170,11 @@ export default function HomeScreen() {
   return (
     <>
       <Screen testID="home-screen">
-        <GlassSurface style={s.header} intensity={70}>
+        <GlassSurface
+          style={[s.header, theme.dark && s.darkHeader]}
+          intensity={70}
+          forceFallback={theme.dark ? "solid" : undefined}
+        >
           <View style={s.identity}>
             <AccessiblePressable
               testID="account-menu"
@@ -172,7 +185,7 @@ export default function HomeScreen() {
               <Menu size={21} color={C.ink} />
             </AccessiblePressable>
             <View>
-              <Text style={s.micro}>Hey Neil</Text>
+              <Text style={s.micro}>Hey {displayName.split(/\s+/)[0]}</Text>
               <Text accessibilityRole="header" style={s.title}>
                 What’s the plan?
               </Text>
@@ -200,10 +213,10 @@ export default function HomeScreen() {
         <Text style={s.pickerLabel}>Today I want to…</Text>
         <View style={s.modeRow}>
           {[
-            ["save", "Save", "Deals & offers", WalletCards],
-            ["play", "Go out", "Book & explore", Sparkles],
-            ["grow", "Grow", "Learn & earn", Rocket],
-          ].map(([id, label, note, Icon]) => (
+            ["save", "Save", WalletCards],
+            ["play", "Go out", Sparkles],
+            ["grow", "Grow", Rocket],
+          ].map(([id, label, Icon]) => (
             <Pressable
               key={id as string}
               testID={`${id}-mode`}
@@ -213,13 +226,10 @@ export default function HomeScreen() {
               }}
               style={[s.modeButton, mode === id && s.modeActive]}
             >
-              <Icon color={mode === id ? C.inkOnAccent : C.ink} size={18} />
+                  <Icon color={mode === id ? C.inkOnAccent : C.ink} size={18} />
               <View>
                 <Text style={[s.modeTitle, mode === id && s.onAccent]}>
                   {label as string}
-                </Text>
-                <Text style={[s.modeNote, mode === id && s.onAccentMuted]}>
-                  {note as string}
                 </Text>
               </View>
             </Pressable>
@@ -394,7 +404,7 @@ export default function HomeScreen() {
                 }
               >
                 <View style={s.categoryIcon}>
-                  <Icon size={31} />
+                  <Icon size={31} color={C.ink} />
                   <Text style={s.categoryInIcon}>{c.name}</Text>
                 </View>
               </Pressable>
@@ -462,7 +472,7 @@ export default function HomeScreen() {
             />
             <Pressable onPress={() => router.push("/deal/2")} style={s.repeat}>
               <View style={s.repeatLogo}>
-                <Text>S</Text>
+              <Text style={s.logoLetter}>S</Text>
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={s.eyebrow}>STARBUCKS · PANAMPILLY NAGAR</Text>
@@ -476,16 +486,11 @@ export default function HomeScreen() {
             <SectionTitle
               eyebrow="FOR STUDENT LIFE"
               title="Exclusive student deals"
-              action="See all"
-              onAction={() =>
-                router.push({
-                  pathname: "/(tabs)/search",
-                  params: { q: "student" },
-                })
-              }
+              action={studentExpanded ? "Show less" : "See all"}
+              onAction={() => setStudentExpanded(!studentExpanded)}
             />
             <View style={s.miniDeals}>
-              {[deals[1], deals[11], deals[8]].map((d) => (
+              {[deals[1], deals[11], deals[8], ...(studentExpanded ? [deals[5], deals[7], deals[15]] : [])].map((d) => (
                 <Pressable
                   key={d.id}
                   onPress={() => router.push(`/deal/${d.id}`)}
@@ -500,19 +505,21 @@ export default function HomeScreen() {
             <SectionTitle
               eyebrow="QUICK BITES, TINY PRICES"
               title="Meals under ₹100"
-              action="See all"
-              onAction={() =>
-                router.push({
-                  pathname: "/(tabs)/search",
-                  params: { q: "meals under 100" },
-                })
-              }
+              action={mealsExpanded ? "Show less" : "See all"}
+              onAction={() => setMealsExpanded(!mealsExpanded)}
             />
             <View style={s.miniDeals}>
               {[
                 [deals[0], "Mini Kerala meals", "₹99"],
                 [deals[14], "Crispy snack box", "₹89"],
                 [deals[3], "Burger & lime", "₹99"],
+                ...(mealsExpanded
+                  ? [
+                      [deals[2], "Chicken & lime", "₹99"],
+                      [deals[15], "Cinema snack combo", "₹99"],
+                      [deals[1], "Coffee & breakfast", "₹99"],
+                    ]
+                  : []),
               ].map(([d, n, p]: any) => (
                 <Pressable
                   key={n}
@@ -548,8 +555,8 @@ export default function HomeScreen() {
             <Pressable onPress={() => router.push("/rewards")} style={s.win}>
               <Gift size={25} />
               <View style={{ flex: 1 }}>
-                <Text style={s.eyebrow}>REDEEM POINTS</Text>
-                <Text style={s.repeatTitle}>Turn points into good stuff</Text>
+              <Text style={[s.eyebrow, s.onAccent]}>REDEEM POINTS</Text>
+                <Text style={[s.repeatTitle, s.onAccent]}>Turn points into good stuff</Text>
               </View>
               <ChevronRight size={18} />
             </Pressable>
@@ -599,13 +606,13 @@ export default function HomeScreen() {
             >
               <Text style={s.progressRing}>62%</Text>
               <View style={{ flex: 1 }}>
-                <Text style={s.eyebrow}>YOUR OPPORTUNITY PROFILE</Text>
-                <Text style={s.repeatTitle}>Two steps from standing out</Text>
-                <Text style={s.modeNote}>
+                <Text style={[s.eyebrow, s.onAccent]}>YOUR OPPORTUNITY PROFILE</Text>
+                <Text style={[s.repeatTitle, s.onAccent]}>Two steps from standing out</Text>
+                <Text style={[s.modeNote, s.onAccent]}>
                   Add your skills and availability to get better matches.
                 </Text>
               </View>
-              <ChevronRight size={17} color={C.ink} />
+              <ChevronRight size={17} color={C.inkOnAccent} />
             </Pressable>
           </>
         )}
@@ -618,6 +625,11 @@ export default function HomeScreen() {
 function AccountDrawer({ open, close }: { open: boolean; close: () => void }) {
   const theme = useAppTheme();
   const { colors: C } = theme;
+  const { state } = useStore();
+  const { user } = useAuth();
+  const account = useProfile();
+  const displayName = user ? account.profile.full_name.trim() || "there" : "there";
+  const savedValue = state.saved.length;
   const s = useMemo(() => makeStyles(C), [theme.mode, theme.highContrast]);
   const links = [
     { label: "Savings history", to: "/account/savings", Icon: BadgePercent },
@@ -648,8 +660,8 @@ function AccountDrawer({ open, close }: { open: boolean; close: () => void }) {
             <Text style={{ color: C.ink }}>N</Text>
           </View>
           <View style={{ flex: 1 }}>
-            <Text style={s.repeatTitle}>Neil Jose Pillard</Text>
-            <Text style={s.modeNote}>Kochi, Kerala</Text>
+            <Text style={s.repeatTitle}>{user ? displayName : "Your Kouponly account"}</Text>
+            <Text style={s.modeNote}>{user ? account.profile.city || "Kochi, Kerala" : "Your saved plans and rewards"}</Text>
           </View>
           <AccessiblePressable
             accessibilityLabel="Close account menu"
@@ -667,16 +679,16 @@ function AccountDrawer({ open, close }: { open: boolean; close: () => void }) {
           style={s.drawerStats}
         >
           <View>
-            <Text style={s.drawerEyebrow}>TOTAL SAVED</Text>
-            <Text style={s.stat}>₹2,400</Text>
+            <Text style={s.drawerEyebrow}>SAVED PLACES</Text>
+            <Text style={s.stat}>{savedValue}</Text>
           </View>
           <View>
-            <Text style={s.drawerEyebrow}>EARNED</Text>
-            <Text style={s.stat}>₹8,750</Text>
+            <Text style={s.drawerEyebrow}>APPLICATIONS</Text>
+            <Text style={s.stat}>{state.appliedCampaigns.length}</Text>
           </View>
           <View>
-            <Text style={s.drawerEyebrow}>REWARDS</Text>
-            <Text style={s.stat}>680</Text>
+            <Text style={s.drawerEyebrow}>POINTS</Text>
+            <Text style={s.stat}>{state.points}</Text>
           </View>
         </Pressable>
         {links.map(({ label, to, Icon }) => (
@@ -724,9 +736,13 @@ function AccountDrawer({ open, close }: { open: boolean; close: () => void }) {
     </Modal>
   );
 }
-const notifySupport = (close: () => void) => {
+const notifySupport = async (close: () => void) => {
   close();
-  router.push("/account/help");
+  try {
+    await Linking.openURL("tel:+97433637582");
+  } catch {
+    router.push("/account/help");
+  }
 };
 
 const makeStyles = (C: ThemeColors) =>
@@ -742,6 +758,9 @@ const makeStyles = (C: ThemeColors) =>
       borderWidth: 1,
       borderColor: C.line,
       overflow: "hidden",
+    },
+    darkHeader: {
+      backgroundColor: C.elevated,
     },
     identity: { flexDirection: "row", alignItems: "center", gap: 11 },
     menu: {
@@ -796,7 +815,7 @@ const makeStyles = (C: ThemeColors) =>
     modeRow: { flexDirection: "row", gap: 7 },
     modeButton: {
       flex: 1,
-      minHeight: 68,
+      minHeight: 56,
       borderRadius: 18,
       backgroundColor: C.soft,
       padding: 9,
@@ -808,7 +827,6 @@ const makeStyles = (C: ThemeColors) =>
     },
     modeActive: { backgroundColor: C.lime, borderColor: C.ink },
     onAccent: { color: C.inkOnAccent },
-    onAccentMuted: { color: "#3A3A3C" },
     modeTitle: { fontFamily: F.bodyBold, fontSize: 12, color: C.ink },
     modeNote: {
       fontFamily: F.body,
@@ -914,7 +932,7 @@ const makeStyles = (C: ThemeColors) =>
     growOrbit: { width: 76, height: 160, alignItems: "center", justifyContent: "space-between", transform: [{ rotate: "8deg" }] },
     pathReveal: { marginTop: 10, backgroundColor: C.card, borderRadius: 23, borderWidth: 1, borderColor: C.line, padding: 14, ...shadow },
     pathRevealHead: { flexDirection: "row", gap: 10, justifyContent: "space-between" },
-    pathEyebrow: { alignSelf: "flex-start", fontFamily: F.bodyBold, fontSize: 10, color: C.ink, backgroundColor: C.lime, paddingHorizontal: 8, paddingVertical: 5, borderRadius: 12, overflow: "hidden" },
+    pathEyebrow: { alignSelf: "flex-start", fontFamily: F.bodyBold, fontSize: 10, color: C.inkOnAccent, backgroundColor: C.lime, paddingHorizontal: 8, paddingVertical: 5, borderRadius: 12, overflow: "hidden" },
     pathHeading: { fontFamily: F.headingSemi, fontSize: 20, color: C.ink, marginTop: 8 },
     pathCopy: { fontFamily: F.body, fontSize: 12, lineHeight: 16, color: C.muted, marginTop: 4 },
     pathClose: { width: 44, height: 44, borderRadius: 14, backgroundColor: C.soft, alignItems: "center", justifyContent: "center" },

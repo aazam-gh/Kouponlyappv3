@@ -53,7 +53,7 @@ export default function RewardsScreen() {
   ] as const;
   return (
     <>
-      <Screen testID="rewards-screen">
+      <Screen testID="rewards-screen" includeTopInset>
         <AppHeader
           eyebrow="KOUPONLY REWARDS"
           title="Complete. Earn. Redeem."

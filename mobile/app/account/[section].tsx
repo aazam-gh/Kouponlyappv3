@@ -205,8 +205,8 @@ function Content(p: any) {
     return (
       <>
         <View style={s.metric}>
-          <Text style={s.metricValue}>₹2,400</Text>
-          <Text style={s.metricLabel}>TOTAL SAVED</Text>
+          <Text style={[s.metricValue, { color: C.inkOnAccent }]}>₹2,400</Text>
+          <Text style={[s.metricLabel, { color: C.inkOnAccent }]}>TOTAL SAVED</Text>
         </View>
         {[
           ["Starbucks", "₹320", "Today"],
@@ -222,7 +222,7 @@ function Content(p: any) {
       <>
         <View style={[s.metric, { backgroundColor: C.ink }]}>
           <Text style={[s.metricValue, { color: C.lime }]}>₹12,500</Text>
-          <Text style={[s.metricLabel, { color: "white" }]}>
+          <Text style={[s.metricLabel, { color: C.paper }]}>
             TOTAL EARNED · NEXT PAYOUT ₹6,000
           </Text>
         </View>
@@ -240,9 +240,9 @@ function Content(p: any) {
       <>
         <View style={s.member}>
           <ShieldCheck size={34} />
-          <Text style={s.memberTitle}>KOUPONLY MEMBER</Text>
-          <Text style={s.memberName}>Neil Jose Pillard</Text>
-          <Text style={s.memberId}>KPN · 2026 · 00482</Text>
+          <Text style={[s.memberTitle, { color: C.inkOnAccent }]}>KOUPONLY MEMBER</Text>
+          <Text style={[s.memberName, { color: C.inkOnAccent }]}>Neil Jose Pillard</Text>
+          <Text style={[s.memberId, { color: C.inkOnAccent }]}>KPN · 2026 · 00482</Text>
         </View>
         <View style={s.card}>
           <Text style={s.cardTitle}>Your benefits</Text>
@@ -371,7 +371,7 @@ function Content(p: any) {
               style={[s.option, p.themePreference === value && s.optionActive]}
             >
               <Icon size={15} />
-              <Text style={s.optionText}>{label}</Text>
+              <Text style={[s.optionText, p.themePreference === value && s.optionTextActive]}>{label}</Text>
             </Pressable>
           ))}
         </View>
@@ -383,7 +383,7 @@ function Content(p: any) {
               onPress={() => {p.setLocation(x);p.savePrefs({location:x})}}
               style={[s.option, p.location === x && s.optionActive]}
             >
-              <Text style={s.optionText}>{x}</Text>
+              <Text style={[s.optionText, p.location === x && s.optionTextActive]}>{x}</Text>
             </Pressable>
           ))}
         </View>
@@ -395,7 +395,7 @@ function Content(p: any) {
               onPress={() => {p.setLanguage(x);p.savePrefs({language:x})}}
               style={[s.option, p.language === x && s.optionActive]}
             >
-              <Text style={s.optionText}>{x}</Text>
+              <Text style={[s.optionText, p.language === x && s.optionTextActive]}>{x}</Text>
             </Pressable>
           ))}
         </View>
@@ -407,7 +407,7 @@ function Content(p: any) {
       <>
         <View style={s.helpRow}>
           <Pressable
-            onPress={() => Linking.openURL("tel:+919999999999")}
+            onPress={() => Linking.openURL("tel:+97433637582")}
             style={[s.help, { backgroundColor: C.lime }]}
           >
             <Phone size={23} />
@@ -417,8 +417,8 @@ function Content(p: any) {
             onPress={() => Linking.openURL("mailto:hello@kouponly.com")}
             style={[s.help, { backgroundColor: C.ink }]}
           >
-            <Mail size={23} color="white" />
-            <Text style={[s.helpTitle, { color: "white" }]}>Email us</Text>
+            <Mail size={23} color={C.paper} />
+            <Text style={[s.helpTitle, { color: C.paper }]}>Email us</Text>
           </Pressable>
         </View>
         <Text style={s.subheading}>COMMON QUESTIONS</Text>
@@ -619,12 +619,13 @@ const s = dynamicStyles(() => StyleSheet.create({
     alignItems: "center",
     marginBottom: 16,
   },
-  metricValue: { fontFamily: F.heading, fontSize: 37 },
+  metricValue: { fontFamily: F.heading, fontSize: 37, color: C.inkOnAccent },
   metricLabel: {
     fontFamily: F.bodyBold,
     fontSize: 11,
     letterSpacing: 1.2,
     marginTop: 3,
+    color: C.inkOnAccent,
   },
   row: {
     minHeight: 68,
@@ -637,9 +638,9 @@ const s = dynamicStyles(() => StyleSheet.create({
     borderWidth: 1,
     borderColor: C.line,
   },
-  rowTitle: { fontFamily: F.bodyBold, fontSize: 11 },
+  rowTitle: { fontFamily: F.bodyBold, fontSize: 11, color: C.ink },
   rowNote: { fontFamily: F.body, fontSize: 11, color: C.muted, marginTop: 4 },
-  rowValue: { fontFamily: F.headingSemi, fontSize: 15 },
+  rowValue: { fontFamily: F.headingSemi, fontSize: 15, color: C.ink },
   member: {
     minHeight: 230,
     borderRadius: 28,
@@ -654,9 +655,9 @@ const s = dynamicStyles(() => StyleSheet.create({
     letterSpacing: 1.2,
     marginTop: 35,
   },
-  memberName: { fontFamily: F.heading, fontSize: 25, marginTop: 5 },
-  memberId: { fontFamily: F.bodyBold, fontSize: 12, marginTop: 8 },
-  cardTitle: { fontFamily: F.headingSemi, fontSize: 18, marginVertical: 11 },
+  memberName: { fontFamily: F.heading, fontSize: 25, marginTop: 5, color: C.inkOnAccent },
+  memberId: { fontFamily: F.bodyBold, fontSize: 12, marginTop: 8, color: C.inkOnAccent },
+  cardTitle: { fontFamily: F.headingSemi, fontSize: 18, marginVertical: 11, color: C.ink },
   check: {
     flexDirection: "row",
     gap: 9,
@@ -704,7 +705,8 @@ const s = dynamicStyles(() => StyleSheet.create({
     justifyContent: "center",
   },
   optionActive: { backgroundColor: C.lime, borderColor: C.ink },
-  optionText: { fontFamily: F.bodyBold, fontSize: 12 },
+  optionText: { fontFamily: F.bodyBold, fontSize: 12, color: C.ink },
+  optionTextActive: { color: C.inkOnAccent },
   helpRow: { flexDirection: "row", gap: 9, marginBottom: 20 },
   help: {
     flex: 1,

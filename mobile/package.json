@@ -5,6 +5,7 @@
   "main": "expo-router/entry",
   "scripts": {
     "start": "expo start",
+    "screenshots:ios": "bash scripts/capture-ios-screenshots.sh",
     "ios": "expo run:ios",
     "android": "expo run:android",
     "prebuild:ios": "expo prebuild --platform ios",
