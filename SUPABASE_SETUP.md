@@ -1,6 +1,8 @@
 # Kouponly Supabase setup
 
-The mobile app is local-first. Guests use an isolated bundled catalogue and AsyncStorage profile. Signed-in users load cloud state into a separate per-user cache, receive Realtime changes, and queue safe row-level writes while offline. Trusted redemptions, rewards, gifts, campaign submissions, uploads, and account deletion require the hosted backend.
+The mobile app is local-first. Guests use an isolated bundled catalogue and AsyncStorage profile. Signed-in users load cloud state into a separate per-user cache, receive Realtime changes, and queue safe row-level writes while offline. Redemptions, rewards, gifts, campaign applications, uploads, and account deletion use the hosted backend. Authenticated mobile operations call protected database RPCs and RLS-scoped tables directly. Account deletion still requires the `delete-account` Edge Function because it uses the server-only Supabase Admin API.
+
+The currently configured Supabase project is `incgawktquflywvypxiq` (`https://incgawktquflywvypxiq.supabase.co`). Its mobile schema, seeded catalogue, secure mobile hardening, and authenticated API grants have been applied. All seven catalogue REST endpoints have been verified. The `delete-account` Edge Function is deployed with JWT verification and performs owner storage cleanup before deleting the Auth user.
 
 ## Hosted deployment
 
@@ -8,19 +10,14 @@ Authenticate the CLI, link the existing project, then apply the database and fun
 
 ```sh
 npx supabase login
-npx supabase link --project-ref gwgvhteqmmcfsdpjeokp
+npx supabase link --project-ref incgawktquflywvypxiq
 npx supabase db push --linked
-npx supabase functions deploy validate-redemption
-npx supabase functions deploy submit-campaign
-npx supabase functions deploy redeem-reward
-npx supabase functions deploy send-gift
-npx supabase functions deploy accept-gift
-npx supabase functions deploy delete-account
+npx supabase functions deploy delete-account --project-ref incgawktquflywvypxiq
 ```
 
-In hosted Auth URL configuration, allow `kouponly://auth` and the development Expo redirect. Email/password sign-up, confirmation, recovery, password/email updates, refresh, and deletion are implemented. Configure production SMTP before enabling mandatory confirmation.
+The hosted Auth redirect allowlist includes the app callback `kouponly://auth`. If you use Expo Go rather than the configured native app scheme, add the exact Expo Go redirect URL for that development session. Email/password sign-up, confirmation, recovery, password/email updates, refresh, and deletion are implemented. Configure production SMTP before enabling mandatory confirmation. The Supabase CLI migration history was seeded from the SQL Editor bootstrap; after authenticating the CLI, run `npx supabase migration list --project-ref incgawktquflywvypxiq` before future `db push` operations.
 
-Private `avatars` and `campaign-media` buckets, their owner-folder policies, catalogue seed records, and Realtime publication are created by migrations. Regenerate catalogue SQL with `npm run supabase:catalogue`, and refresh mobile types from the linked cloud schema with `npx supabase gen types typescript --linked`.
+Private `avatars` and `campaign-media` buckets, their owner-folder policies, catalogue seed records, and Realtime publication are created by migrations. The repository includes a new atomic `complete-redemption` function; the mobile client currently calls the matching authenticated RPC directly. Regenerate catalogue SQL with `npm run supabase:catalogue`, and refresh mobile types from the linked cloud schema with `npx supabase gen types typescript --linked`.
 
 ## Optional local backend verification
 

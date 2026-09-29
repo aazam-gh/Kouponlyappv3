@@ -1,3 +1,4 @@
+import { useCatalogue } from "@/lib/catalogue";
 import { router } from "expo-router";
 import {
   BadgePercent,
@@ -134,7 +135,7 @@ const growOpportunities = [
     Icon: Rocket,
   },
 ] as const;
-export default function HomeScreen() {
+export default function HomeScreen() {useCatalogue();
   const theme = useAppTheme();
   const { colors: C } = theme;
   const s = useMemo(() => makeStyles(C), [theme.mode, theme.highContrast]);

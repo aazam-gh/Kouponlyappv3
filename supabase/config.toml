@@ -424,6 +424,13 @@ entrypoint = "./functions/validate-redemption/index.ts"
 # For example, if you want to serve static HTML pages in your function:
 # static_files = [ "./functions/validate-redemption/*.html" ]
 
+[functions.complete-redemption]
+# Optional legacy endpoint; the mobile client calls complete_redemption_atomic directly.
+enabled = false
+verify_jwt = true
+import_map = "./functions/complete-redemption/deno.json"
+entrypoint = "./functions/complete-redemption/index.ts"
+
 [functions.submit-campaign]
 enabled = true
 verify_jwt = true

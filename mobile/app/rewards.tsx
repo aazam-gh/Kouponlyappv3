@@ -1,3 +1,4 @@
+import { useCatalogue } from "@/lib/catalogue";
 import {
   Check,
   Compass,
@@ -24,7 +25,7 @@ import { AppHeader, PrimaryButton, Screen } from "@/components/ui";
 import { Reward, rewards } from "@/lib/data";
 import { useStore } from "@/lib/store";
 import { C, dynamicStyles, F, shadow } from "@/lib/theme";
-export default function RewardsScreen() {
+export default function RewardsScreen() {useCatalogue();
   const { state, redeemReward, notify } = useStore();
   const [reward, setReward] = useState<Reward | null>(null);
   const [step, setStep] = useState<"confirm" | "pin" | "success">("confirm");

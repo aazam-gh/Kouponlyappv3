@@ -1,7 +1,8 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { AppState } from "react-native";
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useReducer, useRef, useState } from "react";
 import { useAuth } from "@/lib/auth";
-import { acceptGiftCloud, applyMutation, fetchCloudState, makeMutationId, redeemRewardCloud, sendGiftCloud, submitCampaign, subscribeToUser, validateRedemption } from "@/lib/backend";
+import { acceptGiftCloud, applyMutation, completeRedemptionCloud, fetchCloudState, makeMutationId, redeemRewardCloud, sendGiftCloud, submitCampaign, subscribeToUser, validateRedemption } from "@/lib/backend";
 import type { PendingMutation, SyncStatus } from "@/lib/cloud.types";
 
 export type RedemptionMode = "online" | "inStore";
@@ -57,6 +58,7 @@ type Action =
   | { type:"startRedemption"; session:RedemptionSession }
   | { type:"updateRedemption"; id:string; patch:Partial<RedemptionSession> }
   | { type:"redeemReward"; id:string; points:number }
+  | { type:"syncReward"; id:string; points:number }
   | { type:"acceptGift"; id:string }
   | { type:"sendGift"; offer:string; recipient:string };
 
@@ -78,6 +80,7 @@ export function reducer(state: KouponlyState, action: Action): KouponlyState {
     return { ...state, used,offerUsage, redemptions:{...state.redemptions,[action.id]:next} };
   }
   if (action.type === "redeemReward" && state.points >= action.points && !state.redeemedRewards.includes(action.id)) return { ...state, points:state.points-action.points, redeemedRewards:[...state.redeemedRewards,action.id] };
+  if (action.type === "syncReward") return { ...state, points: action.points, redeemedRewards: [...new Set([...state.redeemedRewards, action.id])] };
   if(action.type==="acceptGift")return {...state,acceptedGifts:[...new Set([...state.acceptedGifts,action.id])],saved:[...new Set([...state.saved,2])]};
   if(action.type==="sendGift")return {...state,sentGifts:[{offer:action.offer,recipient:action.recipient,sentAt:Date.now()},...state.sentGifts]};
   return state;
@@ -88,6 +91,7 @@ type StoreValue = {
   toggleSaved:(id:number)=>void; toggleSavedOffer:(id:string)=>void; toggleCampaign:(id:string,note?:string,attachmentIds?:string[])=>Promise<boolean>; toggleInterest:(id:string)=>void;
   startRedemption:(id:string,mode:RedemptionMode)=>void; updateRedemption:(id:string,patch:Partial<RedemptionSession>)=>void;
   revealRedemption:(id:string)=>Promise<boolean>; verifyPartnerPin:(id:string,pin:string)=>Promise<boolean>;
+  completeRedemption:(id:string)=>Promise<boolean>;
   redeemReward:(id:string,points:number)=>Promise<boolean>; acceptGift:(id:string)=>void; sendGift:(offer:string,recipient:string)=>void; notify:(message:string)=>void; retrySync:()=>Promise<void>;
 };
 const StoreContext = createContext<StoreValue | null>(null);
@@ -107,7 +111,16 @@ export function StoreProvider({children}:{children:React.ReactNode}) {
     else{setCloudStatus("loading-cloud");const [cached,pending]=await Promise.all([AsyncStorage.getItem(userKey(id)),AsyncStorage.getItem(queueKey(id))]);if(cached)dispatch({type:"hydrate",state:migrateState(JSON.parse(cached))});queueRef.current=pending?JSON.parse(pending):[];await refreshCloud();}}
     catch{if(id)setCloudStatus("offline");}finally{if(active)setHydrated(true)}})();return()=>{active=false}},[user?.id,refreshCloud]);
   useEffect(()=>{if(!hydrated)return;const key=user?.id?userKey(user.id):KEY;AsyncStorage.setItem(key,JSON.stringify(state)).catch(()=>{})},[state,hydrated,user?.id]);
-  useEffect(()=>{},[]);
+  useEffect(()=>{
+    if(!user)return;
+    let timer:ReturnType<typeof setTimeout>|undefined;
+    const subscription=subscribeToUser(user.id,()=>{
+      if(timer)clearTimeout(timer);
+      timer=setTimeout(()=>{void refreshCloud()},180);
+    });
+    const appState=AppState.addEventListener("change",next=>{if(next==="active")void flushQueue()});
+    return()=>{if(timer)clearTimeout(timer);subscription.unsubscribe();appState.remove()};
+  },[user?.id,refreshCloud,flushQueue]);
   const notify = useCallback((message:string)=>{ setToast(message); setTimeout(()=>setToast(""),2200); },[]);
   const value = useMemo<StoreValue>(()=>({
     state,hydrated,toast,notify,cloudStatus,
@@ -119,7 +132,8 @@ export function StoreProvider({children}:{children:React.ReactNode}) {
     updateRedemption:(id,patch)=>dispatch({type:"updateRedemption",id,patch}),
     revealRedemption:async id=>{const session=state.redemptions[id];if(!session||session.status!=="warning")return false;if(!user){dispatch({type:"updateRedemption",id,patch:{status:"code",code:makeCode(id),expiresAt:Date.now()+600000}});return true}try{const result=await validateRedemption(id,"online");dispatch({type:"updateRedemption",id,patch:{status:result.status,code:result.code??undefined,expiresAt:result.expiresAt??undefined}});return true}catch(error){setCloudStatus("error");notify(error instanceof Error?error.message:"Redemption could not be verified");return false}},
     verifyPartnerPin:async(id,pin)=>{if(!user){if(pin!=="0000")return false;dispatch({type:"updateRedemption",id,patch:{status:"success",completedAt:Date.now()}});return true}try{await validateRedemption(id,"inStore",pin);dispatch({type:"updateRedemption",id,patch:{status:"success",completedAt:Date.now()}});return true}catch{setCloudStatus("error");return false}},
-    redeemReward:async(id,points)=>{if(state.points<points||state.redeemedRewards.includes(id))return false;if(!user){dispatch({type:"redeemReward",id,points});return true}try{const result=await redeemRewardCloud(id);dispatch({type:"redeemReward",id,points:result.cost});return true}catch(error){setCloudStatus("error");notify(error instanceof Error?error.message:"Reward could not be redeemed");return false}},
+    completeRedemption:async id=>{const session=state.redemptions[id];if(!session||session.status!=="code")return false;if(!user){dispatch({type:"updateRedemption",id,patch:{status:"success",completedAt:Date.now()}});return true}try{const result=await completeRedemptionCloud(id);dispatch({type:"updateRedemption",id,patch:{status:result.status,completedAt:result.completedAt}});return true}catch(error){setCloudStatus("error");notify(error instanceof Error?error.message:"Redemption could not be completed");return false}},
+    redeemReward:async(id,points)=>{if(state.points<points||state.redeemedRewards.includes(id))return false;if(!user){dispatch({type:"redeemReward",id,points});return true}try{const result=await redeemRewardCloud(id);dispatch({type:"syncReward",id,points:result.points});return true}catch(error){setCloudStatus("error");notify(error instanceof Error?error.message:"Reward could not be redeemed");return false}},
     acceptGift:id=>{if(!user){dispatch({type:"acceptGift",id});return}void acceptGiftCloud(id).then(()=>dispatch({type:"acceptGift",id})).catch(error=>{setCloudStatus("error");notify(error instanceof Error?error.message:"Gift could not be accepted")})},
     sendGift:(offer,recipient)=>{if(!user){dispatch({type:"sendGift",offer,recipient});return}void sendGiftCloud(offer,recipient).then(()=>dispatch({type:"sendGift",offer,recipient})).catch(error=>{setCloudStatus("error");notify(error instanceof Error?error.message:"Gift could not be sent")})},retrySync:flushQueue,
   }),[state,hydrated,toast,notify,cloudStatus,user,enqueue,flushQueue]);

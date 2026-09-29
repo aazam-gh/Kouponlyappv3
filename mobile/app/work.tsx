@@ -1,3 +1,4 @@
+import { useCatalogue } from "@/lib/catalogue";
 import { router, useLocalSearchParams } from "expo-router";
 import {
   BriefcaseBusiness,
@@ -96,7 +97,7 @@ const roles: any = {
   },
 };
 const creatorSteps = ["Pick & apply", "Receive or visit", "Create & submit", "Post & get paid"];
-export default function WorkScreen() {
+export default function WorkScreen() {useCatalogue();
   const params = useLocalSearchParams<{ track?: string }>();
   const [track, setTrack] = useState(params.track ?? "creator");
   const [selected, setSelected] = useState<string | null>(null);

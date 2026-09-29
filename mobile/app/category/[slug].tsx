@@ -1,3 +1,4 @@
+import { useCatalogue } from "@/lib/catalogue";
 import { useLocalSearchParams } from "expo-router";
 import { BriefcaseBusiness, CakeSlice, CalendarDays, ChefHat, Clapperboard, Compass, CookingPot, CupSoda, Dumbbell, EggFried, GraduationCap, Laptop, MapPin, Plane, Popcorn, Salad, Search, ShoppingBag, Sparkles, Store, UtensilsCrossed } from "lucide-react-native";
 import React, { useMemo, useState } from "react";
@@ -7,7 +8,7 @@ import { categoryBySlug, categoryItems } from "@/lib/data";
 import { F,shadow,type ThemeColors,useAppTheme } from "@/lib/theme";
 
 const iconMap:any={CookingPot,Popcorn,CupSoda,CakeSlice,ChefHat,Salad,EggFried,UtensilsCrossed,Sparkles,Dumbbell,Compass,CalendarDays,Store,Clapperboard,Plane,GraduationCap,Laptop,BriefcaseBusiness,ShoppingBag};
-export default function CategoryScreen(){
+export default function CategoryScreen(){useCatalogue();
  const {colors:C}=useAppTheme();const s=useMemo(()=>makeStyles(C),[C]);
  const {slug}=useLocalSearchParams<{slug:string}>();const category=categoryBySlug(slug);const [query,setQuery]=useState("");const [subcategory,setSubcategory]=useState("All");const [nearest,setNearest]=useState(false);
  const items=useMemo(()=>{if(!category)return[];const found=categoryItems(category,subcategory,query);return nearest?[...found].sort((a,b)=>a.distance-b.distance):[...found].sort((a,b)=>b.trend-a.trend)},[category,subcategory,query,nearest]);

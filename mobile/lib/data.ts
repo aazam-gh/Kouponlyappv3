@@ -121,7 +121,10 @@ export const categoryBySlug=(slug:string)=>categories.find(category=>category.na
 
 export type CataloguePatch={deals?:Deal[];categories?:Category[];heroSlides?:HeroSlide[];directoryItems?:DirectoryItem[];campaigns?:Campaign[];rewards?:Reward[]};
 export function applyCataloguePatch(patch:CataloguePatch){
-  if(patch.deals?.length)deals.splice(0,deals.length,...patch.deals);
+  if(patch.deals?.length)deals.splice(0,deals.length,...patch.deals.map(deal=>({...deal,
+    redemption:deal.redemption??(onlineCategories.has(deal.category)?"online":"inStore"),
+    externalUrl:deal.externalUrl??(onlineCategories.has(deal.category)?onlineUrlFor(deal.name):undefined),
+  })));
   if(patch.categories?.length)categories.splice(0,categories.length,...patch.categories);
   if(patch.heroSlides?.length)heroSlides.splice(0,heroSlides.length,...patch.heroSlides);
   if(patch.directoryItems?.length)directoryItems.splice(0,directoryItems.length,...patch.directoryItems);
