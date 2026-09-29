@@ -4,6 +4,7 @@ import type { Session, User } from '@supabase/supabase-js';
 import type { EmailOtpType } from '@supabase/supabase-js';
 import { getSupabase, supabase, supabaseConfigured } from '@/lib/supabase';
 import { deleteAccountCloud } from '@/lib/backend';
+import { unregisterRealXPushTokenForCurrentUser } from '@/lib/realxPush';
 
 type AuthResult = { error?: string; confirmationRequired?: boolean };
 type AuthValue = {
@@ -168,6 +169,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signOut = useCallback(async () => {
     setRecoveryMode(false);
+    await unregisterRealXPushTokenForCurrentUser();
     try { await getSupabase().auth.signOut(); } catch {}
   }, []);
 

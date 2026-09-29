@@ -465,3 +465,11 @@ enabled = true
 verify_jwt = true
 import_map = "./functions/delete-account/deno.json"
 entrypoint = "./functions/delete-account/index.ts"
+
+[functions.realx-mobile-action]
+enabled = true
+verify_jwt = false
+
+[functions.realx-maintenance]
+enabled = true
+verify_jwt = true

@@ -34,6 +34,12 @@
       "expo-sqlite",
       "expo-web-browser",
       [
+        "expo-notifications",
+        {
+          "sounds": ["./assets/sound.wav"]
+        }
+      ],
+      [
         "expo-image-picker",
         {
           "photosPermission": "Kouponly uses your photo library for your profile picture and creator campaign submissions.",

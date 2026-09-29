@@ -3,6 +3,7 @@ import {
   BadgePercent,
   ChevronRight,
   Gift,
+  GraduationCap,
   HelpCircle,
   LogOut,
   MessageCircle,
@@ -197,6 +198,22 @@ export default function ProfileScreen() {
           </AccessiblePressable>
         </View>
       </View>
+      <AccessiblePressable
+        testID="realx-campus-entry"
+        accessibilityLabel="Open RealX student features"
+        onPress={() => router.push("/realx" as any)}
+        style={s.streak}
+      >
+        <View style={[s.streakIcon, theme.dark && s.darkIconSurface]}>
+          <GraduationCap size={23} color={theme.dark ? C.ink : C.onDark} />
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={s.eyebrow}>REALX CAMPUS</Text>
+          <Text style={s.streakTitle}>Student offers and rewards</Text>
+          <Text style={s.linkNote}>Account, wallet, Wakti, and Badrgo</Text>
+        </View>
+        <ChevronRight size={18} color={C.ink} />
+      </AccessiblePressable>
       <View style={s.menu}>
         {links.map(({ id, label, note, Icon }) => (
           <AccessiblePressable

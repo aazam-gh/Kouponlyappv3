@@ -1,0 +1,20 @@
+{
+  "compilerOptions": {
+    "target": "ES2022", "useDefineForClassFields": true,
+    "lib": ["ES2022", "DOM", "DOM.Iterable"], "module": "ESNext",
+    "skipLibCheck": true, "baseUrl": ".",
+    "paths": {
+      "@/*": ["./src/*"],
+      "firebase/firestore": ["./src/firebase/firestore.ts"],
+      "firebase/functions": ["./src/firebase/functions.ts"],
+      "firebase/storage": ["./src/firebase/storage.ts"],
+      "firebase/auth": ["./src/firebase/auth.ts"]
+    },
+    "types": ["node", "react", "react-dom"],
+    "moduleResolution": "Bundler", "allowImportingTsExtensions": true,
+    "verbatimModuleSyntax": true, "noEmit": true, "jsx": "react-jsx",
+    "strict": true, "noUnusedLocals": true, "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true
+  },
+  "include": ["src"]
+}
