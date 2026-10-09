@@ -1,11 +1,24 @@
-import { campaigns, categories, categoryBySlug, categoryItems, deals, directoryItems, foodSubcategoryItems, heroSlides, onlineUrlFor, searchDirectory } from "../lib/data";
-describe("Kouponly catalogue parity",()=>{
-  it("contains the complete web catalogue",()=>{expect(deals).toHaveLength(16);expect(categories).toHaveLength(18);expect(heroSlides).toHaveLength(10);expect(directoryItems).toHaveLength(150);expect(deals.map(d=>d.name)).toEqual(expect.arrayContaining(["Paragon Restaurant","Starbucks","Kochi Marriott","IndiGo","PVR Cinemas","Cinepolis"]));expect(directoryItems.some(i=>i.type==="Experience")).toBe(true);expect(directoryItems.some(i=>i.type==="Internship")).toBe(true);expect(directoryItems.some(i=>i.type==="Prize")).toBe(true)});
-  it("resolves stable category slugs",()=>expect(categoryBySlug("things-to-do")?.name).toBe("Things to do"));
-  it("searches names, metadata and keywords",()=>{expect(searchDirectory("IndiGo")[0].title).toContain("IndiGo");expect(searchDirectory("internship","Internship").every(i=>i.type==="Internship")).toBe(true)});
-  it("supports every web sort mode",()=>{expect(searchDirectory("","All","A-Z")[0].title.localeCompare(searchDirectory("","All","A-Z")[1].title)).toBeLessThanOrEqual(0);expect(searchDirectory("","All","Highest offer")[0].offer).toBeGreaterThanOrEqual(searchDirectory("","All","Highest offer")[1].offer);expect(searchDirectory("","All","Nearest")[0].distance).toBeLessThanOrEqual(searchDirectory("","All","Nearest")[1].distance)});
-  it("provides populated food subcategories and their empty states",()=>{const mains=categoryBySlug("mains")!;expect(mains.subcategories.map(x=>x.label)).toContain("Biryani");expect(foodSubcategoryItems.length).toBeGreaterThan(250);expect(categoryItems(mains,"Biryani").length).toBeGreaterThan(0);expect(categoryItems(mains,"Biryani","no-such-partner")).toHaveLength(0)});
-  it("classifies online vendors and preserves partner destinations",()=>{expect(deals.filter(d=>d.redemption==="online").map(d=>d.name)).toEqual(expect.arrayContaining(["Westside","IndiGo","PVR Cinemas","Croma","Cinepolis"]));expect(deals.find(d=>d.name==="Westside")?.externalUrl).toBe("https://www.westside.com/");expect(directoryItems.find(item=>item.title==="Westside")?.redemption).toBe("online");expect(directoryItems.find(item=>item.title==="Paragon Restaurant")?.redemption).toBe("inStore");expect(onlineUrlFor("Unknown partner")).toContain("google.com/search?q=")});
-  it("matches every query word instead of loose partial queries",()=>{expect(searchDirectory("coffee study").every(x=>`${x.title} ${x.subtitle} ${x.keywords}`.toLowerCase().includes("coffee"))).toBe(true);expect(searchDirectory("coffee study").every(x=>`${x.title} ${x.subtitle} ${x.keywords}`.toLowerCase().includes("study"))).toBe(true)});
-  it("keeps the website Grow campaign briefs and their required metadata",()=>{expect(campaigns.map(c=>c.id)).toEqual(["paragon-reel","beauty-unbox","pool-day"]);expect(campaigns.map(c=>c.title)).toEqual(["Film a dinner-for-two Reel","Create a beauty unboxing","Capture a pool-day story"]);expect(campaigns.every(c=>c.due.startsWith("Apply by Aug")&&c.deliverables?.length===4)).toBe(true)});
+import { applyCataloguePatch, categories, categoryBySlug, categoryItems, deals, directoryItems, heroSlides, rewards, searchDirectory } from '../lib/data';
+import { clearFixture, loadFixture } from '../test/catalogue-fixture';
+
+afterEach(clearFixture);
+describe('Supabase-only catalogue',()=>{
+  it('starts without bundled vendors, offers, rewards, or taxonomy',()=>{
+    expect([deals,categories,directoryItems,heroSlides,rewards].every(items=>items.length===0)).toBe(true);
+  });
+  it('matches explicit main category and multiple assigned subcategories',()=>{
+    loadFixture(); const food=categoryBySlug('food')!;
+    expect(categoryItems(food,'Rice').map(row=>row.id)).toEqual(categoryItems(food,'Sweets').map(row=>row.id));
+    expect(categoryItems(categoryBySlug('stays')!)).toHaveLength(0);
+    expect(categoryItems(food,'Homestays')).toHaveLength(0);
+    expect(categoryItems(food,'Rice','no-such-vendor')).toHaveLength(0);
+    expect(searchDirectory('Sweets').length).toBeGreaterThan(0);
+  });
+  it('clears stale data when a successful refresh returns empty arrays',()=>{
+    loadFixture(); expect(deals.length).toBeGreaterThan(0);
+    clearFixture(); expect([deals,categories,directoryItems,heroSlides,rewards].every(items=>items.length===0)).toBe(true);
+  });
+  it('keeps unrelated arrays when applying a partial patch',()=>{
+    loadFixture(); applyCataloguePatch({deals:[]}); expect(directoryItems.length).toBeGreaterThan(0);
+  });
 });

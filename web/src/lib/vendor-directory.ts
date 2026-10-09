@@ -20,11 +20,10 @@ export const vendorsSearchSchema = z.object({
     pageSize: z.coerce.number().int().min(5).max(50).catch(10),
     search: z.string().catch(''),
     sort: z.enum(['name-asc', 'name-desc']).catch('name-asc'),
-    xcard: z.enum(['all', 'enabled', 'disabled']).catch('all'),
 })
 
 export type VendorsSearch = z.infer<typeof vendorsSearchSchema>
-export type VendorScope = 'all' | 'in_store' | 'online'
+export type VendorScope = 'all' | 'in_store'
 
 export interface VendorsPageResult {
     vendors: Vendor[]
@@ -40,7 +39,8 @@ function mapVendor(docSnap: QueryDocumentSnapshot<DocumentData>): Vendor {
         contact: data.contact || data.email || '',
         profilePicture: data.profilePicture || '',
         vendorType: data.vendorType || 'in_store',
-        xcard: !!data.xcard,
+        status: data.status,
+        locations: data.locations || [],
         mainCategory: data.mainCategory,
         subcategory: data.subcategory,
         isTrending: data.isTrending,
@@ -56,7 +56,6 @@ function vendorMatchesSearch(docSnap: QueryDocumentSnapshot<DocumentData>, searc
     const data = docSnap.data()
     const searchableValues = [
         data.name,
-        data.nameAr,
         data.contact,
         data.email,
         data.mainCategory,
@@ -77,12 +76,6 @@ export async function fetchVendorsPage(search: VendorsSearch, vendorScope: Vendo
         constraints.push(where('vendorType', '==', vendorScope))
     }
 
-    if (search.xcard === 'enabled') {
-        constraints.push(where('xcard', '==', true))
-    } else if (search.xcard === 'disabled') {
-        constraints.push(where('xcard', '==', false))
-    }
-
     const sortConstraint = orderBy('name', search.sort === 'name-desc' ? 'desc' : 'asc')
 
     if (trimmedSearch) {
@@ -97,7 +90,7 @@ export async function fetchVendorsPage(search: VendorsSearch, vendorScope: Vendo
     }
 
     const countQuery = query(collRef, ...constraints)
-    const cursorKey = `vendors:${vendorScope}:${trimmedSearch}:${search.sort}:${search.xcard}`
+    const cursorKey = `vendors:${vendorScope}:${trimmedSearch}:${search.sort}`
 
     const [countSnapshot, pageResult] = await Promise.all([
         getCountFromServer(countQuery),
@@ -115,7 +108,6 @@ export async function fetchVendorsPage(search: VendorsSearch, vendorScope: Vendo
         totalCount,
         hasSearch: !!trimmedSearch,
         sort: search.sort,
-        xcard: search.xcard,
     })
 
     return {

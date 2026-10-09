@@ -30,7 +30,7 @@ Deno.serve(async (req) => {
   };
 
   try {
-    for (const bucket of ["avatars", "campaign-media"]) {
+    for (const bucket of ["avatars"]) {
       const paths = await collect(bucket, user.id);
       if (paths.length) {
         const { error } = await admin.storage.from(bucket).remove(paths);

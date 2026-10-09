@@ -28,7 +28,6 @@ function VendorProfile() {
 
   const info = [
     ['Name', vendor.name],
-    ['Arabic Name', vendor.nameAr],
     ['Email', vendor.email],
     ['Phone', vendor.phoneNumber],
     ['Website', vendor.website],
@@ -36,7 +35,6 @@ function VendorProfile() {
     ['Vendor Type', vendor.vendorType],
     ['Main Category', vendor.mainCategory],
     ['Address', vendor.address],
-    ['Arabic Address', vendor.addressAr],
   ]
 
   return (
@@ -59,7 +57,6 @@ function VendorProfile() {
 
           <div>
             <h2 className="text-xl font-semibold">{vendor.name || 'Unnamed Vendor'}</h2>
-            {vendor.nameAr && <p className="text-gray-500">{vendor.nameAr}</p>}
           </div>
         </div>
       </div>

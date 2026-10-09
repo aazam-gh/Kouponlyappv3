@@ -16,13 +16,13 @@
     "supabase:stop": "supabase stop",
     "supabase:reset": "supabase db reset --local",
     "supabase:types": "supabase gen types typescript --local > mobile/lib/database.types.ts",
-    "supabase:test": "supabase db lint --local",
-    "supabase:catalogue": "node scripts/generate-supabase-catalogue.mjs"
+    "supabase:test": "supabase db lint --local"
   },
   "dependencies": {
     "drizzle-orm": "0.45.2",
     "lucide-react": "^0.468.0",
     "next": "16.2.6",
+    "posthog-js": "^1.438.2",
     "react": "19.2.6",
     "react-dom": "19.2.6"
   },

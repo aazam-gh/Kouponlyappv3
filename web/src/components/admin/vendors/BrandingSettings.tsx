@@ -3,39 +3,31 @@ import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Upload, Loader2, CreditCard, X, Tag, Plus, TrendingUp, ArrowLeft, ArrowRight, Trash2 } from "lucide-react"
+import { Upload, Loader2, X, Tag, Plus, TrendingUp, ArrowLeft, ArrowRight, Trash2 } from "lucide-react"
 import { Checkbox } from "@/components/ui/checkbox"
 import { useEffect, useState, useRef } from "react"
 import { useQuery } from "@tanstack/react-query"
 import { toast } from "sonner"
-import { categoriesQueryOptions, type OnlineRedemptionConfig, type Vendor } from "@/queries"
+import { categoriesQueryOptions, type Vendor } from "@/queries"
 import { uploadImage } from "@/lib/upload"
 import { deleteGalleryImages, VENDOR_GALLERY_LIMIT } from "@/lib/vendor-gallery"
 
-export type VendorBrandingForm = Vendor & {
-    redemptionPin?: string
-}
+export type VendorBrandingForm = Vendor
 
 interface BrandingSettingsProps {
     formData: VendorBrandingForm
     setFormData: (val: VendorBrandingForm) => void
     vendorId: string
-    onlineConfig: OnlineRedemptionConfig
-    setOnlineConfig: (val: OnlineRedemptionConfig) => void
     savedGalleryImages?: string[]
     onUploadingChange?: (uploading: boolean) => void
-    showOnlineBrandOfferFields?: boolean
 }
 
 export function BrandingSettings({
     formData,
     setFormData,
     vendorId,
-    onlineConfig,
-    setOnlineConfig,
     savedGalleryImages = [],
     onUploadingChange,
-    showOnlineBrandOfferFields = false,
 }: BrandingSettingsProps) {
     const [uploadingProfile, setUploadingProfile] = useState(false)
     const [uploadingCover, setUploadingCover] = useState(false)
@@ -351,36 +343,6 @@ export function BrandingSettings({
                     />
                 </div>
 
-                {/* Brand Name Arabic */}
-                <div className="space-y-4 text-right">
-                    <Label className="text-base font-semibold text-slate-700">Brand Name (Arabic)</Label>
-                    <Input
-                        placeholder="تيم هورتنز"
-                        value={formData.nameAr || ""}
-                        onChange={(e) => setFormData({ ...formData, nameAr: e.target.value })}
-                        dir="rtl"
-                        className="bg-slate-50 border-none ring-0 focus-visible:ring-1 focus-visible:ring-blue-400 h-14 rounded-2xl px-5 text-sm"
-                    />
-                </div>
-
-                {/* Vendor PIN */}
-                <div className="space-y-4">
-                    <Label className="text-base font-semibold text-slate-700">Vendor Security PIN (4 Digits)</Label>
-                    <div className="relative">
-                        <Input
-                            type="text"
-                            inputMode="numeric"
-                            placeholder="1234"
-                            maxLength={4}
-                            value={formData.redemptionPin || ""}
-                            onChange={(e) => {
-                                const val = e.target.value.replace(/\D/g, '').slice(0, 4);
-                                setFormData({ ...formData, redemptionPin: val });
-                            }}
-                            className="bg-slate-50 border-none ring-0 focus-visible:ring-1 focus-visible:ring-blue-400 h-14 rounded-2xl px-5 text-sm font-mono tracking-[0.5em]"
-                        />
-                    </div>
-                </div>
 
                 {/* Short Description English */}
                 <div className="space-y-4">
@@ -393,24 +355,13 @@ export function BrandingSettings({
                     />
                 </div>
 
-                {/* Short Description Arabic */}
-                <div className="space-y-4 text-right">
-                    <Label className="text-base font-semibold text-slate-700">Short Description (Arabic)</Label>
-                    <Input
-                        placeholder="أفضل قهوة في المدينة"
-                        value={formData.shortDescriptionAr || ""}
-                        onChange={(e) => setFormData({ ...formData, shortDescriptionAr: e.target.value })}
-                        dir="rtl"
-                        className="bg-slate-50 border-none ring-0 focus-visible:ring-1 focus-visible:ring-blue-400 h-14 rounded-2xl px-5 text-sm"
-                    />
-                </div>
 
                 {/* Main Category */}
                 <div className="space-y-4">
                     <Label className="text-base font-semibold text-slate-700">Main Category</Label>
                     <Select
                         value={formData.mainCategory || ""}
-                        onValueChange={(value) => setFormData({ ...formData, mainCategory: value, subcategory: [] })}
+                        onValueChange={(value) => setFormData({ ...formData, mainCategory: value, categoryId: categories.find(cat => cat.nameEnglish === value)?.id, subcategory: [] })}
                     >
                         <SelectTrigger className="w-full bg-slate-50 border-none h-14 rounded-2xl px-5 text-sm">
                             <SelectValue placeholder="Select a category" />
@@ -418,7 +369,7 @@ export function BrandingSettings({
                         <SelectContent>
                             {categories.map((cat) => (
                                 <SelectItem key={cat.id} value={cat.nameEnglish}>
-                                    {cat.nameEnglish} — {cat.nameArabic}
+                                    {cat.nameEnglish}
                                 </SelectItem>
                             ))}
                         </SelectContent>
@@ -446,7 +397,7 @@ export function BrandingSettings({
                                 .filter(sub => !(formData.subcategory || []).includes(sub.nameEnglish))
                                 .map((sub) => (
                                     <SelectItem key={sub.nameEnglish} value={sub.nameEnglish}>
-                                        {sub.nameEnglish} — {sub.nameArabic}
+                                        {sub.nameEnglish}
                                     </SelectItem>
                                 ))}
                         </SelectContent>
@@ -458,7 +409,7 @@ export function BrandingSettings({
                                 return (
                                     <Badge key={sub} variant="secondary" className="px-3 py-1.5 text-sm gap-1.5 rounded-full bg-slate-100 text-slate-700 hover:bg-slate-200">
                                         <Tag className="w-3 h-3" />
-                                        {subData ? `${subData.nameEnglish} — ${subData.nameArabic}` : sub}
+                                        {subData ? subData.nameEnglish : sub}
                                         <button
                                             type="button"
                                             onClick={() => {
@@ -541,94 +492,33 @@ export function BrandingSettings({
 
             </div >
 
-            {/* Vendor Type & Online Redemption */}
+            {/* Vendor visibility */}
             <div className="space-y-6 pt-8 border-t border-slate-100">
-                <div className="space-y-4 max-w-md">
-                    <Label className="text-base font-semibold text-slate-700">Vendor Type</Label>
-                    <Select
-                        value={formData.vendorType || 'in_store'}
-                        onValueChange={(value: 'in_store' | 'online') => setFormData({ ...formData, vendorType: value })}
-                    >
-                        <SelectTrigger className="w-full bg-slate-50 border-none h-14 rounded-2xl px-5 text-sm">
-                            <SelectValue placeholder="Select vendor type" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="in_store">In-store vendor</SelectItem>
-                            <SelectItem value="online">Online vendor</SelectItem>
-                        </SelectContent>
-                    </Select>
-                </div>
-
-                {(formData.vendorType || 'in_store') === 'online' && (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-in fade-in slide-in-from-top-4 duration-300">
-                        {showOnlineBrandOfferFields && (
-                            <>
-                                <div className="space-y-4">
-                                    <Label className="text-sm font-medium text-slate-600 ml-1">Brand Offer Name (English)</Label>
-                                    <Input
-                                        placeholder="20% off your first order"
-                                        value={formData.brandOfferName || ''}
-                                        onChange={(e) => setFormData({ ...formData, brandOfferName: e.target.value })}
-                                        className="bg-slate-50 border-none ring-0 focus-visible:ring-1 focus-visible:ring-blue-400 h-14 rounded-2xl px-5 text-sm"
-                                    />
-                                </div>
-
-                                <div className="space-y-4 text-right">
-                                    <Label className="text-sm font-medium text-slate-600 mr-1">Brand Offer Name (Arabic)</Label>
-                                    <Input
-                                        placeholder="خصم 20% على أول طلب"
-                                        value={formData.brandOfferNameAr || ''}
-                                        onChange={(e) => setFormData({ ...formData, brandOfferNameAr: e.target.value })}
-                                        dir="rtl"
-                                        className="bg-slate-50 border-none ring-0 focus-visible:ring-1 focus-visible:ring-blue-400 h-14 rounded-2xl px-5 text-sm"
-                                    />
-                                </div>
-                            </>
-                        )}
-
-                        <div className="space-y-4">
-                            <Label className="text-sm font-medium text-slate-600 ml-1">Discount Code</Label>
-                            <Input
-                                placeholder="REALX20"
-                                value={onlineConfig.discountCode || ''}
-                                onChange={(e) => setOnlineConfig({ ...onlineConfig, discountCode: e.target.value.toUpperCase() })}
-                                className="bg-slate-50 border-none ring-0 focus-visible:ring-1 focus-visible:ring-blue-400 h-14 rounded-2xl px-5 text-sm font-mono tracking-[0.15em]"
-                            />
-                        </div>
-
-                        <div className="space-y-4">
-                            <Label className="text-sm font-medium text-slate-600 ml-1">Purchase URL</Label>
-                            <Input
-                                placeholder="https://store.example.com"
-                                value={onlineConfig.purchaseUrl || ''}
-                                onChange={(e) => setOnlineConfig({ ...onlineConfig, purchaseUrl: e.target.value })}
-                                className="bg-slate-50 border-none ring-0 focus-visible:ring-1 focus-visible:ring-blue-400 h-14 rounded-2xl px-5 text-sm"
-                            />
-                        </div>
-
-                        <div className="space-y-4">
-                            <Label className="text-sm font-medium text-slate-600 ml-1">Redemptions Per User Per Day</Label>
-                            <Input
-                                type="number"
-                                min={1}
-                                placeholder="1"
-                                value={onlineConfig.dailyLimitPerUser || 1}
-                                onChange={(e) => setOnlineConfig({ ...onlineConfig, dailyLimitPerUser: parseInt(e.target.value, 10) || 1 })}
-                                className="bg-slate-50 border-none ring-0 focus-visible:ring-1 focus-visible:ring-blue-400 h-14 rounded-2xl px-5 text-sm"
-                            />
-                        </div>
+                <div className="grid gap-4 sm:grid-cols-3">
+                    <div className="space-y-2">
+                        <Label htmlFor="vendorStatus">Mobile visibility</Label>
+                        <Select value={formData.status || 'Inactive'} onValueChange={value => setFormData({ ...formData, status: value as 'Active' | 'Inactive' })}>
+                            <SelectTrigger id="vendorStatus"><SelectValue /></SelectTrigger>
+                            <SelectContent><SelectItem value="Active">Active</SelectItem><SelectItem value="Inactive">Inactive</SelectItem></SelectContent>
+                        </Select>
                     </div>
-                )}
-            </div>
-
-            {/* XCard & Loyalty */}
-            <div className="space-y-6 pt-8 border-t border-slate-100">
+                    <div className="space-y-2">
+                        <Label htmlFor="newest">New deals priority</Label>
+                        <Input id="newest" type="number" min="0" step="1" value={formData.newest ?? 0} onChange={e => setFormData({ ...formData, newest: Number(e.target.value) })} />
+                        <p className="text-xs text-muted-foreground">Higher values appear first in New deals.</p>
+                    </div>
+                    <div className="space-y-2">
+                        <Label htmlFor="sortOrder">Catalogue order</Label>
+                        <Input id="sortOrder" type="number" min="0" step="1" value={formData.sortOrder ?? 0} onChange={e => setFormData({ ...formData, sortOrder: Number(e.target.value) })} />
+                        <p className="text-xs text-muted-foreground">Lower values appear first in the catalogue.</p>
+                    </div>
+                </div>
                 <div className="flex items-center space-x-3 bg-slate-50/50 p-4 rounded-2xl border border-slate-100/50">
                     <Checkbox
                         id="isTrending"
                         checked={formData.isTrending || false}
                         onCheckedChange={(checked) => setFormData({ ...formData, isTrending: !!checked })}
-                        className="h-5 w-5 rounded-md border-slate-300 data-[state=checked]:bg-orange-500 data-[state=checked]:border-orange-500"
+                        className="h-5 w-5 rounded-md border-border data-[state=checked]:bg-primary data-[state=checked]:border-primary"
                     />
                     <div className="flex items-center gap-2">
                         <TrendingUp className="w-5 h-5 text-slate-400" />
@@ -637,48 +527,6 @@ export function BrandingSettings({
                         </Label>
                     </div>
                 </div>
-
-                <div className="flex items-center space-x-3 bg-slate-50/50 p-4 rounded-2xl border border-slate-100/50">
-                    <Checkbox
-                        id="xcard"
-                        checked={formData.xcard || false}
-                        onCheckedChange={(checked) => setFormData({ ...formData, xcard: !!checked })}
-                        className="h-5 w-5 rounded-md border-slate-300 data-[state=checked]:bg-blue-500 data-[state=checked]:border-blue-500"
-                    />
-                    <div className="flex items-center gap-2">
-                        <CreditCard className="w-5 h-5 text-slate-400" />
-                        <Label htmlFor="xcard" className="text-base font-semibold text-slate-700 cursor-pointer">
-                            Enable XCard Loyalty Program
-                        </Label>
-                    </div>
-                </div>
-
-                {formData.xcard && (
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 animate-in fade-in slide-in-from-top-4 duration-300">
-                        {["Bronze", "Silver", "Gold"].map((tier, i) => (
-                            <div key={tier} className="space-y-3">
-                                <Label className="text-sm font-medium text-slate-600 ml-1">
-                                    {tier} Tier
-                                </Label>
-                                <div className="relative">
-                                    <Input
-                                        type="number"
-                                        placeholder="0"
-                                        value={formData.loyalty?.[i] ?? ""}
-                                        onChange={(e) => {
-                                            const val = parseInt(e.target.value) || 0
-                                            const loyalty = [formData.loyalty?.[0] ?? 0, formData.loyalty?.[1] ?? 0, formData.loyalty?.[2] ?? 0]
-                                            loyalty[i] = val
-                                            setFormData({ ...formData, loyalty })
-                                        }}
-                                        className="bg-slate-50 border-none ring-0 focus-visible:ring-1 focus-visible:ring-blue-400 h-14 rounded-2xl px-5 pr-14 text-sm"
-                                    />
-                                    <span className="absolute right-5 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">QAR</span>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                )}
             </div>
         </div >
     )

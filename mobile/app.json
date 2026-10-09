@@ -4,7 +4,7 @@
     "slug": "kouponly",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/kouponly-app-icon.png",
+    "icon": "./assets/images/icon.png",
     "scheme": "kouponly",
     "userInterfaceStyle": "automatic",
     "ios": {
@@ -22,30 +22,36 @@
       "package": "com.kouponly.app",
       "adaptiveIcon": {
         "backgroundColor": "#0A0A0A",
-        "foregroundImage": "./assets/kouponly-app-icon.png"
+        "foregroundImage": "./assets/images/android-adaptive-icon.png"
       },
       "predictiveBackGestureEnabled": true,
       "permissions": [
         "android.permission.RECORD_AUDIO"
-      ]
+      ],
+      "config": {
+        "googleMaps": {
+          "apiKey": "AIzaSyAZzzmsBPiXDGSRF3HOGgWXXRQsEurm19I"
+        }
+      }
     },
     "plugins": [
       "expo-router",
-      "expo-sqlite",
-      "expo-web-browser",
+      "expo-notifications",
       [
-        "expo-notifications",
+        "expo-location",
         {
-          "sounds": ["./assets/sound.wav"]
+          "locationWhenInUsePermission": "Kouponly uses your location to show nearby campus partners."
         }
       ],
       [
         "expo-image-picker",
         {
-          "photosPermission": "Kouponly uses your photo library for your profile picture and creator campaign submissions.",
-          "cameraPermission": "Kouponly uses the camera for your profile picture and creator campaign submissions."
+          "photosPermission": "Kouponly uses your photo library to attach your student ID.",
+          "cameraPermission": "Kouponly uses the camera to attach your student ID."
         }
-      ]
+      ],
+      "@react-native-community/datetimepicker",
+      "expo-localization"
     ],
     "experiments": {
       "typedRoutes": true

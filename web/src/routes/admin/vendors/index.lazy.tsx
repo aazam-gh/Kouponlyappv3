@@ -9,7 +9,6 @@ import {
 } from '@/components/ui/table'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Checkbox } from '@/components/ui/checkbox'
 import {
     Select,
     SelectContent,
@@ -17,7 +16,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select'
-import { Search, Upload, Plus, ChevronRight, Loader2, Trash2 } from 'lucide-react'
+import { Search, Plus, ChevronRight, Loader2, Trash2 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import {
     Dialog,
@@ -32,8 +31,7 @@ import { Label } from '@/components/ui/label'
 import { db, functions } from '@/firebase/config'
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query'
 import { httpsCallable } from 'firebase/functions'
-import { doc, setDoc, updateDoc } from 'firebase/firestore'
-import { Switch } from '@/components/ui/switch'
+import { doc, setDoc } from 'firebase/firestore'
 import { fetchVendorsPage } from '@/lib/vendor-directory'
 import type { Vendor } from '@/queries'
 import { refreshVendorList } from '@/lib/vendorList'
@@ -46,7 +44,7 @@ export const Route = createLazyFileRoute('/admin/vendors/')({
 function RouteComponent() {
     const queryClient = useQueryClient()
     const navigate = useNavigate({ from: '/admin/vendors/' })
-    const { page, pageSize, search: searchQuery, sort, xcard: xcardFilter } = useSearch({ from: '/admin/vendors/' })
+    const { page, pageSize, search: searchQuery, sort } = useSearch({ from: '/admin/vendors/' })
     const [searchInput, setSearchInput] = useState(searchQuery)
     const [open, setOpen] = useState(false)
     const [form, setForm] = useState({ name: '', email: '', password: '' })
@@ -58,8 +56,8 @@ function RouteComponent() {
     }, [searchQuery])
 
     const { data = { vendors: [], totalCount: 0 }, isLoading } = useQuery({
-        queryKey: ['vendors-page', 'in_store', { page, pageSize, search: searchQuery, sort, xcard: xcardFilter }],
-        queryFn: () => fetchVendorsPage({ page, pageSize, search: searchQuery, sort, xcard: xcardFilter }, 'in_store'),
+        queryKey: ['vendors-page', 'in_store', { page, pageSize, search: searchQuery, sort }],
+        queryFn: () => fetchVendorsPage({ page, pageSize, search: searchQuery, sort }, 'in_store'),
         staleTime: 1000 * 60 * 5,
     })
 
@@ -88,7 +86,7 @@ function RouteComponent() {
             })
             const dataResult = result.data as { uid: string }
             if (dataResult?.uid) {
-                await setDoc(doc(db, 'vendors', dataResult.uid), { xcard: false, vendorType: 'in_store' }, { merge: true })
+                await setDoc(doc(db, 'vendors', dataResult.uid), { vendorType: 'in_store' }, { merge: true })
             }
             return result.data
         },
@@ -102,18 +100,6 @@ function RouteComponent() {
         onError: (error) => {
             console.error('Error adding vendor: ', error)
             alert('Failed to add vendor: ' + (error instanceof Error ? error.message : 'Unknown error'))
-        }
-    })
-
-    const toggleXCardMutation = useMutation({
-        mutationFn: async ({ vendorId, xcard }: { vendorId: string, xcard: boolean }) => {
-            const vendorRef = doc(db, 'vendors', vendorId)
-            await updateDoc(vendorRef, { xcard })
-        },
-        onSuccess: () => {
-            resetFirestorePaginationCursors('vendors:')
-            queryClient.invalidateQueries({ queryKey: ['vendors-page'] })
-            void refreshVendorList()
         }
     })
 
@@ -155,7 +141,7 @@ function RouteComponent() {
 
     return (
         <div className="p-8 space-y-6 w-full max-w-[1600px] mx-auto">
-            <h1 className="text-3xl font-bold tracking-tight">Vendor Overview</h1>
+            <h1 className="text-2xl font-semibold tracking-tight">Explore & vendors</h1>
 
             {/* Delete Confirmation Dialog */}
             <Dialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
@@ -193,7 +179,8 @@ function RouteComponent() {
                     <div className="relative flex-1">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                         <Input
-                            placeholder="Search by indexed keyword"
+                            aria-label="Search vendors"
+                            placeholder="Search vendor, category or contact"
                             className="pl-9 bg-muted/50 border-none h-10"
                             value={searchInput}
                             onChange={(e) => setSearchInput(e.target.value)}
@@ -210,21 +197,8 @@ function RouteComponent() {
                     >
                         Search
                     </Button>
-                    <Select value={xcardFilter} onValueChange={(v) => updateFilters({ xcard: v })}>
-                        <SelectTrigger className="w-[150px] h-10 bg-muted/50 border-none">
-                            <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="all">All Vendors</SelectItem>
-                            <SelectItem value="enabled">XCard On</SelectItem>
-                            <SelectItem value="disabled">XCard Off</SelectItem>
-                        </SelectContent>
-                    </Select>
                 </div>
                 <div className="flex items-center gap-2 w-full sm:w-auto">
-                    <Button variant="outline" className="gap-2 h-10">
-                        Export <Upload className="h-4 w-4" />
-                    </Button>
                     <Dialog open={open} onOpenChange={setOpen}>
                         <DialogTrigger asChild>
                             <Button className="bg-brand-green hover:bg-brand-green/90 text-white gap-2 h-10">
@@ -303,29 +277,28 @@ function RouteComponent() {
             </div>
 
             {/* Results info */}
-            {(searchQuery || xcardFilter !== 'all') && (
+            {searchQuery && (
                 <p className="text-sm text-muted-foreground">
                     {totalVendors} result{totalVendors !== 1 ? 's' : ''} found
                 </p>
             )}
 
-            <div className="rounded-md bg-white">
+            <div className="overflow-x-auto rounded-2xl border bg-card">
                 <Table>
                     <TableHeader>
                         <TableRow className="hover:bg-transparent border-none">
-                            <TableHead className="w-12">
-                                <Checkbox />
-                            </TableHead>
                             <TableHead className="text-black font-bold text-base">Brand Name</TableHead>
-                            <TableHead className="text-black font-bold text-base">Contact Info</TableHead>
-                            <TableHead className="text-black font-bold text-base">XCard</TableHead>
+                            <TableHead>Category & subcategories</TableHead>
+                            <TableHead>Mobile status</TableHead>
+                            <TableHead>Offers / branches</TableHead>
+                            <TableHead>Contact</TableHead>
                             <TableHead className="text-black font-bold text-base text-right pr-8">Actions:</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
                         {loading ? (
                             <TableRow>
-                                <TableCell colSpan={5} className="text-center py-10">
+                                <TableCell colSpan={6} className="text-center py-10">
                                     <div className="flex flex-col items-center gap-2">
                                         <div className="h-8 w-8 animate-spin rounded-full border-4 border-brand-green border-t-transparent" />
                                         <p className="text-muted-foreground font-medium">Loading vendors...</p>
@@ -334,8 +307,8 @@ function RouteComponent() {
                             </TableRow>
                         ) : vendorList.length === 0 ? (
                             <TableRow>
-                                <TableCell colSpan={5} className="text-center py-10 text-muted-foreground">
-                                    {searchQuery || xcardFilter !== 'all'
+                                <TableCell colSpan={6} className="text-center py-10 text-muted-foreground">
+                                    {searchQuery
                                         ? 'No vendors match your filters.'
                                         : 'No vendors found.'}
                                 </TableCell>
@@ -343,9 +316,6 @@ function RouteComponent() {
                         ) : (
                             vendorList.map((vendor: Vendor) => (
                                 <TableRow key={vendor.id} className="h-16 border-b border-gray-100 hover:bg-gray-50/50">
-                                    <TableCell>
-                                        <Checkbox />
-                                    </TableCell>
                                     <TableCell>
                                         <div className="flex items-center gap-3">
                                             {vendor.profilePicture ? (
@@ -358,14 +328,10 @@ function RouteComponent() {
                                             <span className="font-medium text-base">{vendor.name || 'Vendor'}</span>
                                         </div>
                                     </TableCell>
+                                    <TableCell><p>{vendor.mainCategory || 'Not assigned'}</p><p className="text-xs text-muted-foreground">{vendor.subcategory?.join(', ') || 'No subcategories'}</p></TableCell>
+                                    <TableCell>{vendor.status || 'Unknown'}</TableCell>
+                                    <TableCell>{vendor.offers?.length ?? 0} offers / {vendor.locations?.length ?? 0} branches</TableCell>
                                     <TableCell className="font-medium text-gray-900">{vendor.contact}</TableCell>
-                                    <TableCell className="font-medium text-gray-900">
-                                        <Switch
-                                            checked={vendor.xcard}
-                                            onCheckedChange={(checked) => toggleXCardMutation.mutate({ vendorId: vendor.id, xcard: checked })}
-                                            disabled={toggleXCardMutation.isPending}
-                                        />
-                                    </TableCell>
                                     <TableCell className="text-right">
                                         <div className="flex items-center justify-end gap-2">
                                             <Link to="/admin/vendors/$vendorId/settings" params={{ vendorId: vendor.id }}>
@@ -377,6 +343,7 @@ function RouteComponent() {
                                                 variant="ghost"
                                                 size="icon"
                                                 className="h-8 w-8 text-muted-foreground hover:text-destructive transition-colors"
+                                                aria-label={`Delete ${vendor.name || 'vendor'}`}
                                                 onClick={() => handleDeleteVendor(vendor)}
                                             >
                                                 <Trash2 className="h-4 w-4" />

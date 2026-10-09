@@ -5,6 +5,7 @@ import { RouterProvider, createRouter } from '@tanstack/react-router'
 import { routeTree } from './routeTree.gen'
 import { AuthContextProvider, useAuth } from './auth'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { capturePageView } from './analytics'
 
 import './styles.css'
 
@@ -20,6 +21,7 @@ const router = createRouter({
     queryClient: queryClient,
   },
 })
+router.subscribe('onResolved', () => capturePageView(router.state.matches.at(-1)?.routeId ?? '/'))
 
 // Register things for typesafety
 declare module '@tanstack/react-router' {
@@ -53,7 +55,7 @@ function App() {
   )
 }
 
-const rootElement = document.getElementById('app')!
+const rootElement = document.getElementById('root')!
 
 if (!rootElement.innerHTML) {
   const root = ReactDOM.createRoot(rootElement)

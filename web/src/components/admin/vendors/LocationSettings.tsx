@@ -24,7 +24,6 @@ const readLocations = (vendor: Vendor): VendorLocation[] => {
     return [{
         id: 'primary',
         address: vendor.address,
-        addressAr: vendor.addressAr,
         latitude: vendor.latitude,
         longitude: vendor.longitude,
         geohash: vendor.geohash,
@@ -47,7 +46,6 @@ const syncPrimaryLocation = (vendor: Vendor, locations: VendorLocation[]): Vendo
         lat: primary?.latitude,
         lng: primary?.longitude,
         address: primary?.address,
-        addressAr: primary?.addressAr,
         geohash: primary?.geohash,
     }
 }
@@ -75,10 +73,8 @@ export function LocationSettings({ formData, setFormData }: LocationSettingsProp
             {
                 id: newLocationId(),
                 name: '',
-                nameAr: '',
                 phoneNumber: '',
                 address: '',
-                addressAr: '',
                 isPrimary: false,
             },
         ])
@@ -103,7 +99,7 @@ export function LocationSettings({ formData, setFormData }: LocationSettingsProp
     return (
         <div className="space-y-8">
             <div className="rounded-lg border border-blue-100 bg-blue-50/70 px-5 py-4 text-sm text-blue-800">
-                Add one row per branch. The primary branch also syncs <span className="font-mono">latitude/longitude</span> and <span className="font-mono">lat/lng</span> for existing mobile screens.
+                Add one row per branch and enter its latitude and longitude so Kouponly can include it in the mobile “Offers near you” feed. The primary branch also syncs <span className="font-mono">latitude/longitude</span> and <span className="font-mono">lat/lng</span> for existing mobile screens.
             </div>
 
             <div className="space-y-6">
@@ -152,16 +148,6 @@ export function LocationSettings({ formData, setFormData }: LocationSettingsProp
                                     />
                                 </div>
 
-                                <div className="space-y-3 text-right">
-                                    <Label className="text-sm font-semibold text-slate-700">Branch Name (Arabic)</Label>
-                                    <Input
-                                        placeholder="فيلاجيو"
-                                        value={location.nameAr || ""}
-                                        onChange={(event) => updateLocation(location.id, { nameAr: event.target.value })}
-                                        dir="rtl"
-                                        className="h-12 rounded-lg border-none bg-slate-50 px-4 text-sm ring-0 focus-visible:ring-1 focus-visible:ring-blue-400"
-                                    />
-                                </div>
 
                                 <div className="space-y-3 md:col-span-2">
                                     <Label className="text-sm font-semibold text-slate-700">Branch Phone Number</Label>
@@ -214,16 +200,6 @@ export function LocationSettings({ formData, setFormData }: LocationSettingsProp
                                     />
                                 </div>
 
-                                <div className="space-y-3 text-right">
-                                    <Label className="text-sm font-semibold text-slate-700">Address (Arabic)</Label>
-                                    <Input
-                                        placeholder="فيلاجيو مول، الطابق الثاني"
-                                        value={location.addressAr || ""}
-                                        onChange={(event) => updateLocation(location.id, { addressAr: event.target.value })}
-                                        dir="rtl"
-                                        className="h-12 rounded-lg border-none bg-slate-50 px-4 text-sm ring-0 focus-visible:ring-1 focus-visible:ring-blue-400"
-                                    />
-                                </div>
 
                                 <div className="space-y-3 md:col-span-2">
                                     <Label className="text-sm font-semibold text-slate-700">Geohash</Label>

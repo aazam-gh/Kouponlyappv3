@@ -1,6 +1,5 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from "react";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import { AccessibilityInfo, Platform, Pressable, Text, TextInput, useColorScheme } from "react-native";
+import { AccessibilityInfo, Platform, Pressable, Text, TextInput } from "react-native";
 
 export type ThemeMode = "light" | "dark";
 export type ThemePreference = ThemeMode | "system";
@@ -43,19 +42,19 @@ export interface Theme {
 }
 
 const light: ThemeColors = {
-  ink: "#0A0A0A", inkOnAccent: "#0A0A0A", blackSoft: "#202020", lime: "#B7F52B",
-  paper: "#FAFAFA", elevated: "#FFFFFF", card: "#FFFFFF", muted: "#59595F",
-  line: "rgba(10,10,10,0.12)", soft: "#F0F0F2", success: "#08784F", danger: "#B42318",
+  ink: "#0A0F0C", inkOnAccent: "#0A0F0C", blackSoft: "#202020", lime: "#18B852",
+  paper: "#FFFFFF", elevated: "#FFFFFF", card: "#FFFFFF", muted: "#5F6861",
+  line: "#E2E8E1", soft: "#F1F4EF", success: "#08784F", danger: "#B42318",
   onDark: "#FFFFFF", onDarkMuted: "#D0D0D4", backdrop: "rgba(0,0,0,0.52)",
-  glass: "rgba(255,255,255,0.48)", glassSolid: "#F7F7F8", input: "#FFFFFF",
+  glass: "rgba(255,255,255,0.48)", glassSolid: "#F7F8F6", input: "#FFFFFF",
 };
 
 const dark: ThemeColors = {
-  ink: "#F5F5F7", inkOnAccent: "#080808", blackSoft: "#E4E4E7", lime: "#B7F52B",
-  paper: "#000000", elevated: "#1C1C1E", card: "#1C1C1E", muted: "#B8B8BE",
-  line: "rgba(255,255,255,0.16)", soft: "#2C2C2E", success: "#52D69A", danger: "#FF6961",
+  ink: "#F4F8F3", inkOnAccent: "#080808", blackSoft: "#E4E4E7", lime: "#18B852",
+  paper: "#0B0F0D", elevated: "#171C19", card: "#141916", muted: "#C8D0C8",
+  line: "#29322D", soft: "#1E2420", success: "#52D69A", danger: "#FF6961",
   onDark: "#FFFFFF", onDarkMuted: "#D0D0D4", backdrop: "rgba(0,0,0,0.68)",
-  glass: "rgba(28,28,30,0.54)", glassSolid: "#242426", input: "#1C1C1E",
+  glass: "rgba(17,21,19,0.54)", glassSolid: "#171C19", input: "#141916",
 };
 
 function withContrast(colors: ThemeColors, mode: ThemeMode): ThemeColors {
@@ -72,35 +71,12 @@ const fallback: Theme = {
 
 const ThemeContext = createContext<Theme>(fallback);
 let activeThemeColors: ThemeColors = light;
-// Versioned so devices that previously stored "system" receive the product's
-// light default once, without disturbing the user's other app data.
-const THEME_STORAGE_KEY = "kouponly.theme-preference-v2";
-
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const system = useColorScheme();
-  // Keep the product's light visual language consistent across devices until
-  // someone explicitly chooses another appearance in Settings.
-  const [preference, setPreference] = useState<ThemePreference>("light");
-  const [hydrated, setHydrated] = useState(false);
+  const preference: ThemePreference = "light";
   const [reduceMotion, setReduceMotion] = useState(false);
   const [reduceTransparency, setReduceTransparency] = useState(false);
   const [highContrast, setHighContrast] = useState(false);
   const [boldText, setBoldText] = useState(false);
-
-  useEffect(() => {
-    let mounted = true;
-    void AsyncStorage.getItem(THEME_STORAGE_KEY).then((value) => {
-      if (!mounted) return;
-      if (value === "light" || value === "dark" || value === "system") setPreference(value);
-      setHydrated(true);
-    }).catch(() => setHydrated(true));
-    return () => { mounted = false; };
-  }, []);
-
-  useEffect(() => {
-    if (!hydrated) return;
-    void AsyncStorage.setItem(THEME_STORAGE_KEY, preference);
-  }, [hydrated, preference]);
 
   useEffect(() => {
     AccessibilityInfo.isReduceMotionEnabled().then(setReduceMotion);
@@ -123,24 +99,20 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const value = useMemo<Theme>(() => {
-    const mode: ThemeMode = preference === "system" ? (system === "dark" ? "dark" : "light") : preference;
-    const base = mode === "dark" ? dark : light;
-    const colors = highContrast ? withContrast(base, mode) : base;
+    const mode: ThemeMode = "light";
+    const base = light;
+    const colors = highContrast ? withContrast(base, "light") : base;
     return {
       mode,
       preference,
-      dark: mode === "dark",
+      dark: false,
       highContrast,
       boldText,
       colors,
       motion: { reduceMotion, reduceTransparency },
-      setPreference: (next) => {
-        const nextMode: ThemeMode = next === "system" ? (system === "dark" ? "dark" : "light") : next;
-        activeThemeColors = highContrast ? withContrast(nextMode === "dark" ? dark : light, nextMode) : (nextMode === "dark" ? dark : light);
-        setPreference(next);
-      },
+      setPreference: () => undefined,
     };
-  }, [system, preference, highContrast, boldText, reduceMotion, reduceTransparency]);
+  }, [highContrast, boldText, reduceMotion, reduceTransparency]);
 
   useEffect(() => {
     activeThemeColors = value.colors;
@@ -193,16 +165,16 @@ export const C: ThemeColors = new Proxy({ ...light }, {
 }) as ThemeColors;
 
 // Ensure legacy screen copy follows appearance even before every Text node adopts AppText.
-(Text as any).defaultProps = { ...(Text as any).defaultProps, allowFontScaling: true, maxFontSizeMultiplier: 2.4, style: [{ color: C.ink }, (Text as any).defaultProps?.style] };
-(TextInput as any).defaultProps = { ...(TextInput as any).defaultProps, allowFontScaling: true, maxFontSizeMultiplier: 2.4, style: [{ color: C.ink }, (TextInput as any).defaultProps?.style] };
+(Text as any).defaultProps = { ...(Text as any).defaultProps, allowFontScaling: true, maxFontSizeMultiplier: 2.4, style: [{ color: C.ink, fontFamily: "Poppins" }, (Text as any).defaultProps?.style] };
+(TextInput as any).defaultProps = { ...(TextInput as any).defaultProps, allowFontScaling: true, maxFontSizeMultiplier: 2.4, style: [{ color: C.ink, fontFamily: "Poppins" }, (TextInput as any).defaultProps?.style] };
 (Pressable as any).defaultProps = { ...(Pressable as any).defaultProps, accessibilityRole: "button", hitSlop: 4 };
 
 export const F = {
-  heading: "BricolageGrotesque_700Bold",
-  headingSemi: "BricolageGrotesque_600SemiBold",
-  body: "Manrope_500Medium",
-  bodySemi: "Manrope_600SemiBold",
-  bodyBold: "Manrope_800ExtraBold",
+  heading: "PoppinsBold",
+  headingSemi: "PoppinsBold",
+  body: "Poppins",
+  bodySemi: "PoppinsBold",
+  bodyBold: "PoppinsBold",
 } as const;
 
 export type TypographyVariant = "largeTitle" | "title" | "headline" | "body" | "callout" | "caption" | "eyebrow";

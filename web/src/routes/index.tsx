@@ -8,9 +8,6 @@ export const Route = createFileRoute('/')({
     if (context.auth.isAdmin) {
       throw redirect({ to: '/admin/dashboard' })
     }
-    if (context.auth.isHoldingAccount) {
-      throw redirect({ to: '/holding/dashboard' })
-    }
     throw redirect({ to: '/dashboard' })
   },
 })

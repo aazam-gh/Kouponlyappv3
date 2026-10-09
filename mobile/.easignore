@@ -1,0 +1,9 @@
+node_modules/
+.expo/
+dist/
+coverage/
+*.log
+.env.local
+.env.*.local
+expo-env.d.ts
+package-lock.json

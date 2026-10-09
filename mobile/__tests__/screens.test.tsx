@@ -1,30 +1,83 @@
-import React from "react";
-import { cleanup, fireEvent, render, waitFor } from "@testing-library/react-native";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import { SafeAreaProvider } from "react-native-safe-area-context";
-import { StoreProvider } from "../lib/store";
-import SearchScreen from "../app/(tabs)/search";
-import HomeScreen from "../app/(tabs)/index";
-import SavedScreen from "../app/(tabs)/saved";
-import WorkScreen from "../app/work";
-import RewardsScreen from "../app/rewards";
-import { RedemptionSheet } from "../components/RedemptionSheet";
+import React from 'react';
+import { QueryClientProvider } from '@tanstack/react-query';
+import { AppThemeProvider } from '../context/AppThemeContext';
+import { LocaleProvider } from '../context/LocaleContext';
+import { queryClient } from '../utils/queryClient';
+import { TabBarVisibilityProvider } from '../components/TabBarScrollVisibility';
+import { cleanup, fireEvent, render, waitFor } from '@testing-library/react-native';
+import { Alert } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { StoreProvider } from '../lib/store';
+import VendorSearchScreen from '../app/realx/search';
+import HomeScreen from '../app/(tabs)/index';
+import SavedScreen from '../app/saved';
+import WorkScreen from '../app/work';
+import { router } from 'expo-router';
+import { loadFixture, clearFixture } from '../test/catalogue-fixture';
+import { CatalogueProvider } from '../lib/catalogue';
+import { NearbyProvider } from '../lib/nearby';
+import { RedemptionSheet } from '../components/RedemptionSheet';
+import * as couponlyBackend from '../lib/couponlyBackend';
+import { getPendingVerification, savePendingVerification } from '../lib/verification-pending';
 
-const frame={x:0,y:0,width:393,height:852};
-const wrapper=(node:React.ReactNode)=>render(<SafeAreaProvider initialMetrics={{frame,insets:{top:59,left:0,right:0,bottom:34}}}><StoreProvider>{node}</StoreProvider></SafeAreaProvider>);
-afterEach(async()=>{cleanup();await AsyncStorage.clear()});
+jest.mock('posthog-react-native', () => ({usePostHog: () => ({capture: jest.fn()})}));
 
-describe("major mobile screen states",()=>{
-  it("renders and filters the complete search catalogue",async()=>{const view=await wrapper(<SearchScreen/>);expect(view.getByText("150 things to explore")).toBeTruthy();await fireEvent.changeText(view.getByTestId("search-input"),"Cinepolis");expect(view.getByText("Cinepolis")).toBeTruthy();await fireEvent.press(view.getByTestId("sort-button"));expect(view.getByText("Nearest")).toBeTruthy()});
-  it("uses the Starbucks artwork in the Use it again tile",async()=>{const view=await wrapper(<HomeScreen/>);const image=view.getByTestId("use-again-starbucks-image");expect(image.props.source.uri).toBeTruthy();expect(view.getByTestId("use-again-starbucks")).toBeTruthy()});
-  it("uses catalog artwork for popular partners",async()=>{const view=await wrapper(<HomeScreen/>);expect(view.getByTestId("popular-partner-image-1").props.source.uri).toBeTruthy();expect(view.getByTestId("popular-partner-image-2").props.source.uri).toBeTruthy()});
-  it("uses catalog artwork in Browse categories",async()=>{const view=await wrapper(<HomeScreen/>);expect(view.getByTestId("category-image-mains").props.source.uri).toBeTruthy();expect(view.getByTestId("category-image-snacks").props.source.uri).toBeTruthy()});
-  it("renders saved places, offers, and used segments",async()=>{const view=await wrapper(<SavedScreen/>);expect(view.getByText("Starbucks")).toBeTruthy();await fireEvent.press(view.getByTestId("saved-Offers"));expect(view.getByText("No saved offers yet")).toBeTruthy();await fireEvent.press(view.getByTestId("saved-Used"));expect(view.getByText("No used offers yet")).toBeTruthy()});
-  it("renders creator campaign and application states",async()=>{const view=await wrapper(<WorkScreen/>);expect(view.getByText("YOU’RE AN APPROVED CREATOR")).toBeTruthy();await fireEvent.press(view.getByTestId("campaign-paragon-reel"));expect(view.getByText("PARAGON · CREATOR BRIEF")).toBeTruthy();expect(view.getByTestId("apply-campaign")).toBeTruthy()});
-  it("renders the full Grow landing paths and opportunity actions",async()=>{const view=await wrapper(<HomeScreen/>);await fireEvent.press(view.getByText("Grow"));expect(view.getByText("Your talent. Real briefs. Real experience.")).toBeTruthy();expect(view.getByText("Jobs")).toBeTruthy();await fireEvent.press(view.getByTestId("grow-open-paths"));expect(view.getByTestId("grow-paths")).toBeTruthy();expect(view.getByText("Pick your Kouponly path")).toBeTruthy();expect(view.getByTestId("grow-path-creator")).toBeTruthy();expect(view.getByTestId("grow-opportunity-freelance")).toBeTruthy();expect(view.getByTestId("grow-profile-cta")).toBeTruthy();expect(view.getByLabelText("Opportunity profile 62 percent complete")).toBeTruthy()});
-  it("renders creator earnings, payout steps, and every website campaign",async()=>{const view=await wrapper(<WorkScreen/>);expect(view.getByTestId("creator-earnings")).toBeTruthy();expect(view.getByText("How creator work gets paid")).toBeTruthy();expect(view.getByText("Pick & apply")).toBeTruthy();expect(view.getByText("Create a beauty unboxing")).toBeTruthy();expect(view.getByText("Capture a pool-day story")).toBeTruthy();await fireEvent.press(view.getByTestId("track-bd"));expect(view.getByText("BD & Sales Internship")).toBeTruthy();await fireEvent.press(view.getByTestId("interest-bd"));expect(view.getByText("WHY ARE YOU INTERESTED?")).toBeTruthy();expect(view.getByTestId("submit-interest").props.accessibilityState.disabled).toBe(true)});
-  it("renders every work track destination",async()=>{const view=await wrapper(<WorkScreen/>);for(const [id,title] of [["bd","BD & Sales Internship"],["marketing","Marketing Internship"],["campus","Campus Ambassador"]] as const){await fireEvent.press(view.getByTestId(`track-${id}`));expect(view.getByText(title)).toBeTruthy();expect(view.getByTestId(`interest-${id}`)).toBeTruthy()}});
-  it("renders reward progress and unavailable reward states",async()=>{const view=await wrapper(<RewardsScreen/>);expect(view.getByText("Use 3 Kouponly discounts")).toBeTruthy();expect(view.getByText("220 POINTS SHORT")).toBeTruthy();expect(view.getByText("More ways to earn points")).toBeTruthy()});
-  it("runs the guest online redemption flow",async()=>{const view=await wrapper(<RedemptionSheet visible id="deal-10-0" title="Westside · Member price" mode="online" externalUrl="https://www.westside.com/" onClose={jest.fn()}/>);await waitFor(()=>expect(view.getByTestId("reveal-code")).toBeTruthy());await fireEvent.press(view.getByTestId("reveal-code"));await waitFor(()=>expect(view.getByTestId("active-code")).toBeTruthy());expect(view.getByText(/Complete it in/)).toBeTruthy();expect(view.getByText("Open partner website")).toBeTruthy()});
-  it("keeps physical vendors on partner PIN redemption",async()=>{const view=await wrapper(<RedemptionSheet visible id="deal-1-0" title="Paragon · Member price" mode="inStore" onClose={jest.fn()}/>);await waitFor(()=>expect(view.getByTestId("partner-pin")).toBeTruthy());await fireEvent.changeText(view.getByTestId("partner-pin"),"0000");await fireEvent.press(view.getByTestId("verify-pin"));await waitFor(()=>expect(view.getByText("Partner PIN accepted")).toBeTruthy())});
+jest.mock('../lib/backend',()=>({...jest.requireActual('../lib/backend'),fetchCloudCatalogue:jest.fn(async()=>({...jest.requireActual('../test/catalogue-fixture').fixture(),heroSlides:[],rewards:[],source:'cloud',updatedAt:0})),subscribeToCatalogue:()=>({unsubscribe:jest.fn()})}));
+jest.mock('expo-location',()=>({getForegroundPermissionsAsync:jest.fn(async()=>({status:'denied',canAskAgain:false}))}));
+beforeEach(loadFixture);
+const frame = { x: 0, y: 0, width: 393, height: 852 };
+const wrapper = (node: React.ReactNode) => render(<SafeAreaProvider initialMetrics={{ frame, insets: { top: 59, left: 0, right: 0, bottom: 34 } }}><AppThemeProvider><LocaleProvider><TabBarVisibilityProvider><QueryClientProvider client={queryClient}><CatalogueProvider><NearbyProvider><StoreProvider>{node}</StoreProvider></NearbyProvider></CatalogueProvider></QueryClientProvider></TabBarVisibilityProvider></LocaleProvider></AppThemeProvider></SafeAreaProvider>);
+afterEach(async () => { cleanup(); queryClient.clear(); clearFixture(); await AsyncStorage.clear(); });
+
+describe('mobile showcase states', () => {
+  it('submits the home search query on Enter', async () => {
+    const view = await wrapper(<HomeScreen />);
+    expect(view.getByTestId('home-search')).toBeTruthy();
+    await fireEvent.changeText(view.getByTestId('home-search'), '  lunch  ');
+    await fireEvent(view.getByTestId('home-search'),'submitEditing');
+    expect(router.push).toHaveBeenCalledWith({pathname:'/realx/search',params:{q:'lunch'}});
+  });
+  it('uses the source image-card search results and popular recommendations', async () => {
+    const view = await wrapper(<VendorSearchScreen />);
+    const input = view.getByTestId('vendor-search-input');
+    await fireEvent.changeText(input, 'Rice');
+    await fireEvent(input, 'submitEditing');
+    expect(view.getByLabelText('Test Kitchen')).toBeTruthy();
+    await fireEvent.changeText(input, 'no matching partner');
+    await fireEvent(input, 'submitEditing');
+    await waitFor(() => expect(view.getByText('Popular offers for you')).toBeTruthy());
+    expect(view.getByLabelText('Test Kitchen')).toBeTruthy();
+  });
+  it('shows database main categories on Home', async () => {
+    const view = await wrapper(<HomeScreen />);
+    await waitFor(() => expect(view.getByLabelText('Food')).toBeTruthy());
+    expect(view.getByLabelText('Stays')).toBeTruthy();
+  });
+  it('shows and opens the pending verification banner from stored Supabase request state', async () => {
+    jest.spyOn(couponlyBackend, 'getCouponlyVerificationStatus').mockResolvedValue({ status: 'pending', requestId: 'request-1', rejectionReason: null, role: 'student' });
+    await savePendingVerification({ email: 'student@example.edu', role: 'student', requestId: 'request-1', statusToken: 'status-token' });
+    expect(await getPendingVerification()).toMatchObject({ requestId: 'request-1' });
+    const view = await wrapper(<HomeScreen />);
+    await waitFor(() => expect(view.getByText('Verification in Progress')).toBeTruthy());
+    await fireEvent.press(view.getByText('Verification in Progress'));
+    expect(router.push).toHaveBeenCalledWith({ pathname: '/realx/onboarding', params: { flow: 'verification', step: 'status', requestId: 'request-1', statusToken: 'status-token' } });
+  });
+  it('uses the source guest auth prompt for saved offers', async () => {
+    const alert = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+    await wrapper(<SavedScreen />);
+    await waitFor(() => expect(router.replace).toHaveBeenCalledWith('/realx/profile'));
+    expect(alert).toHaveBeenCalledWith('Create an account to continue', 'Log in or sign up to view saved offers.', expect.any(Array));
+    alert.mockRestore();
+  });
+  it('routes the legacy work link to the source Explore map', async () => {
+    await wrapper(<WorkScreen />);
+    await waitFor(() => expect(router.replace).toHaveBeenCalledWith('/realx/map'));
+  });
+  it.each(['online','inStore'] as const)('requires sign-in for %s redemption', async (mode) => {
+    const view = await wrapper(<RedemptionSheet visible id="deal-101-1" title="Test Kitchen" mode={mode} onClose={jest.fn()}/>);
+    await waitFor(()=>expect(view.getByText('Sign in to redeem')).toBeTruthy());
+    expect(view.queryByTestId('confirm-redemption')).toBeNull();
+    expect(view.queryByPlaceholderText(/PIN/)).toBeNull();
+  });
 });

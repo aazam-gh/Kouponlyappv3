@@ -1,8 +1,6 @@
 import { BlurView } from "expo-blur";
 import { GlassView, isGlassEffectAPIAvailable, isLiquidGlassAvailable } from "expo-glass-effect";
 import * as Haptics from "expo-haptics";
-import { SymbolView } from "expo-symbols";
-import type { SFSymbol } from "sf-symbols-typescript";
 import { router } from "expo-router";
 import { ArrowLeft, ChevronRight, Heart, MapPin, Star } from "lucide-react-native";
 import React, { useEffect, useMemo } from "react";
@@ -11,6 +9,10 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import type { Deal, DirectoryItem } from "@/lib/data";
 import { F,layout,shadow,typography,type ThemeColors,type TypographyVariant,useAppTheme } from "@/lib/theme";
 import { useStore } from "@/lib/store";
+import { useAppLocale } from "@/context/LocaleContext";
+import { formatKouponlyCurrencyText } from "@/utils/numbers";
+import AppIcon from './AppIcon';
+export { AppIcon };
 
 type GlassRole="navigation"|"control";
 export function GlassSurface({children,style,intensity=64,interactive=false,role="navigation",forceFallback}:{children:React.ReactNode;style?:StyleProp<ViewStyle>;intensity?:number;interactive?:boolean;role?:GlassRole;forceFallback?:"blur"|"solid"}) {
@@ -25,7 +27,6 @@ type AppTextProps=TextProps&{variant?:TypographyVariant;color?:keyof ThemeColors
 const ramps:Record<TypographyVariant,TextProps["dynamicTypeRamp"]>={largeTitle:"largeTitle",title:"title1",headline:"headline",body:"body",callout:"callout",caption:"caption1",eyebrow:"caption2"};
 export function AppText({variant="body",color="ink",style,children,...props}:AppTextProps){const {colors}=useAppTheme();return <Text {...props} allowFontScaling dynamicTypeRamp={ramps[variant]} maxFontSizeMultiplier={2.4} style={[typography[variant],{color:colors[color]},style]}>{children}</Text>}
 
-export function AppIcon({sf,fallback,size=22,color}:{sf:SFSymbol;fallback:React.ReactNode;size?:number;color?:string}){const {colors}=useAppTheme();if(Platform.OS!=="ios")return <>{fallback}</>;return <SymbolView name={sf} size={size} tintColor={color??colors.ink} weight="semibold" fallback={fallback}/>}
 export function safeGoBack(fallback: string = "/") { if (router.canGoBack()) router.back(); else router.replace(fallback as any); }
 
 type HapticKind="selection"|"light"|"success"|"warning"|"error"|"none";
@@ -41,12 +42,8 @@ export function AccessiblePressable({style,onPress,haptic="light",accessibilityR
 
 export function Screen({children,scroll=true,style,testID,includeTopInset=false}:{children:React.ReactNode;scroll?:boolean;style?:StyleProp<ViewStyle>;testID?:string;includeTopInset?:boolean}) {
   const insets=useSafeAreaInsets(); const {width}=useWindowDimensions(); const {colors:C}=useAppTheme();
-  // iOS ScrollView applies the top safe-area inset automatically. Only fixed
-  // screens need the inset here; adding it to scrollable screens creates a
-  // duplicate blank band above the header.
-  // Scrollable iOS screens receive the status-bar inset from the ScrollView;
-  // only fixed layouts need manual top padding. This prevents stacked insets
-  // from creating a blank band above account and support headers.
+  // Scrollable iOS screens receive the top safe-area inset from the ScrollView.
+  // Applying it here as well creates a blank band above the screen title.
   const topPadding=!scroll||Platform.OS!=="ios"?insets.top:0;
   // Native iOS tabs float above the content and their bottom safe-area inset
   // differs between iPhone generations. Keep the final content reachable
@@ -57,9 +54,9 @@ export function Screen({children,scroll=true,style,testID,includeTopInset=false}
   return scroll ? <ScrollView style={{flex:1,backgroundColor:C.paper}} contentInsetAdjustmentBehavior="automatic" contentContainerStyle={{paddingBottom:bottomPadding,paddingHorizontal:width>layout.maxWidth?gutter:0}} showsVerticalScrollIndicator={false} scrollIndicatorInsets={{bottom:bottomPadding}} keyboardShouldPersistTaps="handled" automaticallyAdjustKeyboardInsets>{content}</ScrollView> : <View style={{flex:1,backgroundColor:C.paper}}>{content}</View>;
 }
 
-export function AppHeader({eyebrow,title,back,right}:{eyebrow?:string;title:string;back?:boolean;right?:React.ReactNode}) {
+export function AppHeader({eyebrow,title,back,right,titleStyle}:{eyebrow?:string;title:string;back?:boolean;right?:React.ReactNode;titleStyle?:TextStyle}) {
   const theme=useAppTheme(); const {colors:C}=theme; const styles=useMemo(()=>makeStyles(C),[theme.mode,theme.highContrast]);
-  return <GlassSurface style={[styles.header,theme.dark&&{backgroundColor:C.elevated}]} forceFallback={theme.dark?"solid":undefined} intensity={70}>{back?<AccessiblePressable accessibilityLabel="Go back" accessibilityHint="Returns to the previous screen" onPress={()=>safeGoBack()} style={styles.iconButton}><AppIcon sf="chevron.left" fallback={<ArrowLeft size={21} color={C.ink}/>}/></AccessiblePressable>:null}<View style={styles.headerCopy}>{eyebrow?<AppText variant="eyebrow">{eyebrow}</AppText>:null}<AppText accessibilityRole="header" variant="largeTitle" style={styles.headerTitle}>{title}</AppText></View>{right??<View style={{width:44}}/>}</GlassSurface>;
+  return <View style={styles.header}>{back?<AccessiblePressable accessibilityLabel="Go back" accessibilityHint="Returns to the previous screen" onPress={()=>safeGoBack()} style={styles.iconButton}><AppIcon sf="chevron.left" fallback={<ArrowLeft size={21} color={C.ink}/>}/></AccessiblePressable>:null}<View style={styles.headerCopy}>{eyebrow?<AppText variant="eyebrow" color="muted">{eyebrow}</AppText>:null}<AppText accessibilityRole="header" variant="largeTitle" style={[styles.headerTitle,titleStyle]}>{title}</AppText></View>{right??<View style={{width:44}}/>}</View>;
 }
 
 export function SectionTitle({eyebrow,title,action,onAction}:{eyebrow:string;title:string;action?:string;onAction?:()=>void}) {
@@ -67,12 +64,24 @@ export function SectionTitle({eyebrow,title,action,onAction}:{eyebrow:string;tit
   return <View style={styles.sectionTitle}><View style={{flexShrink:1}}><AppText variant="eyebrow">{eyebrow}</AppText><AppText accessibilityRole="header" variant="title" style={styles.sectionHeading}>{title}</AppText></View>{action?<AccessiblePressable accessibilityLabel={action} haptic="selection" onPress={onAction} style={styles.sectionActionButton}><AppText variant="caption" style={styles.sectionAction}>{action}</AppText></AccessiblePressable>:null}</View>;
 }
 
-export function DealCard({deal,compact=false}:{deal:Deal;compact?:boolean}) {
-  const {state,toggleSaved,notify}=useStore(); const theme=useAppTheme(); const {colors:C}=theme; const styles=useMemo(()=>makeStyles(C),[theme.mode,theme.highContrast]); const saved=state.saved.includes(deal.id);
-  return <View style={[styles.dealCard,compact&&styles.dealCompact]}>
-    <AccessiblePressable testID={`deal-${deal.id}`} accessibilityLabel={`${deal.name}. ${deal.offer}. ${deal.saving}. ${deal.distance}`} accessibilityHint="Opens partner details" onPress={()=>router.push(`/deal/${deal.id}`)} style={[styles.dealLink,compact&&styles.dealLinkCompact]}>
-      <View><Image accessible={false} source={{uri:deal.image}} style={[styles.dealImage,compact&&styles.dealImageCompact]}/><View style={styles.distance}><MapPin size={12} color="white"/><AppText variant="caption" style={styles.distanceText}>{deal.distance}</AppText></View></View>
-      <View style={styles.dealBody}><AppText variant="eyebrow">{deal.category.toUpperCase()}</AppText><AppText variant="headline" style={styles.dealName}>{deal.name}</AppText><AppText variant="caption" color="muted" numberOfLines={compact?3:2}>{deal.offer}</AppText><View style={styles.dealMeta}><AppText variant="caption" style={styles.saving}>{deal.saving}</AppText><AppText variant="caption" style={styles.rating}><Star size={13} color={C.ink} fill={C.ink}/> {deal.rating}</AppText></View></View>
+export function DealCard({deal,compact=false,playful=false,minimal=false}:{deal:Deal;compact?:boolean;playful?:boolean;minimal?:boolean}) {
+  const {state,toggleSaved,notify}=useStore(); const theme=useAppTheme(); const {colors:C}=theme; const {isRTL}=useAppLocale(); const saving=formatKouponlyCurrencyText(deal.saving); const styles=useMemo(()=>makeStyles(C),[theme.mode,theme.highContrast]); const saved=state.saved.includes(deal.id);
+  return <View style={[styles.dealCard,compact&&styles.dealCompact,playful&&styles.dealPlayful]}>
+    <AccessiblePressable testID={`deal-${deal.id}`} accessibilityLabel={`${deal.name}${minimal||playful?'':`. ${deal.offer}`}${playful?'':`. ${saving}`}. ${deal.distance}`} accessibilityHint="Opens partner details" onPress={()=>router.push(`/deal/${deal.id}`)} style={[styles.dealLink,compact&&styles.dealLinkCompact]}>
+      <View style={playful?styles.playfulPhoto:undefined}>
+        <Image accessible={false} source={{uri:deal.image}} style={[styles.dealImage,compact&&styles.dealImageCompact,playful&&styles.playfulImage]}/>
+        <View style={[styles.distance,playful&&styles.playfulDistance]}><MapPin size={12} color={playful?C.ink:"white"}/><AppText variant="caption" style={playful?styles.playfulDistanceText:styles.distanceText}>{deal.distance}</AppText></View>
+      </View>
+      <View style={[styles.dealBody,playful&&styles.playfulBody]}>
+        {playful?<>
+          <View style={styles.playfulTitleRow}>
+            <AppText variant="headline" style={[styles.dealName,styles.playfulVendorName]} numberOfLines={1}>{deal.name}</AppText>
+            {deal.logo?<View style={styles.playfulVendorLogoFrame}><Image accessible={false} source={{uri:deal.logo}} resizeMode="cover" style={styles.playfulVendorLogo}/></View>:null}
+          </View>
+        </>:<>
+          <AppText variant="eyebrow">{deal.category.toUpperCase()}</AppText><View style={styles.dealTitleRow}><AppText variant="headline" style={[styles.dealName,styles.dealTitle]} numberOfLines={2}>{deal.name}</AppText>{deal.logo?<View style={styles.dealLogoFrame}><Image accessible={false} source={{uri:deal.logo}} resizeMode="contain" style={styles.dealLogo}/></View>:null}</View>{minimal?null:<AppText variant="caption" color="muted" numberOfLines={compact?3:2}>{deal.offer}</AppText>}<View style={styles.dealMeta}><AppText variant="caption" style={styles.saving}>{saving}</AppText><AppText variant="caption" style={styles.rating}><Star size={13} color={C.ink} fill={C.ink}/> {deal.rating}</AppText></View>
+        </>}
+      </View>
     </AccessiblePressable>
     <AccessiblePressable accessibilityLabel={saved?`Remove ${deal.name} from saved`:`Save ${deal.name}`} accessibilityState={{selected:saved}} haptic="selection" onPress={()=>{toggleSaved(deal.id);notify(saved?"Removed from saved":"Saved for later")}} style={styles.heart}><AppIcon sf={saved?"heart.fill":"heart"} fallback={<Heart size={19} color={C.ink} fill={saved?C.lime:"transparent"}/>}/></AccessiblePressable>
   </View>;
@@ -80,7 +89,7 @@ export function DealCard({deal,compact=false}:{deal:Deal;compact?:boolean}) {
 
 export function ListingRow({item}:{item:DirectoryItem}) {
   const theme=useAppTheme(); const {colors:C}=theme; const styles=useMemo(()=>makeStyles(C),[theme.mode,theme.highContrast]);
-  return <AccessiblePressable testID={`listing-${item.id}`} accessibilityLabel={`${item.title}. ${item.subtitle}. ${item.tag}`} accessibilityHint="Opens details" onPress={()=>item.dealId?router.push(`/deal/${item.dealId}`):router.push(`/listing/${item.id}`)} style={styles.listingRow}><Image accessible={false} source={{uri:item.image}} style={styles.listingImage}/><View style={{flex:1}}><AppText variant="eyebrow">{item.type.toUpperCase()}</AppText><AppText variant="headline" style={styles.listingTitle}>{item.title}</AppText><AppText variant="caption" color="muted" numberOfLines={2}>{item.subtitle}</AppText><AppText variant="caption" style={styles.listingTag}>{item.tag}</AppText></View><AppIcon sf="chevron.right" fallback={<ChevronRight size={18} color={C.muted}/>}/></AccessiblePressable>;
+  return <AccessiblePressable testID={`listing-${item.id}`} accessibilityLabel={`${item.title}. ${item.subtitle}. ${item.tag}`} accessibilityHint="Opens details" onPress={()=>item.dealId?router.push({pathname:'/deal/[id]',params:{id:String(item.dealId),offer:String(item.offerIndex??0)}}):router.push(`/listing/${item.id}`)} style={styles.listingRow}><Image accessible={false} source={{uri:item.image}} style={styles.listingImage}/><View style={{flex:1}}><AppText variant="eyebrow">{item.type.toUpperCase()}</AppText><AppText variant="headline" style={styles.listingTitle}>{item.title}</AppText><AppText variant="caption" color="muted" numberOfLines={2}>{item.subtitle}</AppText><AppText variant="caption" style={styles.listingTag}>{item.tag}</AppText></View><AppIcon sf="chevron.right" fallback={<ChevronRight size={18} color={C.muted}/>}/></AccessiblePressable>;
 }
 
 export function PrimaryButton({label,onPress,disabled=false,testID,loading=false}:{label:string;onPress:()=>void;disabled?:boolean;testID?:string;loading?:boolean}) { const theme=useAppTheme(); const {colors:C}=theme;const inactive=disabled||loading;const styles=useMemo(()=>makeStyles(C),[theme.mode,theme.highContrast]);return <AccessiblePressable testID={testID} disabled={inactive} accessibilityLabel={label} accessibilityState={{disabled:inactive,busy:loading}} haptic="light" onPress={onPress} style={[styles.primary,inactive&&styles.disabled]}><AppText variant="callout" style={[styles.primaryText,inactive&&styles.disabledText]}>{loading?"Working…":label}</AppText><AppIcon sf="chevron.right" color={inactive?C.muted:C.onDark} fallback={<ChevronRight size={18} color={inactive?C.muted:C.onDark}/>}/></AccessiblePressable>; }
@@ -89,12 +98,13 @@ export function Toast() { const {toast}=useStore();const theme=useAppTheme(); co
 export const Txt=({children,style}:{children:React.ReactNode;style?:StyleProp<TextStyle>})=><AppText style={style}>{children}</AppText>;
 
 const makeStyles=(C:ThemeColors)=>StyleSheet.create({
-  header:{minHeight:72,flexDirection:"row",alignItems:"center",gap:12,marginBottom:18,borderRadius:24,paddingHorizontal:10,borderWidth:1,borderColor:C.line,overflow:"hidden"},headerCopy:{flex:1,paddingVertical:8},iconButton:{width:44,height:44,borderRadius:15,backgroundColor:C.glass,alignItems:"center",justifyContent:"center",borderWidth:1,borderColor:C.line},headerTitle:{letterSpacing:-1.1},
-  sectionTitle:{flexDirection:"row",justifyContent:"space-between",alignItems:"flex-end",marginTop:30,marginBottom:14,gap:10},sectionHeading:{letterSpacing:-.5,marginTop:3},sectionActionButton:{minHeight:44,paddingHorizontal:2},sectionAction:{backgroundColor:C.soft,paddingHorizontal:12,paddingVertical:8,borderRadius:20,overflow:"hidden"},
-  dealCard:{width:255,borderRadius:22,backgroundColor:C.card,borderWidth:1,borderColor:C.line,overflow:"hidden",...shadow},dealCompact:{width:"100%",marginBottom:12},dealLink:{width:"100%",alignItems:"stretch"},dealLinkCompact:{flexDirection:"row"},dealImage:{width:"100%",height:145},dealImageCompact:{width:112,height:154},distance:{position:"absolute",left:10,top:10,backgroundColor:"rgba(10,10,10,.75)",borderRadius:12,paddingHorizontal:8,paddingVertical:6,flexDirection:"row",alignItems:"center",gap:4},distanceText:{color:"white",fontFamily:F.bodyBold},heart:{position:"absolute",right:8,top:8,width:44,height:44,borderRadius:15,backgroundColor:C.glassSolid,borderWidth:1,borderColor:C.line},
-  dealBody:{padding:14,flex:1,alignSelf:"stretch"},dealName:{marginTop:4},dealMeta:{marginTop:12,flexDirection:"row",justifyContent:"space-between",alignItems:"center",gap:8},saving:{fontFamily:F.bodyBold,backgroundColor:C.soft,paddingHorizontal:8,paddingVertical:6,borderRadius:9,overflow:"hidden"},rating:{fontFamily:F.bodyBold,flexDirection:"row"},
-  listingRow:{minHeight:116,flexDirection:"row",alignItems:"center",gap:12,backgroundColor:C.card,borderRadius:21,padding:11,marginBottom:10,borderWidth:1,borderColor:C.line,...shadow},listingImage:{width:82,height:88,borderRadius:16},listingTitle:{marginVertical:3},listingTag:{fontFamily:F.bodyBold,marginTop:7},
-  primary:{minHeight:54,borderRadius:17,backgroundColor:C.ink,flexDirection:"row",alignItems:"center",justifyContent:"center",gap:7,paddingHorizontal:18,...shadow},primaryText:{fontFamily:F.bodyBold,color:C.paper},disabledText:{color:C.muted},disabled:{backgroundColor:C.soft,opacity:1},
+  header:{minHeight:72,flexDirection:"row",alignItems:"center",gap:12,marginBottom:18},headerCopy:{flex:1,paddingVertical:8},iconButton:{width:44,height:44,alignItems:"center",justifyContent:"center"},headerTitle:{letterSpacing:-1.1},
+  sectionTitle:{flexDirection:"row",justifyContent:"space-between",alignItems:"flex-end",marginTop:30,marginBottom:14,gap:10},sectionHeading:{letterSpacing:-.5,marginTop:3},sectionActionButton:{minHeight:44,paddingHorizontal:2},sectionAction:{color:C.ink},
+  dealCard:{width:255,borderRadius:14,backgroundColor:C.card,borderWidth:1,borderColor:C.line,overflow:"hidden"},dealCompact:{width:"100%",marginBottom:12},dealLink:{width:"100%",alignItems:"stretch"},dealLinkCompact:{flexDirection:"row"},dealImage:{width:"100%",height:145},dealImageCompact:{width:112,height:154},distance:{position:"absolute",left:10,top:10,backgroundColor:"rgba(10,10,10,.75)",borderRadius:9,paddingHorizontal:8,paddingVertical:6,flexDirection:"row",alignItems:"center",gap:4},distanceText:{color:"white",fontFamily:F.bodyBold},heart:{position:"absolute",right:8,top:8,width:44,height:44,borderRadius:12,backgroundColor:C.glassSolid,borderWidth:1,borderColor:C.line},
+  dealPlayful:{width:250,borderRadius:25,borderWidth:0,backgroundColor:C.card},playfulPhoto:{position:"relative",overflow:"hidden",borderBottomRightRadius:0},playfulImage:{height:120,borderBottomRightRadius:0},playfulDistance:{backgroundColor:C.lime,borderRadius:14,transform:[{rotate:"-3deg"}]},playfulDistanceText:{color:C.ink,fontFamily:F.bodyBold},playfulBody:{paddingTop:0,paddingLeft:14,paddingRight:0,paddingBottom:0,borderWidth:2,borderColor:"#D8C6FF",borderBottomLeftRadius:23,borderBottomRightRadius:23},playfulTitleRow:{height:52,position:"relative",paddingRight:62,flexDirection:"row",alignItems:"center",gap:8},playfulVendorName:{flex:1,minWidth:0,fontSize:16,lineHeight:20},playfulVendorLogoFrame:{position:"absolute",top:-2,right:-2,bottom:-2,width:54,overflow:"hidden",borderTopLeftRadius:28,borderBottomLeftRadius:28,borderBottomRightRadius:25,backgroundColor:C.card},playfulVendorLogo:{width:"100%",height:"100%"},
+  dealBody:{padding:14,flex:1,alignSelf:"stretch"},dealName:{marginTop:4},dealTitleRow:{minHeight:38,flexDirection:"row",alignItems:"center",gap:8},dealTitle:{flex:1,minWidth:0},dealLogoFrame:{width:34,height:34,borderRadius:11,backgroundColor:"white",alignItems:"center",justifyContent:"center"},dealLogo:{width:27,height:27},dealMeta:{marginTop:12,flexDirection:"row",justifyContent:"space-between",alignItems:"center",gap:8},saving:{fontFamily:F.bodyBold,backgroundColor:C.soft,paddingHorizontal:8,paddingVertical:6,borderRadius:9,overflow:"hidden"},rating:{fontFamily:F.bodyBold,flexDirection:"row"},
+  listingRow:{minHeight:116,flexDirection:"row",alignItems:"center",gap:12,backgroundColor:C.card,paddingVertical:11,marginBottom:2,borderBottomWidth:1,borderColor:C.line},listingImage:{width:82,height:88,borderRadius:11},listingTitle:{marginVertical:3},listingTag:{fontFamily:F.bodyBold,marginTop:7},
+  primary:{minHeight:54,borderRadius:12,backgroundColor:C.ink,flexDirection:"row",alignItems:"center",justifyContent:"center",gap:7,paddingHorizontal:18},primaryText:{fontFamily:F.bodyBold,color:C.paper},disabledText:{color:C.muted},disabled:{backgroundColor:C.soft,opacity:1},
   empty:{alignItems:"center",paddingVertical:68,paddingHorizontal:24},emptyIcon:{width:64,height:64,textAlign:"center",textAlignVertical:"center",fontSize:30,backgroundColor:C.soft,borderRadius:21,overflow:"hidden"},emptyTitle:{marginTop:17,textAlign:"center"},emptyBody:{textAlign:"center",marginTop:7},
   toast:{position:"absolute",zIndex:100,bottom:92,alignSelf:"center",left:28,right:28,minHeight:52,borderRadius:17,backgroundColor:C.elevated,flexDirection:"row",alignItems:"center",justifyContent:"center",paddingHorizontal:16,gap:8,borderWidth:1,borderColor:C.line,...shadow},toastDot:{color:C.lime},toastText:{color:C.ink,fontFamily:F.bodyBold},
 });

@@ -1,7 +1,6 @@
 export interface FeaturedBrandShowcaseItem {
     id: string
     title: string
-    titleAr?: string
     orderUrl: string
     isActive: boolean
     heroImageUrl: string

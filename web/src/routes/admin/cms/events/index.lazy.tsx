@@ -42,11 +42,8 @@ function createBlankEvent(): StudentEvent {
     return {
         id,
         titleEn: '',
-        titleAr: '',
         descriptionEn: '',
-        descriptionAr: '',
         locationEn: '',
-        locationAr: '',
         imageUrl: '',
         link: '',
         startsAt: null,
@@ -81,11 +78,8 @@ function normalizeEventForWrite(event: StudentEvent) {
     return {
         id: event.id,
         titleEn: event.titleEn.trim(),
-        titleAr: event.titleAr?.trim() || '',
         descriptionEn: event.descriptionEn?.trim() || '',
-        descriptionAr: event.descriptionAr?.trim() || '',
         locationEn: event.locationEn?.trim() || '',
-        locationAr: event.locationAr?.trim() || '',
         imageUrl: event.imageUrl || '',
         link: event.link?.trim() || '',
         startsAt: startsAtValue ? Timestamp.fromDate(new Date(startsAtValue)) : null,
@@ -356,16 +350,6 @@ function EventsManagement() {
                                         className="bg-white border-gray-100 h-11 rounded-xl"
                                     />
                                 </div>
-                                <div className="space-y-2 text-right">
-                                    <Label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mr-1">Title Arabic</Label>
-                                    <Input
-                                        value={event.titleAr || ''}
-                                        onChange={(e) => updateEvent(event.id, { titleAr: e.target.value })}
-                                        placeholder="سوق الجامعة الليلي"
-                                        dir="rtl"
-                                        className="bg-white border-gray-100 h-11 rounded-xl"
-                                    />
-                                </div>
                                 <div className="space-y-2">
                                     <Label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider ml-1">Description English</Label>
                                     <Textarea
@@ -375,32 +359,12 @@ function EventsManagement() {
                                         className="bg-white border-gray-100 min-h-24 rounded-xl resize-none"
                                     />
                                 </div>
-                                <div className="space-y-2 text-right">
-                                    <Label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mr-1">Description Arabic</Label>
-                                    <Textarea
-                                        value={event.descriptionAr || ''}
-                                        onChange={(e) => updateEvent(event.id, { descriptionAr: e.target.value })}
-                                        placeholder="وصف مختصر للفعالية"
-                                        dir="rtl"
-                                        className="bg-white border-gray-100 min-h-24 rounded-xl resize-none"
-                                    />
-                                </div>
                                 <div className="space-y-2">
                                     <Label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider ml-1">Location English</Label>
                                     <Input
                                         value={event.locationEn || ''}
                                         onChange={(e) => updateEvent(event.id, { locationEn: e.target.value })}
                                         placeholder="Education City"
-                                        className="bg-white border-gray-100 h-11 rounded-xl"
-                                    />
-                                </div>
-                                <div className="space-y-2 text-right">
-                                    <Label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mr-1">Location Arabic</Label>
-                                    <Input
-                                        value={event.locationAr || ''}
-                                        onChange={(e) => updateEvent(event.id, { locationAr: e.target.value })}
-                                        placeholder="المدينة التعليمية"
-                                        dir="rtl"
                                         className="bg-white border-gray-100 h-11 rounded-xl"
                                     />
                                 </div>

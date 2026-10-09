@@ -223,7 +223,7 @@ enable_signup = true
 # addresses. If disabled, only the new email is required to confirm.
 double_confirm_changes = true
 # If enabled, users need to confirm their email address before signing in.
-enable_confirmations = false
+enable_confirmations = true
 # If enabled, users will need to reauthenticate or have logged in recently to change their password.
 secure_password_change = false
 # Controls the minimum amount of time that must pass before sending another signup confirmation or password reset email.
@@ -243,10 +243,13 @@ otp_expiry = 3600
 # admin_email = "admin@email.com"
 # sender_name = "Admin"
 
-# Uncomment to customize email template
-# [auth.email.template.invite]
-# subject = "You have been invited"
-# content_path = "./supabase/templates/invite.html"
+[auth.email.template.confirmation]
+subject = "Your Kouponly verification code"
+content_path = "./supabase/templates/email-otp.html"
+
+[auth.email.template.magic_link]
+subject = "Your Kouponly sign-in code"
+content_path = "./supabase/templates/email-otp.html"
 
 # Uncomment to customize notification email template
 # [auth.email.notification.password_changed]
@@ -388,7 +391,7 @@ deno_version = 2
 [analytics]
 enabled = true
 port = 54327
-# Configure one of the supported backends: `postgres`, `bigquery`.
+# Analytics uses the Supabase Postgres backend.
 backend = "postgres"
 
 # Experimental features may be deprecated any time
@@ -413,63 +416,44 @@ enabled = true
 # JSON string passed through to pg-delta SQL formatting.
 # format_options = "{\"keywordCase\":\"upper\",\"indent\":2,\"maxWidth\":80,\"commaStyle\":\"trailing\"}"
 
-[functions.validate-redemption]
+[functions.kouponly-validate-redemption]
 enabled = true
 verify_jwt = true
-import_map = "./functions/validate-redemption/deno.json"
+import_map = "./functions/kouponly-validate-redemption/deno.json"
 # Uncomment to specify a custom file path to the entrypoint.
 # Supported file extensions are: .ts, .js, .mjs, .jsx, .tsx
-entrypoint = "./functions/validate-redemption/index.ts"
+entrypoint = "./functions/kouponly-validate-redemption/index.ts"
 # Specifies static files to be bundled with the function. Supports glob patterns.
 # For example, if you want to serve static HTML pages in your function:
 # static_files = [ "./functions/validate-redemption/*.html" ]
 
-[functions.complete-redemption]
+[functions.kouponly-complete-redemption]
 # Optional legacy endpoint; the mobile client calls complete_redemption_atomic directly.
 enabled = false
 verify_jwt = true
-import_map = "./functions/complete-redemption/deno.json"
-entrypoint = "./functions/complete-redemption/index.ts"
+import_map = "./functions/kouponly-complete-redemption/deno.json"
+entrypoint = "./functions/kouponly-complete-redemption/index.ts"
 
-[functions.submit-campaign]
+[functions.kouponly-redeem-reward]
 enabled = true
 verify_jwt = true
-import_map = "./functions/submit-campaign/deno.json"
-# Uncomment to specify a custom file path to the entrypoint.
-# Supported file extensions are: .ts, .js, .mjs, .jsx, .tsx
-entrypoint = "./functions/submit-campaign/index.ts"
-# Specifies static files to be bundled with the function. Supports glob patterns.
-# For example, if you want to serve static HTML pages in your function:
-# static_files = [ "./functions/submit-campaign/*.html" ]
+import_map = "./functions/kouponly-redeem-reward/deno.json"
+entrypoint = "./functions/kouponly-redeem-reward/index.ts"
 
-[functions.redeem-reward]
+[functions.kouponly-delete-account]
 enabled = true
 verify_jwt = true
-import_map = "./functions/redeem-reward/deno.json"
-entrypoint = "./functions/redeem-reward/index.ts"
+import_map = "./functions/kouponly-delete-account/deno.json"
+entrypoint = "./functions/kouponly-delete-account/index.ts"
 
-[functions.send-gift]
-enabled = true
-verify_jwt = true
-import_map = "./functions/send-gift/deno.json"
-entrypoint = "./functions/send-gift/index.ts"
-
-[functions.accept-gift]
-enabled = true
-verify_jwt = true
-import_map = "./functions/accept-gift/deno.json"
-entrypoint = "./functions/accept-gift/index.ts"
-
-[functions.delete-account]
-enabled = true
-verify_jwt = true
-import_map = "./functions/delete-account/deno.json"
-entrypoint = "./functions/delete-account/index.ts"
-
-[functions.realx-mobile-action]
+[functions.kouponly-mobile-action]
 enabled = true
 verify_jwt = false
 
-[functions.realx-maintenance]
+[functions.kouponly-maintenance]
+enabled = true
+verify_jwt = true
+
+[functions.kouponly-admin-action]
 enabled = true
 verify_jwt = true

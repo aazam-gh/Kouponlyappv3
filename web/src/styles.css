@@ -50,18 +50,10 @@
   --animate-fade-up: fade-in 0.7s ease-out forwards;
 
   --font-sans: "Poppins", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
-  --font-heading: "Hanson", "Poppins", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif;
+  --font-heading: "Poppins", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif;
 }
 
 /* Font Faces */
-@font-face {
-  font-family: 'Hanson';
-  src: url('./assets/fonts/Hanson-Bold.otf') format('opentype');
-  font-weight: 700;
-  font-style: normal;
-  font-display: swap;
-}
-
 @font-face {
   font-family: 'Poppins';
   src: url('./assets/fonts/poppins.ttf') format('truetype');
@@ -72,11 +64,11 @@
 
 @layer base {
   :root {
-    --radius: 0.625rem;
+    --radius: 0.875rem;
 
     /* Light Mode Colors from User Request */
     --background: #FFFFFF;
-    --foreground: #000000;
+    --foreground: #0A0F0C;
     /* text */
 
     --card: #FFFFFF;
@@ -85,64 +77,64 @@
     --popover: #FFFFFF;
     --popover-foreground: #000000;
 
-    --primary: #E60000;
+    --primary: #18B852;
     /* primaryRed */
-    --primary-foreground: #FFFFFF;
+    --primary-foreground: #0A0A0A;
     /* buttonText */
 
-    --secondary: #f1f5f9;
-    --secondary-foreground: #0f172a;
+    --secondary: #F1F4EF;
+    --secondary-foreground: #202020;
 
-    --muted: #f1f5f9;
-    --muted-foreground: #666666;
+    --muted: #F1F4EF;
+    --muted-foreground: #5F6861;
     /* subtitle */
 
-    --accent: #f8fafc;
-    --accent-foreground: #0f172a;
+    --accent: #F1F4EF;
+    --accent-foreground: #0A0F0C;
 
     --destructive: #ef4444;
     --destructive-foreground: #f8fafc;
 
-    --border: #e2e8f0;
-    --input: #e2e8f0;
-    --ring: #E60000;
+    --border: #E2E8E1;
+    --input: #E2E8E1;
+    --ring: #18B852;
 
     --brand-green: #18B852;
     --onboarding-background: #FFFFFF;
     --onboarding-foreground: #000000;
 
-    --chart-1: #E60000;
-    --chart-2: #ffd33d;
-    --chart-3: #18B852;
-    --chart-4: #25292e;
-    --chart-5: #666666;
+    --chart-1: #18B852;
+    --chart-2: #0A0A0A;
+    --chart-3: #59595F;
+    --chart-4: #F0F0F2;
+    --chart-5: #A5A5AA;
 
-    --sidebar: #f8fafc;
-    --sidebar-foreground: #0f172a;
+    --sidebar: #F7F8F6;
+    --sidebar-foreground: #0A0F0C;
     --sidebar-primary: #18B852;
-    --sidebar-primary-foreground: #FFFFFF;
-    --sidebar-accent: #f1f5f9;
-    --sidebar-accent-foreground: #0f172a;
-    --sidebar-border: #e2e8f0;
-    --sidebar-ring: #E60000;
+    --sidebar-primary-foreground: #0A0A0A;
+    --sidebar-accent: #F1F4EF;
+    --sidebar-accent-foreground: #0A0F0C;
+    --sidebar-border: #E2E8E1;
+    --sidebar-ring: #18B852;
   }
 
   .dark {
     /* Dark Mode Colors from User Request */
-    --background: #25292e;
+    --background: #000000;
     /* darkBackground */
     --foreground: #FFFFFF;
     /* text */
 
-    --card: #25292e;
+    --card: #1C1C1E;
     --card-foreground: #FFFFFF;
 
-    --popover: #25292e;
+    --popover: #1C1C1E;
     --popover-foreground: #FFFFFF;
 
-    --primary: #E60000;
+    --primary: #18B852;
     /* primaryRed */
-    --primary-foreground: #FFFFFF;
+    --primary-foreground: #080808;
     /* buttonText */
 
     --secondary: #1e293b;
@@ -175,11 +167,11 @@
     --chart-4: #25292e;
     --chart-5: #9BA1A6;
 
-    --sidebar: #1e293b;
-    --sidebar-foreground: #f8fafc;
+    --sidebar: #000000;
+    --sidebar-foreground: #F5F5F7;
     --sidebar-primary: #18B852;
-    --sidebar-primary-foreground: #FFFFFF;
-    --sidebar-accent: #25292e;
+    --sidebar-primary-foreground: #080808;
+    --sidebar-accent: #1C1C1E;
     --sidebar-accent-foreground: #f8fafc;
     --sidebar-border: #3d4146;
     --sidebar-ring: #ffd33d;
@@ -187,6 +179,10 @@
 }
 
 @layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+
   html {
     font-family: "Poppins", ui-sans-serif, system-ui, sans-serif;
   }
@@ -204,7 +200,7 @@
   h4,
   h5,
   h6 {
-    font-family: "Hanson", "Poppins", ui-sans-serif, system-ui, sans-serif;
+    font-family: "Poppins", ui-sans-serif, system-ui, sans-serif;
     letter-spacing: -0.025em;
   }
 }

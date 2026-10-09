@@ -1,0 +1,68 @@
+import type { TextStyle } from 'react-native';
+
+const FontFamilyTokens = {
+    display: 'PoppinsBold',
+    body: 'Poppins',
+    bodyStrong: 'PoppinsBold',
+} as const;
+
+export type TextVariant = 'display' | 'body' | 'bodyStrong';
+
+const textVariantStyles: Record<TextVariant, TextStyle> = {
+    display: {
+        fontFamily: FontFamilyTokens.display,
+        fontStyle: 'normal',
+    },
+    body: {
+        fontFamily: FontFamilyTokens.body,
+        fontStyle: 'normal',
+    },
+    bodyStrong: {
+        fontFamily: FontFamilyTokens.bodyStrong,
+        fontStyle: 'normal',
+    },
+};
+
+type TextDirectionOptions = {
+    isRTL?: boolean;
+    textAlign?: TextStyle['textAlign'];
+};
+
+export function getTextVariantStyle(variant: TextVariant): TextStyle {
+    return textVariantStyles[variant];
+}
+
+export function getLocalizedTextVariantStyle(variant: TextVariant, _locale: 'en'): TextStyle {
+    return {
+        fontFamily: FontFamilyTokens[variant],
+        fontStyle: 'normal',
+    };
+}
+
+function getTextDirectionStyle({
+    isRTL: explicitRTL,
+    textAlign,
+}: TextDirectionOptions = {}): TextStyle {
+    const rtl = explicitRTL ?? false;
+
+    return {
+        writingDirection: rtl ? 'rtl' : 'ltr',
+        ...(textAlign ? { textAlign } : null),
+    };
+}
+
+export const Typography = {
+    hanson: {
+        bold: FontFamilyTokens.display,
+    },
+    poppins: {
+        medium: FontFamilyTokens.body,
+        semiBold: FontFamilyTokens.bodyStrong,
+        bold: 'PoppinsBold',
+    },
+    fontFamily: FontFamilyTokens,
+    variants: textVariantStyles,
+    getTextVariantStyle,
+    getLocalizedTextVariantStyle,
+    getTextDirectionStyle,
+} as const;

@@ -6,12 +6,15 @@ import { db } from '@/firebase/config'
 import { doc, updateDoc } from 'firebase/firestore'
 import { toast } from 'sonner'
 import { useState, useEffect } from 'react'
+import { format } from 'date-fns'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Checkbox } from '@/components/ui/checkbox'
 import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { vendorQueryOptions, type EmbeddedOffer } from '@/queries'
 import { refreshVendorList } from '@/lib/vendorList'
+import { uploadImage } from '@/lib/upload'
 
 export function generateSearchTokens({
     name,
@@ -40,16 +43,6 @@ export function generateSearchTokens({
                 tokens.add(word.split("'")[0]);
             }
 
-            // Arabic specific normalization
-            const normalizedAr = word
-                .replace(/[\u064B-\u0652]/g, '') // Remove diacritics
-                .replace(/[أإآ]/g, 'ا') // Normalize Alef
-                .replace(/ة/g, 'ه') // Normalize Teh Marbuta
-                .replace(/ى/g, 'ي'); // Normalize Alef Maksura
-
-            if (normalizedAr !== word) {
-                tokens.add(normalizedAr);
-            }
         });
     };
 
@@ -65,15 +58,32 @@ interface OffersSettingsProps {
     vendorId: string | undefined
 }
 
+function makeVendorLogo(name: string): File {
+    const initials = name.trim().split(/\s+/).map(word => word[0]).join('').slice(0, 2).toUpperCase()
+    const safeName = name.replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&apos;' })[char]!)
+    const color = ({
+        Starbucks: '#00704a', KFC: '#e4002b', 'Burger King': '#d62300', 'Kochi Marriott': '#8a714c',
+        IndiGo: '#172b85', 'PVR Cinemas': '#ed1c24', Wonderla: '#e61e2b', Croma: '#6d2077',
+        Chicking: '#e31837', Cinepolis: '#003da5', Nykaa: '#fc2779', Decathlon: '#0072ce', Westside: '#302c2b',
+    } as Record<string, string>)[name] || '#17894f'
+    const fontSize = name.length > 13 ? 28 : name.length > 9 ? 34 : 40
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512"><rect width="512" height="512" rx="72" fill="${color}"/><circle cx="256" cy="190" r="91" fill="#fff"/><text x="256" y="217" text-anchor="middle" font-family="Arial,sans-serif" font-size="76" font-weight="700" fill="${color}">${initials}</text><text x="256" y="353" text-anchor="middle" font-family="Arial,sans-serif" font-size="${fontSize}" font-weight="700" fill="#fff">${safeName}</text><text x="256" y="407" text-anchor="middle" font-family="Arial,sans-serif" font-size="17" letter-spacing="5" fill="#ffffffcc">KOUPONLY OFFER</text></svg>`
+    return new File([svg], `${name.toLowerCase().replace(/[^a-z0-9]+/g, '-')}-offer-logo.svg`, { type: 'image/svg+xml' })
+}
+
 export function OffersSettings({ vendorId }: OffersSettingsProps) {
     const queryClient = useQueryClient()
     const [isCreating, setIsCreating] = useState(false)
     const [editingIndex, setEditingIndex] = useState<number | null>(null)
+    const [isUploadingImage, setIsUploadingImage] = useState(false)
 
     // Form State
     const [formData, setFormData] = useState<Partial<EmbeddedOffer>>({
         discountType: 'percentage',
         discountValue: 0,
+        currency: 'INR',
+        active: true,
+        redemptionMode: 'inStore',
     })
 
     // Reset form when entering Create mode
@@ -82,6 +92,9 @@ export function OffersSettings({ vendorId }: OffersSettingsProps) {
             setFormData({
                 discountType: 'percentage',
                 discountValue: 0,
+                currency: 'INR',
+                active: true,
+                redemptionMode: 'inStore',
             })
         }
     }, [isCreating])
@@ -102,14 +115,27 @@ export function OffersSettings({ vendorId }: OffersSettingsProps) {
     const saveMutation = useMutation({
         mutationFn: async (data: Partial<EmbeddedOffer>) => {
             if (!vendorId) throw new Error("Vendor ID is missing")
+            if (!data.titleEn?.trim()) throw new Error('Enter an offer title before saving.')
+            if (data.startsAt && data.endsAt && Date.parse(data.endsAt) <= Date.parse(data.startsAt)) {
+                throw new Error('The end date must be later than the start date.')
+            }
 
             const offer: EmbeddedOffer = {
-                titleEn: data.titleEn || '',
-                titleAr: data.titleAr,
+                id: data.id,
+                titleEn: data.titleEn.trim(),
                 descriptionEn: data.descriptionEn,
-                descriptionAr: data.descriptionAr,
+                imageUrl: data.imageUrl,
                 discountType: data.discountType || 'percentage',
                 ...(data.discountType !== 'buy1get1' && { discountValue: data.discountValue || 0 }),
+                currency: data.currency || 'INR',
+                savingLabel: data.savingLabel?.trim(),
+                offerValue: data.offerValue ?? data.discountValue ?? 0,
+                startsAt: data.startsAt || undefined,
+                endsAt: data.endsAt || undefined,
+                termsEn: data.termsEn?.trim(),
+                redemptionInstructionsEn: data.redemptionInstructionsEn?.trim(),
+                active: data.active ?? true,
+                redemptionMode: 'inStore',
             }
 
             let updatedOffers: EmbeddedOffer[]
@@ -139,8 +165,8 @@ export function OffersSettings({ vendorId }: OffersSettingsProps) {
             setEditingIndex(null)
             void refreshVendorList()
         },
-        onError: () => {
-            toast.error('Failed to save offer')
+        onError: (error) => {
+            toast.error(error instanceof Error ? error.message : 'Failed to save offer')
         }
     })
 
@@ -167,8 +193,8 @@ export function OffersSettings({ vendorId }: OffersSettingsProps) {
             setEditingIndex(null)
             void refreshVendorList()
         },
-        onError: () => {
-            toast.error('Failed to delete offer')
+        onError: (error) => {
+            toast.error(error instanceof Error ? error.message : 'Failed to delete offer')
         }
     })
 
@@ -217,7 +243,7 @@ export function OffersSettings({ vendorId }: OffersSettingsProps) {
                     {/* Left Column: Titles & Descriptions */}
                     <div className="space-y-6">
                         {/* Titles */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 gap-4">
                             <div className="space-y-2">
                                 <Label htmlFor="titleEn">Title (English)</Label>
                                 <Input
@@ -226,17 +252,6 @@ export function OffersSettings({ vendorId }: OffersSettingsProps) {
                                     onChange={e => setFormData(prev => ({ ...prev, titleEn: e.target.value }))}
                                     placeholder="Ex: Summer Sale"
                                     className="bg-slate-50 h-12"
-                                />
-                            </div>
-                            <div className="space-y-2">
-                                <Label htmlFor="titleAr">Title (Arabic)</Label>
-                                <Input
-                                    id="titleAr"
-                                    value={formData.titleAr || ''}
-                                    onChange={e => setFormData(prev => ({ ...prev, titleAr: e.target.value }))}
-                                    placeholder="Ex: خصومات الصيف"
-                                    dir="rtl"
-                                    className="bg-slate-50 h-12 text-right"
                                 />
                             </div>
                         </div>
@@ -253,22 +268,70 @@ export function OffersSettings({ vendorId }: OffersSettingsProps) {
                                     className="bg-slate-50 min-h-[100px]"
                                 />
                             </div>
-                            <div className="space-y-2">
-                                <Label htmlFor="descAr">Description (Arabic)</Label>
-                                <Textarea
-                                    id="descAr"
-                                    value={formData.descriptionAr || ''}
-                                    onChange={e => setFormData(prev => ({ ...prev, descriptionAr: e.target.value }))}
-                                    placeholder="وصف مختصر للعرض..."
-                                    dir="rtl"
-                                    className="bg-slate-50 min-h-[100px] text-right"
-                                />
-                            </div>
                         </div>
                     </div>
 
                     {/* Right Column: Discount Settings */}
                     <div className="space-y-6">
+                        <div className="space-y-3">
+                            <Label htmlFor="offerImage">Offer logo</Label>
+                            <div className="flex items-center gap-4">
+                                {formData.imageUrl ? (
+                                    <img src={formData.imageUrl} alt="Offer logo preview" className="h-16 w-16 rounded-xl border bg-white object-contain p-1" />
+                                ) : (
+                                    <div className="h-16 w-16 rounded-xl border bg-white text-xs text-slate-400 flex items-center justify-center">No logo</div>
+                                )}
+                                <div>
+                                    <div className="flex flex-wrap items-center gap-2">
+                                        <Input
+                                            id="offerImage"
+                                            type="file"
+                                            accept="image/*"
+                                            disabled={isUploadingImage}
+                                            className="max-w-xs bg-white"
+                                            onChange={async e => {
+                                                const file = e.target.files?.[0]
+                                                if (!file || !vendorId) return
+                                                setIsUploadingImage(true)
+                                                try {
+                                                    const path = `vendors/${vendorId}/offers/offer-${editingIndex ?? 'new'}`
+                                                    const imageUrl = await uploadImage(path, file, { maxWidth: 512, quality: 0.9 })
+                                                    setFormData(prev => ({ ...prev, imageUrl }))
+                                                    toast.success('Offer logo uploaded')
+                                                } catch (error) {
+                                                    toast.error(error instanceof Error ? error.message : 'Failed to upload offer logo')
+                                                } finally {
+                                                    setIsUploadingImage(false)
+                                                    e.target.value = ''
+                                                }
+                                            }}
+                                        />
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            disabled={isUploadingImage}
+                                            onClick={async () => {
+                                                if (!vendorId) return
+                                                setIsUploadingImage(true)
+                                                try {
+                                                    const path = `vendors/${vendorId}/offers/offer-${editingIndex ?? 'new'}`
+                                                    const imageUrl = await uploadImage(path, makeVendorLogo(vendor?.name || 'Vendor'), { maxWidth: 512, quality: 0.9 })
+                                                    setFormData(prev => ({ ...prev, imageUrl }))
+                                                    toast.success('Vendor offer logo created and uploaded')
+                                                } catch (error) {
+                                                    toast.error(error instanceof Error ? error.message : 'Failed to create offer logo')
+                                                } finally {
+                                                    setIsUploadingImage(false)
+                                                }
+                                            }}
+                                        >
+                                            Create vendor logo
+                                        </Button>
+                                    </div>
+                                    {isUploadingImage && <p className="mt-1 text-xs text-slate-500">Uploading logo…</p>}
+                                </div>
+                            </div>
+                        </div>
                         {/* Discount Settings */}
                         <div className="grid grid-cols-2 gap-4 p-5 bg-slate-50 rounded-2xl border border-slate-100">
                             <div className="space-y-2">
@@ -299,6 +362,36 @@ export function OffersSettings({ vendorId }: OffersSettingsProps) {
                                     />
                                 </div>
                             )}
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <Label htmlFor="savingLabel">Mobile offer label</Label>
+                                <Input id="savingLabel" value={formData.savingLabel || ''} onChange={e => setFormData(prev => ({ ...prev, savingLabel: e.target.value }))} placeholder="Save up to ₹480" className="bg-slate-50 h-11" />
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="offerValue">Saving value (₹)</Label>
+                                <Input id="offerValue" type="number" min="0" value={formData.offerValue ?? ''} onChange={e => setFormData(prev => ({ ...prev, offerValue: e.target.value === '' ? undefined : Number(e.target.value) }))} placeholder="480" className="bg-slate-50 h-11" />
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="startsAt">Starts (your local time)</Label>
+                                <Input id="startsAt" type="datetime-local" value={formData.startsAt ? format(new Date(formData.startsAt), "yyyy-MM-dd'T'HH:mm") : ''} onChange={e => setFormData(prev => ({ ...prev, startsAt: e.target.value ? new Date(e.target.value).toISOString() : undefined }))} className="bg-slate-50 h-11" />
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="endsAt">Ends (your local time)</Label>
+                                <Input id="endsAt" type="datetime-local" value={formData.endsAt ? format(new Date(formData.endsAt), "yyyy-MM-dd'T'HH:mm") : ''} onChange={e => setFormData(prev => ({ ...prev, endsAt: e.target.value ? new Date(e.target.value).toISOString() : undefined }))} className="bg-slate-50 h-11" />
+                            </div>
+                            <div className="space-y-2 md:col-span-2">
+                                <Label htmlFor="termsEn">Terms and conditions</Label>
+                                <Textarea id="termsEn" value={formData.termsEn || ''} onChange={e => setFormData(prev => ({ ...prev, termsEn: e.target.value }))} placeholder="Add exclusions, limits, or booking requirements" className="bg-slate-50 min-h-[80px]" />
+                            </div>
+                            <div className="space-y-2 md:col-span-2">
+                                <Label htmlFor="redemptionInstructionsEn">How to redeem</Label>
+                                <Textarea id="redemptionInstructionsEn" value={formData.redemptionInstructionsEn || ''} onChange={e => setFormData(prev => ({ ...prev, redemptionInstructionsEn: e.target.value }))} placeholder="Tell customers what to show at checkout" className="bg-slate-50 min-h-[80px]" />
+                            </div>
+                            <label className="flex items-center gap-2 text-sm font-medium text-slate-700 md:col-span-2">
+                                <Checkbox checked={formData.active ?? true} onCheckedChange={checked => setFormData(prev => ({ ...prev, active: checked === true }))} />
+                                Publish this offer in the mobile app
+                            </label>
                         </div>
                     </div>
                 </div>
@@ -348,7 +441,7 @@ export function OffersSettings({ vendorId }: OffersSettingsProps) {
                         {/* Discount Badge */}
                         <div className="h-[80px] w-full bg-slate-50 relative flex items-center justify-center">
                             <span className="text-2xl font-bold text-brand-green">
-                                {offer.discountType === 'buy1get1' ? 'Buy 1 Get 1' : offer.discountType === 'percentage' ? `${offer.discountValue}% OFF` : `$${offer.discountValue} OFF`}
+                                {offer.discountType === 'buy1get1' ? 'Buy 1 Get 1' : offer.discountType === 'percentage' ? `${offer.discountValue}% OFF` : `${offer.currency === 'INR' ? '₹' : '$'}${offer.discountValue} OFF`}
                             </span>
                         </div>
 

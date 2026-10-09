@@ -1,16 +1,10 @@
 import * as React from "react"
 import {
   IconBell,
-  IconClipboardCheck,
-  IconDatabase,
   IconHome,
   IconInfoCircle,
-  IconGift,
-  IconReceipt,
-  IconSparkles,
-  IconShield,
-  IconShoppingBag,
-  IconBuildingStore,
+  IconMapPin,
+  IconTicket,
   IconUsers,
 } from "@tabler/icons-react"
 
@@ -28,71 +22,17 @@ import {
 
 const data = {
   user: {
-    name: "shadcn",
-    email: "m@example.com",
-    avatar: "/avatars/shadcn.jpg",
+    name: "Administrator",
+    email: "",
+    avatar: "",
   },
   navMain: [
-    {
-      title: "Dashboard",
-      url: "/admin/dashboard",
-      icon: IconHome,
-    },
-    {
-      title: "Daily Transactions",
-      url: "/admin/transactions",
-      icon: IconReceipt,
-    },
-    {
-      title: "Transactions",
-      url: "/admin/bigquery-transactions",
-      icon: IconDatabase,
-    },
-    {
-      title: "Vendors",
-      url: "/admin/vendors",
-      icon: IconShield,
-    },
-    {
-      title: "Online Vendors",
-      url: "/admin/online-vendors",
-      icon: IconShoppingBag,
-    },
-    {
-      title: "Holding Groups",
-      url: "/admin/holding-groups",
-      icon: IconBuildingStore,
-    },
-    {
-      title: "Students",
-      url: "/admin/students",
-      icon: IconUsers,
-    },
-    {
-      title: "Verification Requests",
-      url: "/admin/verification-requests",
-      icon: IconClipboardCheck,
-    },
-    {
-      title: "Wakti",
-      url: "/admin/wakti",
-      icon: IconSparkles,
-    },
-    {
-      title: "App CMS",
-      url: "/admin/cms",
-      icon: IconInfoCircle,
-    },
-    {
-      title: "Notifications",
-      url: "/admin/notifications",
-      icon: IconBell,
-    },
-    {
-      title: "Badrgo Vouchers",
-      url: "/admin/pilot-campaign",
-      icon: IconGift,
-    },
+    { title: "Overview", url: "/admin/dashboard", icon: IconHome },
+    { title: "Home content", url: "/admin/cms", icon: IconInfoCircle },
+    { title: "Explore & vendors", url: "/admin/vendors", icon: IconMapPin },
+    { title: "Students & profiles", url: "/admin/students", icon: IconUsers },
+    { title: "Coupons & referrals", url: "/admin/membership", icon: IconTicket },
+    { title: "Notifications", url: "/admin/notifications", icon: IconBell },
   ],
 }
 
@@ -120,11 +60,13 @@ export function AdminSidebar({
               className="hover:bg-transparent"
             >
               <a href="/">
-                <span className="text-3xl font-black text-primary tracking-tighter">realX</span>
+                <span className="grid size-8 place-items-center rounded-lg bg-[#18B852] text-sm font-black text-[#0A0F0C]">K</span>
+                <span className="font-heading text-xl tracking-tight text-sidebar-foreground">Kouponly</span>
               </a>
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
+        <p className="px-2 text-xs text-muted-foreground">Free Rajagiri MVP</p>
       </SidebarHeader>
       <SidebarContent className="px-2 mt-4">
         <NavMain items={data.navMain} />

@@ -1,65 +1,90 @@
+import { isSchoolEmail, SCHOOL_EMAIL_MESSAGE } from '@/lib/school-email';
 import * as ImagePicker from 'expo-image-picker';
-import { router } from 'expo-router';
+import Ionicons from '@expo/vector-icons/Ionicons';
+import { Image as ExpoImage } from 'expo-image';
+import { router, useLocalSearchParams } from 'expo-router';
 import React from 'react';
-import { ActivityIndicator, Image, KeyboardAvoidingView, Platform, StyleSheet, Text, TextInput, View } from 'react-native';
-import { AccessiblePressable, AppHeader, PrimaryButton, Screen } from '@/components/ui';
+import { useTranslation } from 'react-i18next';
+import { Linking, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { InlineNotice, OnboardingField, OnboardingPrimaryButton, OnboardingScaffold, OnboardingTextButton } from '@/components/onboarding/OnboardingUI';
+import { benefitsRpc, makeMutationId } from '@/lib/benefits';
 import { useAuth } from '@/lib/auth';
 import { getSupabase } from '@/lib/supabase';
-import { cancelRealXVerificationRequest, completeRealXSignup, getRealXVerificationStatus, sendRealXEmailCode, submitRealXVerificationRequest, verifyRealXEmailCode, type RealXVerificationStatus, type VerificationRole } from '@/lib/realxBackend';
-import { F, type ThemeColors, useAppTheme } from '@/lib/theme';
-import { syncRealXPushToken } from '@/lib/realxPush';
+import { cancelCouponlyVerificationRequest, completeCouponlySignup, getCouponlyVerificationStatus, sendCouponlyEmailCode, submitCouponlyVerificationRequest, verifyCouponlyEmailCode, type CouponlyVerificationStatus, type VerificationRole } from '@/lib/couponlyBackend';
+import { type ThemeColors, useAppTheme } from '@/lib/theme';
+import { syncCouponlyPushToken } from '@/lib/couponlyPush';
+import { clearPendingVerification, savePendingVerification } from '@/lib/verification-pending';
 
 type Flow = 'signup' | 'login' | 'verification';
-type Step = 'email' | 'code' | 'profile' | 'document' | 'status' | 'done';
+type Step = 'email' | 'code' | 'document' | 'status' | 'done';
 type PickedImage = { base64: string; uri: string; extension: string; contentType: string };
+const MAX_ID_BYTES = 3 * 1024 * 1024;
 
 export default function RealXOnboardingScreen() {
+  const params = useLocalSearchParams<{ flow?: Flow; step?: Step; email?: string; requestId?: string; statusToken?: string }>();
   const theme = useAppTheme(); const { colors: C } = theme;
+  const { t } = useTranslation();
   const styles = React.useMemo(() => makeStyles(C), [theme.mode, theme.highContrast]);
-  const { user } = useAuth();
-  const [flow, setFlow] = React.useState<Flow>('signup');
-  const [step, setStep] = React.useState<Step>('email');
-  const [email, setEmail] = React.useState(user?.email || '');
+  const { user, refreshStudentAccess } = useAuth();
+  const [flow, setFlow] = React.useState<Flow>(params.flow === 'login' ? 'login' : 'signup');
+  const [step, setStep] = React.useState<Step>(params.step === 'status' ? 'status' : 'email');
+  const [email, setEmail] = React.useState(user?.email || (typeof params.email === 'string' ? params.email : ''));
   const [code, setCode] = React.useState('');
+  const [inviteCode, setInviteCode] = React.useState('');
+  const inviteRequest = React.useRef({code: '', id: ''});
   const [firstName, setFirstName] = React.useState('');
   const [lastName, setLastName] = React.useState('');
-  const [role, setRole] = React.useState<VerificationRole>('student');
+  const role: VerificationRole = 'student';
   const [image, setImage] = React.useState<PickedImage | null>(null);
-  const [request, setRequest] = React.useState<{ requestId: string; statusToken: string } | null>(null);
-  const [status, setStatus] = React.useState<RealXVerificationStatus | null>(null);
-  const [creatorCode, setCreatorCode] = React.useState<string | null>(null);
+  const [request, setRequest] = React.useState<{ requestId: string; statusToken: string } | null>(typeof params.requestId === 'string' && typeof params.statusToken === 'string' ? { requestId: params.requestId, statusToken: params.statusToken } : null);
+  const [status, setStatus] = React.useState<CouponlyVerificationStatus | null>(params.step === 'status' ? 'pending' : null);
   const [busy, setBusy] = React.useState(false);
   const [message, setMessage] = React.useState('');
+  const [resendCooldown, setResendCooldown] = React.useState(0);
+  const autoSubmitted = React.useRef('');
+  const verificationInFlight = React.useRef(false);
 
   React.useEffect(() => { if (user?.email) setEmail(user.email); }, [user?.email]);
+  React.useEffect(() => {
+    if (resendCooldown <= 0) return;
+    const timer = setTimeout(() => setResendCooldown(value => Math.max(0, value - 1)), 1000);
+    return () => clearTimeout(timer);
+  }, [resendCooldown]);
   React.useEffect(() => {
     if (step !== 'status' || !request) return;
     let active = true;
     const refresh = async () => {
-      try { const result = await getRealXVerificationStatus(request.requestId, request.statusToken); if (active) setStatus(result.status); }
+      try { const result = await getCouponlyVerificationStatus(request.requestId, request.statusToken); if (active) setStatus(result.status); }
       catch { /* Keep showing the last request state if a poll is temporarily unavailable. */ }
     };
     void refresh();
     const interval = setInterval(() => { void refresh(); }, 15000);
     return () => { active = false; clearInterval(interval); };
   }, [step, request]);
+  React.useEffect(() => {
+    if (step === 'status' && status && status !== 'pending' && status !== 'approving') void clearPendingVerification();
+  }, [step, status]);
 
   const sendCode = async () => {
+    if (flow !== 'login' && !isSchoolEmail(email)) { setMessage(SCHOOL_EMAIL_MESSAGE); return; }
     setBusy(true); setMessage('');
     try {
-      await sendRealXEmailCode(email.trim().toLowerCase(), flow);
+      await sendCouponlyEmailCode(email.trim().toLowerCase(), flow);
       setStep('code');
-      setMessage(flow === 'verification' ? 'We sent a code to confirm your email before ID review.' : 'Enter the sign-in code from your email.');
+      setResendCooldown(60);
+      autoSubmitted.current = '';
+      setMessage(flow === 'verification' ? 'We sent a code to confirm your email before ID review.' : flow === 'signup' ? 'Enter the verification code from your email.' : 'Enter the sign-in code from your email.');
     } catch (error) {
       const detail = error instanceof Error ? error.message : 'Unable to send the email code.';
       setMessage(detail);
-      if (flow === 'signup' && detail.toLowerCase().includes('school email')) setFlow('verification');
     } finally { setBusy(false); }
   };
   const verifyCode = async () => {
+    if (code.trim().length < 6 || verificationInFlight.current) return;
+    verificationInFlight.current = true;
     setBusy(true); setMessage('');
     try {
-      await verifyRealXEmailCode(email.trim().toLowerCase(), flow, code.trim());
+      await verifyCouponlyEmailCode(email.trim().toLowerCase(), flow, code.trim());
       if (flow === 'verification') setStep('document');
       else if (flow === 'login') {
         const current = getSupabase().auth.getUser ? await getSupabase().auth.getUser() : null;
@@ -69,35 +94,60 @@ export default function RealXOnboardingScreen() {
           if (profile) { setStep('done'); router.replace('/realx' as any); return; }
         }
         setStep('profile');
-      } else setStep('profile');
+      } else await finishProfile();
     } catch (error) { setMessage(error instanceof Error ? error.message : 'The code could not be verified.'); }
+    finally { verificationInFlight.current = false; setBusy(false); }
+  };
+  React.useEffect(() => {
+    if (step === 'code' && code.length === 6 && code !== autoSubmitted.current) {
+      autoSubmitted.current = code;
+      void verifyCode();
+    }
+  }, [code, step]);
+  const resendCode = async () => {
+    if (resendCooldown > 0 || busy) return;
+    setBusy(true); setMessage(''); setCode(''); autoSubmitted.current = '';
+    try { await sendCouponlyEmailCode(email.trim().toLowerCase(), flow); setResendCooldown(60); }
+    catch (error) { setMessage(error instanceof Error ? error.message : 'Unable to send a new code.'); }
     finally { setBusy(false); }
   };
   const finishProfile = async () => {
     setBusy(true); setMessage('');
     try {
-      const result = await completeRealXSignup({ email: user?.email || email.trim().toLowerCase(), firstName: firstName.trim(), lastName: lastName.trim(), accountRole: role });
+      await completeCouponlySignup({ email: user?.email || email.trim().toLowerCase(), firstName: firstName.trim(), lastName: lastName.trim(), accountRole: role });
+      if (inviteCode.trim()) {
+        const normalized = inviteCode.trim().toUpperCase();
+        if (inviteRequest.current.code !== normalized) inviteRequest.current = {code: normalized, id: makeMutationId()};
+        await benefitsRpc('kouponly_claim_code', {p_code: normalized, p_mutation_id: inviteRequest.current.id});
+      }
+      await refreshStudentAccess();
       const current = await getSupabase().auth.getUser();
-      if (current.data.user) void syncRealXPushToken(current.data.user.id, true);
-      setCreatorCode(result.creatorCode || null); setStep('done');
+      if (current.data.user) void syncCouponlyPushToken(current.data.user.id, true);
+      setStep('done');
     } catch (error) { setMessage(error instanceof Error ? error.message : 'Unable to save your student profile.'); }
     finally { setBusy(false); }
   };
   const pickImage = async () => {
-    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!permission.granted) { setMessage('Allow photo library access to attach your student ID.'); return; }
-    const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], allowsEditing: true, base64: true, quality: 0.72 });
-    const asset = result.canceled ? null : result.assets[0];
-    if (!asset?.base64) return;
-    const extension = asset.mimeType?.split('/')[1] || 'jpg';
-    setImage({ base64: asset.base64, uri: asset.uri, extension, contentType: asset.mimeType || 'image/jpeg' });
     setMessage('');
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], base64: true, quality: 0.7 });
+      if (result.canceled || !result.assets?.[0]) return;
+      const asset = result.assets[0];
+      if (asset.mimeType && !['image/jpeg', 'image/png'].includes(asset.mimeType)) setMessage(t('onboarding_upload_unsupported'));
+      else if (!asset.width || !asset.height || Math.min(asset.width, asset.height) < 480) setMessage(t('onboarding_upload_too_small'));
+      else if (!asset.base64) setMessage(t('onboarding_upload_unreadable'));
+      else if (Math.ceil((asset.base64.length * 3) / 4) > MAX_ID_BYTES) setMessage(t('onboarding_upload_image_too_large'));
+      else setImage({ base64: asset.base64, uri: asset.uri, extension: asset.mimeType?.split('/')[1] || 'jpg', contentType: asset.mimeType || 'image/jpeg' });
+    } catch {
+      setMessage(t('onboarding_upload_picker_failed'));
+    }
   };
   const submitId = async () => {
     if (!image) { setMessage('Choose a clear photo of your student ID first.'); return; }
     setBusy(true); setMessage('');
     try {
-      const result = await submitRealXVerificationRequest({ email: email.trim().toLowerCase(), role, idImageBase64: image.base64, imageExtension: image.extension, contentType: image.contentType, details: { firstName: firstName.trim(), lastName: lastName.trim() } });
+      const result = await submitCouponlyVerificationRequest({ email: email.trim().toLowerCase(), role, idImageBase64: image.base64, imageExtension: image.extension, contentType: image.contentType, details: { firstName: firstName.trim(), lastName: lastName.trim() } });
+      await savePendingVerification({ email: email.trim().toLowerCase(), role, requestId: result.requestId, statusToken: result.statusToken });
       setRequest({ requestId: result.requestId, statusToken: result.statusToken }); setStatus('pending'); setStep('status');
     } catch (error) { setMessage(error instanceof Error ? error.message : 'Unable to submit your student ID.'); }
     finally { setBusy(false); }
@@ -105,77 +155,109 @@ export default function RealXOnboardingScreen() {
   const cancel = async () => {
     if (!request) return;
     setBusy(true); setMessage('');
-    try { await cancelRealXVerificationRequest(request.requestId, request.statusToken); setStatus('cancelled'); }
+    try { await cancelCouponlyVerificationRequest(request.requestId, request.statusToken); setStatus('cancelled'); await clearPendingVerification(); }
     catch (error) { setMessage(error instanceof Error ? error.message : 'Unable to cancel the request.'); }
     finally { setBusy(false); }
   };
 
-  const heading = step === 'email' ? flow === 'login' ? 'Sign in' : flow === 'verification' ? 'Verify your student ID' : 'Create a student account'
-    : step === 'code' ? 'Check your email' : step === 'profile' ? 'Your student profile' : step === 'document' ? 'Upload your ID' : step === 'status' ? 'Verification status' : 'You’re ready';
-  const primaryLabel = step === 'email' ? flow === 'login' ? 'Send sign-in code' : 'Send email code' : step === 'code' ? 'Verify code' : step === 'profile' ? 'Finish account setup' : step === 'document' ? 'Submit for review' : 'Back to RealX';
-  const submit = step === 'email' ? sendCode : step === 'code' ? verifyCode : step === 'profile' ? finishProfile : step === 'document' ? submitId : () => router.replace('/realx' as any);
+  const heading = step === 'email' ? flow === 'login' ? t('onboarding_v2_login_title') : flow === 'verification' ? t('onboarding_v2_manual_email_title') : t('onboarding_v2_email_title')
+    : step === 'code' ? t('onboarding_v2_code_title') : step === 'document' ? `${t('onboarding_upload_id_title_prefix')} ${t('onboarding_upload_id_title_suffix')}` : step === 'status' ? 'Verification status' : t('onboarding_v2_success_title', { firstName });
+  const subtitle = step === 'email' ? flow === 'login' ? t('onboarding_v2_login_subtitle') : flow === 'verification' ? t('onboarding_v2_manual_email_subtitle') : undefined
+    : step === 'code' ? t('onboarding_v2_code_subtitle') : step === 'document' ? t('onboarding_upload_id_description') : undefined;
+  const primaryLabel = step === 'email' ? flow === 'login' ? t('onboarding_v2_send_signin_code') : t('onboarding_email_continue')
+    : step === 'code' ? t('onboarding_otp_verify_button') : step === 'document' ? t('onboarding_upload_continue') : step === 'status' ? status === 'rejected' || status === 'cancelled' ? 'Start again' : 'Back to Kouponly' : 'Back to Kouponly';
+  const onBack = () => {
+    if (step === 'code') { setStep('email'); setCode(''); }
+    else if (step === 'document') setStep('code');
+    else if (step === 'status') setStep('document');
+    else router.back();
+  };
+  const progress = flow === 'login' || step === 'done' ? undefined : flow === 'verification'
+    ? { current: step === 'email' ? 2 : step === 'code' ? 3 : step === 'document' ? 4 : 5, total: 5 }
+    : { current: step === 'email' ? 2 : 3, total: 3 };
+  const disabled = step === 'email' ? !email.trim() || (flow === 'signup' && (!firstName.trim() || !lastName.trim())) : step === 'code' ? code.trim().length < 6 : step === 'document' ? !image : false;
+  const onSubmit = step === 'email' ? sendCode : step === 'code' ? verifyCode : step === 'document' ? submitId : step === 'status' && (status === 'rejected' || status === 'cancelled') ? () => { setFlow('verification'); setStep('email'); setMessage(''); } : () => router.replace('/realx' as any);
 
-  return <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
-    <Screen testID="realx-onboarding-screen">
-      <AppHeader eyebrow="REALX · ACCOUNT" title={heading} back />
-      {step === 'email' ? <>
-        <Text style={styles.intro}>Use your school email for instant student signup. If you do not have an approved school email, submit a student ID for manual review.</Text>
-        <Field label="EMAIL ADDRESS" value={email} onChangeText={setEmail} keyboardType="email-address" autoCapitalize="none" autoCorrect={false} editable={!busy && !user} />
-        {flow === 'verification' ? <RoleChoice role={role} setRole={setRole} /> : null}
+  return <OnboardingScaffold
+    title={heading}
+    subtitle={subtitle}
+    onBack={onBack}
+    onClose={() => router.replace('/realx' as any)}
+    progress={progress}
+    footer={<OnboardingPrimaryButton label={primaryLabel} loadingLabel={step === 'code' && flow === 'signup' ? t('onboarding_v2_creating_account') : undefined} loading={busy} disabled={disabled} onPress={() => void onSubmit()} />}
+  >
+    {step === 'email' ? <>
+      <OnboardingField label={flow === 'login' ? t('onboarding_login_email_placeholder') : t('onboarding_email_placeholder')} value={email} onChangeText={setEmail} keyboardType="email-address" autoCapitalize="none" autoCorrect={false} autoComplete="email" editable={!busy && !user} style={{ writingDirection: 'ltr', textAlign: 'left' }} />
+      {flow !== 'login' ? <Text style={styles.legal}>{SCHOOL_EMAIL_MESSAGE}</Text> : null}
+      {flow === 'signup' ? <>
+        <OnboardingField label={t('first_name_placeholder')} value={firstName} onChangeText={setFirstName} autoComplete="given-name" autoCapitalize="words" editable={!busy} />
+        <OnboardingField label={t('last_name_placeholder')} value={lastName} onChangeText={setLastName} autoComplete="family-name" autoCapitalize="words" editable={!busy} />
+        <OnboardingField label="Invite code (optional)" value={inviteCode} onChangeText={text => setInviteCode(text.toUpperCase())} autoCapitalize="characters" autoCorrect={false} maxLength={5} editable={!busy} />
       </> : null}
-      {step === 'code' ? <>
-        <Text style={styles.intro}>We sent a 6 digit code to {email}. The code expires after a short time.</Text>
-        <Field label="EMAIL CODE" value={code} onChangeText={setCode} keyboardType="number-pad" maxLength={6} autoComplete="one-time-code" />
-        <AccessiblePressable onPress={() => { setStep('email'); setCode(''); }} style={styles.textButton}><Text style={styles.link}>Change email</Text></AccessiblePressable>
-      </> : null}
-      {step === 'profile' ? <>
-        <Text style={styles.intro}>Complete the RealX profile tied to your verified Supabase account.</Text>
-        <Field label="FIRST NAME" value={firstName} onChangeText={setFirstName} autoCapitalize="words" />
-        <Field label="LAST NAME" value={lastName} onChangeText={setLastName} autoCapitalize="words" />
-        <RoleChoice role={role} setRole={setRole} />
-      </> : null}
-      {step === 'document' ? <>
-        <Text style={styles.intro}>Upload a clear image with your name and school visible. An admin will review it and send an update to your email.</Text>
-        <Field label="FIRST NAME" value={firstName} onChangeText={setFirstName} autoCapitalize="words" />
-        <Field label="LAST NAME" value={lastName} onChangeText={setLastName} autoCapitalize="words" />
-        <RoleChoice role={role} setRole={setRole} />
-        <AccessiblePressable onPress={() => void pickImage()} style={styles.upload}><Text style={styles.link}>{image ? 'Replace student ID photo' : 'Choose student ID photo'}</Text></AccessiblePressable>
-        {image ? <Image source={{ uri: image.uri }} style={styles.preview} /> : null}
-      </> : null}
-      {step === 'status' ? <View style={styles.statusCard}>
-        <Text style={styles.status}>{status?.replaceAll('_', ' ').toUpperCase() || 'CHECKING'}</Text>
-        <Text style={styles.intro}>{status === 'approved' ? 'Your school status is approved. Use sign in to finish your student profile.' : status === 'rejected' ? 'The uploaded document could not be verified. You can submit another request with a clearer image.' : status === 'cancelled' ? 'This request was cancelled.' : 'Your request is waiting for admin review. We will refresh this status automatically.'}</Text>
-        {request && status === 'pending' ? <AccessiblePressable disabled={busy} onPress={() => void cancel()} style={styles.textButton}><Text style={styles.link}>Cancel request</Text></AccessiblePressable> : null}
-        {status === 'approved' || status === 'rejected' || status === 'cancelled' ? <AccessiblePressable onPress={() => { setFlow(status === 'approved' ? 'login' : 'verification'); setStep('email'); }} style={styles.textButton}><Text style={styles.link}>{status === 'approved' ? 'Continue to sign in' : 'Start again'}</Text></AccessiblePressable> : null}
-      </View> : null}
-      {step === 'done' ? <View style={styles.statusCard}>
-        <Text style={styles.status}>STUDENT PROFILE READY</Text>
-        <Text style={styles.intro}>{creatorCode ? `Your creator code is ${creatorCode}.` : 'Your RealX student profile is connected to this account.'}</Text>
-      </View> : null}
-      {message ? <Text accessibilityRole="alert" style={styles.error}>{message}</Text> : null}
-      <View style={styles.action}><PrimaryButton label={primaryLabel} loading={busy} disabled={step === 'email' ? !email.includes('@') : step === 'code' ? code.trim().length < 6 : step === 'profile' ? !firstName.trim() || !lastName.trim() : step === 'document' ? !image : false} onPress={() => void submit()} /></View>
-      {step === 'email' && flow !== 'verification' ? <AccessiblePressable onPress={() => { setFlow(flow === 'signup' ? 'login' : 'signup'); setMessage(''); }} style={styles.textButton}><Text style={styles.link}>{flow === 'signup' ? 'Already a student? Sign in' : 'New student? Create an account'}</Text></AccessiblePressable> : null}
-      {step === 'email' && flow === 'verification' ? <AccessiblePressable onPress={() => { setFlow('signup'); setMessage(''); }} style={styles.textButton}><Text style={styles.link}>I have an approved school email</Text></AccessiblePressable> : null}
-    </Screen>
-  </KeyboardAvoidingView>;
+      {flow === 'signup' ? <Text style={styles.legal}>{t('onboarding_v2_legal')}</Text> : null}
+      {flow !== 'verification' ? <OnboardingTextButton label={flow === 'signup' ? t('onboarding_login_action') : t('onboarding_v2_create_account')} disabled={busy} onPress={() => { setFlow(flow === 'signup' ? 'login' : 'signup'); setMessage(''); }} /> : null}
+    </> : null}
+    {step === 'code' ? <>
+      <Text style={styles.intro}>{email}</Text>
+      <OtpField value={code} onChangeText={value => { setCode(value); if (value.length < 6) autoSubmitted.current = ''; }} disabled={busy} />
+      <OnboardingTextButton label={t('onboarding_otp_change_email')} onPress={() => { setStep('email'); setCode(''); }} />
+      {resendCooldown > 0 ? <Text style={styles.legal}>{t('onboarding_otp_resend_in', { seconds: resendCooldown })}</Text> : <OnboardingTextButton label={t('onboarding_otp_resend')} disabled={busy} onPress={() => void resendCode()} />}
+      <Text style={styles.legal}>{t('onboarding_v2_code_delay')}</Text>
+    </> : null}
+    {step === 'document' ? <>
+      <TouchableOpacity accessibilityLabel={image ? t('onboarding_upload_replace') : t('onboarding_upload_id_single')} accessibilityRole="button" activeOpacity={0.82} disabled={busy} onPress={() => void pickImage()} style={[styles.uploadZone, { backgroundColor: image ? C.soft : C.card, borderColor: image ? C.lime : C.line }]}>
+        {image ? <><ExpoImage source={{ uri: image.uri }} style={styles.previewImage} contentFit="contain" /><View style={[styles.replaceBadge, { backgroundColor: C.ink }]}><Text style={[styles.replaceText, { color: C.onDark }]}>{t('onboarding_upload_replace')}</Text></View></> : <View style={styles.uploadPlaceholder}><Ionicons name="images-outline" size={36} color={C.muted} /><Text style={[styles.uploadLabel, { color: C.ink }]}>{t('onboarding_upload_id_single')}</Text><Text style={[styles.uploadInfo, { color: C.muted }]}>{t('onboarding_upload_id_info')}</Text></View>}
+      </TouchableOpacity>
+      <View style={styles.qualityList}>{(['corners', 'readable', 'glare'] as const).map(item => <View key={item} style={styles.qualityItem}><Ionicons name="checkmark-circle" size={18} color={C.lime} /><Text style={[styles.qualityText, { color: C.muted }]}>{t(`onboarding_upload_quality_${item}`)}</Text></View>)}</View>
+      <View style={[styles.privacy, { backgroundColor: C.soft }]}><Text style={[styles.privacyText, { color: C.muted }]}>{t('onboarding_upload_privacy_explanation')}</Text><View style={styles.privacyLinks}><TouchableOpacity accessibilityRole="link" onPress={() => router.push('/privacy' as any)}><Text style={[styles.privacyLink, { color: C.lime }]}>{t('privacy_policy')}</Text></TouchableOpacity><TouchableOpacity accessibilityRole="link" onPress={() => router.push('/terms' as any)}><Text style={[styles.privacyLink, { color: C.lime }]}>{t('terms_and_conditions')}</Text></TouchableOpacity></View></View>
+      {message ? <View><Text selectable accessibilityLiveRegion="polite" style={[styles.inlineError, { color: C.danger }]}>{message}</Text>{message === t('onboarding_upload_picker_failed') ? <TouchableOpacity accessibilityRole="button" onPress={() => void Linking.openSettings()} style={styles.settingsButton}><Text style={[styles.privacyLink, { color: C.lime }]}>{t('onboarding_v2_open_settings')}</Text></TouchableOpacity> : null}</View> : null}
+    </> : null}
+    {step === 'status' ? <>
+      <InlineNotice tone={status === 'rejected' ? 'error' : status === 'approved' ? 'success' : 'info'}>{status === 'approved' ? 'Your student status is approved.' : status === 'rejected' ? 'The uploaded document could not be verified. Submit a clearer photo to try again.' : status === 'cancelled' ? 'This request was cancelled.' : 'Your request is waiting for review. This page checks for updates automatically.'}</InlineNotice>
+      {request && status === 'pending' ? <OnboardingTextButton label="Cancel request" disabled={busy} onPress={() => void cancel()} /> : null}
+      {(status === 'approved' || status === 'rejected' || status === 'cancelled') ? <OnboardingTextButton label={status === 'approved' ? 'Continue to sign in' : 'Start again'} onPress={() => { setFlow(status === 'approved' ? 'login' : 'verification'); setStep('email'); }} /> : null}
+    </> : null}
+    {step === 'done' ? <InlineNotice tone="success">{t('onboarding_v2_success_preview')}</InlineNotice> : null}
+    {message && step !== 'document' ? <InlineNotice tone="error">{message}</InlineNotice> : null}
+  </OnboardingScaffold>;
 }
 
-function Field({ label, ...props }: any) {
-  const { colors: C } = useAppTheme(); const styles = React.useMemo(() => makeStyles(C), [C]);
-  return <View style={styles.field}><Text style={styles.label}>{label}</Text><TextInput {...props} placeholder={label === 'EMAIL ADDRESS' ? 'name@school.edu.qa' : ''} placeholderTextColor={C.muted} style={styles.input} /></View>;
-}
-function RoleChoice({ role, setRole }: { role: VerificationRole; setRole: (role: VerificationRole) => void }) {
-  const { colors: C } = useAppTheme(); const styles = React.useMemo(() => makeStyles(C), [C]);
-  return <View><Text style={styles.label}>ACCOUNT TYPE</Text><View style={styles.roles}>{(['student', 'creator'] as const).map((value) => <AccessiblePressable key={value} accessibilityState={{ selected: role === value }} onPress={() => setRole(value)} style={[styles.role, role === value && styles.roleSelected]}><Text style={[styles.roleText, role === value && styles.roleTextSelected]}>{value === 'student' ? 'Student' : 'Creator'}</Text></AccessiblePressable>)}</View></View>;
+function OtpField({ value, onChangeText, disabled }: { value: string; onChangeText: (value: string) => void; disabled: boolean }) {
+  const { colors: C } = useAppTheme();
+  const styles = React.useMemo(() => makeStyles(C), [C]);
+  const input = React.useRef<TextInput>(null);
+  return <View style={styles.otpWrap}>
+    <TouchableOpacity activeOpacity={1} onPress={() => input.current?.focus()} style={styles.otpCells}>
+      {Array.from({ length: 6 }, (_, index) => <View key={index} style={[styles.otpCell, index === value.length && styles.otpCellActive]}><Text style={styles.otpDigit}>{value[index] || ''}</Text></View>)}
+    </TouchableOpacity>
+    <TextInput ref={input} value={value} onChangeText={text => onChangeText(text.replace(/\D/g, '').slice(0, 6))} keyboardType="number-pad" autoComplete="one-time-code" textContentType="oneTimeCode" maxLength={6} editable={!disabled} autoFocus style={styles.hiddenInput} accessibilityLabel="Six-digit verification code" />
+  </View>;
 }
 
 const makeStyles = (C: ThemeColors) => StyleSheet.create({
-  intro: { fontFamily: F.body, fontSize: 14, lineHeight: 21, color: C.muted, marginBottom: 17 },
-  field: { marginBottom: 14 }, label: { fontFamily: F.bodyBold, fontSize: 10, letterSpacing: 1, color: C.muted, marginBottom: 7 },
-  input: { minHeight: 52, borderRadius: 15, paddingHorizontal: 14, borderWidth: 1, borderColor: C.line, backgroundColor: C.card, color: C.ink, fontFamily: F.body, fontSize: 15 },
-  roles: { flexDirection: 'row', gap: 9, marginBottom: 17 }, role: { minHeight: 44, minWidth: 110, borderRadius: 14, borderWidth: 1, borderColor: C.line, backgroundColor: C.card, paddingHorizontal: 16, alignItems: 'center', justifyContent: 'center' },
-  roleSelected: { backgroundColor: C.ink, borderColor: C.ink }, roleText: { fontFamily: F.bodyBold, color: C.ink, fontSize: 13 }, roleTextSelected: { color: C.onDark },
-  upload: { minHeight: 48, borderRadius: 14, backgroundColor: C.soft, alignItems: 'center', justifyContent: 'center', marginBottom: 12 }, link: { fontFamily: F.bodyBold, color: C.ink, fontSize: 13 }, textButton: { minHeight: 43, alignItems: 'center', justifyContent: 'center' },
-  preview: { width: '100%', height: 210, borderRadius: 18, backgroundColor: C.soft, marginBottom: 12 }, statusCard: { backgroundColor: C.soft, padding: 19, borderRadius: 21, marginBottom: 16 }, status: { fontFamily: F.headingSemi, fontSize: 15, color: C.ink, letterSpacing: .5, marginBottom: 10 },
-  error: { color: C.danger, fontFamily: F.bodySemi, fontSize: 13, lineHeight: 19, marginBottom: 12 }, action: { marginTop: 8 },
+  intro: { fontSize: 15, lineHeight: 22, color: C.muted, textAlign: 'center' },
+  legal: { fontSize: 13, lineHeight: 19, color: C.muted, textAlign: 'center' },
+  preview: { width: '100%', height: 210, borderRadius: 18, backgroundColor: C.soft },
+  uploadZone: { height: 230, borderWidth: 1.5, borderRadius: 20, borderStyle: 'dashed', overflow: 'hidden' },
+  uploadPlaceholder: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 9, paddingHorizontal: 24 },
+  uploadLabel: { fontSize: 16, lineHeight: 23, fontFamily: 'Poppins' },
+  uploadInfo: { fontSize: 13, lineHeight: 19, textAlign: 'center', fontFamily: 'Poppins' },
+  previewImage: { width: '100%', height: '100%' },
+  replaceBadge: { position: 'absolute', right: 12, bottom: 12, borderRadius: 16, paddingHorizontal: 14, paddingVertical: 8 },
+  replaceText: { fontSize: 13, lineHeight: 19, fontFamily: 'Poppins' },
+  qualityList: { gap: 10 },
+  qualityItem: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  qualityText: { flex: 1, fontSize: 14, lineHeight: 20, fontFamily: 'Poppins' },
+  privacy: { borderRadius: 16, padding: 16, gap: 12 },
+  privacyText: { fontSize: 13, lineHeight: 19, fontFamily: 'Poppins' },
+  privacyLinks: { flexDirection: 'row', gap: 20, flexWrap: 'wrap' },
+  privacyLink: { fontSize: 13, lineHeight: 19, fontFamily: 'Poppins', textDecorationLine: 'underline' },
+  inlineError: { fontSize: 13, lineHeight: 19, fontFamily: 'Poppins' },
+  settingsButton: { alignSelf: 'flex-start', minHeight: 44, justifyContent: 'center' },
+  otpWrap: { width: '100%' },
+  otpCells: { flexDirection: 'row', justifyContent: 'center', gap: 7 },
+  otpCell: { flex: 1, maxWidth: 52, minWidth: 38, height: 58, borderRadius: 14, borderWidth: 1.5, borderColor: C.line, backgroundColor: C.soft, alignItems: 'center', justifyContent: 'center' },
+  otpCellActive: { borderColor: C.lime },
+  otpDigit: { color: C.ink, fontSize: 24, fontWeight: '700' },
+  hiddenInput: { position: 'absolute', width: 1, height: 1, opacity: 0 },
 });

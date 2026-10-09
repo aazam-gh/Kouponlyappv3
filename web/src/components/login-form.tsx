@@ -33,11 +33,7 @@ export function LoginForm({
     try {
       const role = await loginWithEmail(email, password)
       await router.invalidate()
-      const fallback = role.admin
-        ? '/admin/dashboard'
-        : role.holding
-          ? '/holding/dashboard'
-          : '/dashboard'
+      const fallback = role.admin ? '/admin/dashboard' : '/dashboard'
       await navigate({ to: search.redirect || fallback })
     } catch (err) {
       console.error("Login error:", err)
@@ -79,7 +75,7 @@ export function LoginForm({
           <Input id="password" name="password" type="password" required disabled={isLoading} autoComplete="current-password" />
         </Field>
         <Field>
-          <Button type="submit" disabled={isLoading} className="w-full bg-brand-green hover:bg-brand-green/90 text-white">
+          <Button type="submit" disabled={isLoading} className="w-full bg-[#18B852] text-[#0A0A0A] hover:bg-[#128A43]">
             {isLoading ? "Signing in..." : "Login"}
           </Button>
         </Field>

@@ -1,16 +1,15 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { BrandingSettings, type VendorBrandingForm } from '@/components/admin/vendors/BrandingSettings'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { db, functions } from '@/firebase/config'
-import { doc, getDoc, serverTimestamp, setDoc, updateDoc } from 'firebase/firestore'
-import { httpsCallable } from 'firebase/functions'
+import { db } from '@/firebase/config'
+import { doc, updateDoc } from 'firebase/firestore'
 import { useState, useEffect } from 'react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Loader2, Save } from 'lucide-react'
 import { refreshVendorList } from '@/lib/vendorList'
 import { deleteGalleryImages, getRemovedGalleryImages } from '@/lib/vendor-gallery'
-import { vendorPinQueryOptions, vendorQueryOptions, type OnlineRedemptionConfig, type Vendor } from '@/queries'
+import { vendorQueryOptions, type Vendor } from '@/queries'
 
 export const Route = createFileRoute('/admin/vendors/$vendorId/settings/branding')({
     component: BrandingSettingsComponent,
@@ -24,112 +23,35 @@ function BrandingSettingsComponent() {
     const queryClient = useQueryClient()
     const [formData, setFormData] = useState<VendorBrandingForm | null>(null)
     const [uploadingImages, setUploadingImages] = useState(false)
-    const [onlineConfig, setOnlineConfig] = useState<OnlineRedemptionConfig>({
-        discountCode: '',
-        purchaseUrl: '',
-        dailyLimitPerUser: 1,
-        enabled: false,
-    })
+
 
     const { data: vendor, isLoading } = useQuery(vendorQueryOptions(vendorId))
-    const { data: vendorPin = '', isLoading: isPinLoading } = useQuery(vendorPinQueryOptions(vendorId))
-
     useEffect(() => {
         if (vendor) {
-            setFormData({ ...vendor, redemptionPin: vendorPin })
+            setFormData({ ...vendor })
         }
-    }, [vendor, vendorPin])
-
-    useEffect(() => {
-        let active = true
-
-        const loadOnlineConfig = async () => {
-            const snapshot = await getDoc(doc(db, 'vendorOnlineRedemptionConfigs', vendorId))
-            if (!active) return
-
-            if (!snapshot.exists()) {
-                setOnlineConfig({
-                    discountCode: '',
-                    purchaseUrl: '',
-                    dailyLimitPerUser: 1,
-                    enabled: false,
-                })
-                return
-            }
-
-            const data = snapshot.data()
-            setOnlineConfig({
-                discountCode: data.discountCode || '',
-                purchaseUrl: data.purchaseUrl || '',
-                dailyLimitPerUser: Number(data.dailyLimitPerUser || 1),
-                enabled: data.enabled === true,
-            })
-        }
-
-        void loadOnlineConfig()
-
-        return () => {
-            active = false
-        }
-    }, [vendorId])
+    }, [vendor])
 
     const updateMutation = useMutation({
-        mutationFn: async ({ vendorData, configData }: { vendorData: VendorBrandingForm, configData: OnlineRedemptionConfig }) => {
-            if (vendorData.vendorType === 'online') {
-                const discountCode = configData.discountCode.trim()
-                const purchaseUrl = configData.purchaseUrl.trim()
-                const dailyLimitPerUser = Number(configData.dailyLimitPerUser)
-
-                if (!discountCode || !purchaseUrl || !Number.isFinite(dailyLimitPerUser) || dailyLimitPerUser < 1) {
-                    throw new Error('Online vendors require a discount code, purchase URL, and daily limit of at least 1.')
-                }
-
-                try {
-                    new URL(purchaseUrl)
-                } catch {
-                    throw new Error('Purchase URL must be a valid URL.')
-                }
-            }
+        mutationFn: async (vendorData: VendorBrandingForm) => {
 
             const dataToUpdate: Partial<VendorBrandingForm> = { ...vendorData }
             delete dataToUpdate.id
-            delete dataToUpdate.redemptionPin
-
-            const pin = vendorData.redemptionPin?.trim() || ''
-            if (pin && !/^\d{4}$/.test(pin)) {
-                throw new Error('Vendor security PIN must be exactly 4 digits.')
-            }
-            if (pin && pin !== vendorPin) {
-                await httpsCallable(functions, 'setVendorRedemptionPin')({ vendorId, pin })
-            }
 
             const vendorRef = doc(db, 'vendors', vendorId)
             await updateDoc(vendorRef, dataToUpdate)
-
-            await setDoc(doc(db, 'vendorOnlineRedemptionConfigs', vendorId), {
-                discountCode: configData.discountCode.trim(),
-                purchaseUrl: configData.purchaseUrl.trim(),
-                dailyLimitPerUser: Math.max(1, Math.floor(Number(configData.dailyLimitPerUser) || 1)),
-                enabled: configData.enabled === true,
-                updatedAt: serverTimestamp(),
-            }, { merge: true })
-
-            return { savedPin: pin || vendorPin }
         },
-        onMutate: async ({ vendorData }) => {
+        onMutate: async (vendorData) => {
             await queryClient.cancelQueries({ queryKey: ['vendor', vendorId] })
             const previousVendor = queryClient.getQueryData(['vendor', vendorId])
             const optimisticVendor = { ...vendorData }
-            delete optimisticVendor.redemptionPin
             queryClient.setQueryData(['vendor', vendorId], (old: Vendor | undefined) => {
                 if (!old) return old
                 return { ...old, ...optimisticVendor }
             })
             return { previousVendor }
         },
-        onSuccess: ({ savedPin }, { vendorData }) => {
-            queryClient.setQueryData(['vendor-pin', vendorId], savedPin)
-            setFormData((current) => current ? { ...current, redemptionPin: savedPin } : current)
+        onSuccess: (_result, vendorData) => {
             void deleteGalleryImages(getRemovedGalleryImages(vendor?.galleryImages, vendorData.galleryImages))
             void refreshVendorList()
             toast.success('Settings updated successfully!', {
@@ -147,23 +69,22 @@ function BrandingSettingsComponent() {
         },
         onSettled: () => {
             queryClient.invalidateQueries({ queryKey: ['vendor', vendorId] })
-            queryClient.invalidateQueries({ queryKey: ['vendor-pin', vendorId] })
         },
     })
 
     const handleSave = () => {
         if (formData) {
-            updateMutation.mutate({ vendorData: formData, configData: onlineConfig })
+            updateMutation.mutate(formData)
         }
     }
 
     const handleReset = () => {
         if (!formData || !vendor || uploadingImages) return
         void deleteGalleryImages(getRemovedGalleryImages(formData.galleryImages, vendor.galleryImages))
-        setFormData({ ...vendor, redemptionPin: vendorPin })
+        setFormData({ ...vendor })
     }
 
-    if (isLoading || isPinLoading) {
+    if (isLoading) {
         return (
             <div className="flex items-center justify-center min-h-[400px]">
                 <div className="h-8 w-8 animate-spin rounded-full border-4 border-brand-green border-t-transparent" />
@@ -180,8 +101,6 @@ function BrandingSettingsComponent() {
                     formData={formData}
                     setFormData={setFormData}
                     vendorId={vendorId}
-                    onlineConfig={onlineConfig}
-                    setOnlineConfig={setOnlineConfig}
                     savedGalleryImages={vendor.galleryImages}
                     onUploadingChange={setUploadingImages}
                 />

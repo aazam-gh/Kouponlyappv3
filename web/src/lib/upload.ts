@@ -50,7 +50,10 @@ export async function uploadImage(
             reject,
             async () => {
                 const url = await getDownloadURL(uploadTask.snapshot.ref)
-                resolve(url)
+                // A replacement at the same Storage path must invalidate image caches.
+                const published = new URL(url)
+                published.searchParams.set('v', String(Date.now()))
+                resolve(published.toString())
             }
         )
     })

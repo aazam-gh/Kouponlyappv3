@@ -32,7 +32,6 @@ function createEmptyItem(): FeaturedBrandShowcaseItem {
     return {
         id: `showcase_${Math.random().toString(36).slice(2, 11)}`,
         title: '',
-        titleAr: '',
         orderUrl: '',
         isActive: false,
         heroImageUrl: '',
@@ -190,7 +189,6 @@ function FeaturedBrandShowcaseManagement() {
             const cleanedItem: FeaturedBrandShowcaseItem = {
                 ...item,
                 title: item.title.trim(),
-                titleAr: item.titleAr?.trim() || '',
                 orderUrl: item.orderUrl.trim(),
                 altText: item.altText?.trim() || '',
                 order: Number.isFinite(Number(item.order)) ? Number(item.order) : 0,
@@ -327,15 +325,6 @@ function FeaturedBrandShowcaseManagement() {
                         />
                     </Field>
 
-                    <Field label="Title (Arabic)">
-                        <input
-                            dir="rtl"
-                            value={item.titleAr || ''}
-                            onChange={(event) => updateItem({ titleAr: event.target.value })}
-                            placeholder="اومارا للملابس"
-                            className="w-full h-11 px-4 rounded-xl bg-white border border-gray-100 font-bold text-sm text-gray-900 outline-none focus:border-purple-400 transition-all shadow-sm text-right"
-                        />
-                    </Field>
 
                     <Field label="Order URL">
                         <input

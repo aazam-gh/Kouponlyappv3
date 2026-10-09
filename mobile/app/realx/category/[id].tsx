@@ -1,38 +1,87 @@
 import { router, useLocalSearchParams } from 'expo-router';
-import { Store } from 'lucide-react-native';
+import { StatusBar } from 'expo-status-bar';
 import React from 'react';
-import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
-import { AccessiblePressable, AppHeader, Empty, Screen } from '@/components/ui';
-import { getSupabase } from '@/lib/supabase';
-import { F, type ThemeColors, useAppTheme } from '@/lib/theme';
+import { ActivityIndicator, FlatList, Keyboard, Platform, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
+import { CategoryHeader, FilterTabs, RestaurantCard, SubCategoryChips } from '@/components/category';
+import SearchBar from '@/components/home/SearchBar';
+import { CatalogueNotice, useCatalogue } from '@/lib/catalogue';
+import { categories, deals, type Deal } from '@/lib/data';
+import { useAppTheme } from '@/context/AppThemeContext';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-type Vendor = { id: string; name: string; category_id: string | null; payload: Record<string, any> };
 export default function RealXCategoryScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>(); const theme = useAppTheme(); const { colors: C } = theme;
-  const styles = React.useMemo(() => makeStyles(C), [theme.mode, theme.highContrast]);
-  const [title, setTitle] = React.useState('Campus category'); const [rows, setRows] = React.useState<Vendor[]>([]); const [loading, setLoading] = React.useState(true); const [message, setMessage] = React.useState('');
-  React.useEffect(() => {
-    let active = true;
-    void (async () => {
-      try {
-        const client = getSupabase();
-        const [category, vendors] = await Promise.all([
-          client.from('realx_categories').select('id,name,slug,payload').eq('id', String(id || '')).maybeSingle(),
-          client.from('realx_vendors').select('id,name,category_id,payload').eq('status', 'Active').order('name').limit(500),
-        ]);
-        if (category.error) throw category.error; if (vendors.error) throw vendors.error;
-        const categoryName = category.data?.name || category.data?.payload?.nameEn || 'Campus category';
-        const categoryValue = String(category.data?.slug || category.data?.name || id || '').toLocaleLowerCase();
-        if (active) { setTitle(categoryName); setRows(((vendors.data || []) as Vendor[]).filter((row) => row.category_id === id || String(row.payload?.mainCategory || '').toLocaleLowerCase() === categoryValue)); setMessage(''); }
-      } catch (error) { if (active) setMessage(error instanceof Error ? error.message : 'Unable to load this category.'); }
-      finally { if (active) setLoading(false); }
-    })();
-    return () => { active = false; };
-  }, [id]);
-  return <Screen testID="realx-category-screen"><AppHeader eyebrow="REALX · CATEGORY" title={title} back />
-    {loading ? <ActivityIndicator color={C.ink} style={{ marginTop: 40 }} /> : rows.length ? rows.map((row) => <AccessiblePressable key={row.id} onPress={() => router.push({ pathname: '/realx/vendor/[id]', params: { id: row.id } } as any)} style={styles.card}>
-      <View style={styles.icon}><Store size={18} color={C.ink} /></View><View style={{ flex: 1 }}><Text style={styles.name}>{row.name || row.payload?.name || 'RealX partner'}</Text><Text style={styles.body}>{(row.payload?.offers || []).length ? `${row.payload.offers.length} offer${row.payload.offers.length === 1 ? '' : 's'}` : row.payload?.description || 'View partner offers and details.'}</Text></View>
-    </AccessiblePressable>) : <Empty icon="%" title="No partners in this category" body={message || 'Active partners will appear here.'} />}
-  </Screen>;
+  const { id, name, englishName } = useLocalSearchParams<{ id: string; name?: string; englishName?: string }>();
+  const { t } = useTranslation();
+  const { isDark, theme } = useAppTheme();
+  const { width } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
+  const { status, revision, refresh } = useCatalogue();
+  const [filter, setFilter] = React.useState('all');
+  const [subcategory, setSubcategory] = React.useState('all');
+  const [input, setInput] = React.useState('');
+  const [query, setQuery] = React.useState('');
+  const category = categories.find(item => item.id === String(id) || item.slug === String(id));
+  const title = englishName || category?.name || name || 'Category';
+  const isCategoryActive = Boolean(category);
+  const subcategories = React.useMemo(() => [
+    { id: 'all', name: t('all'), icon: 'apps-outline' },
+    ...(category?.subcategories.filter(item => item.id).map(item => ({ id: item.id!, name: item.label, icon: item.image || '' })) || []),
+  ], [category, t]);
+  const rows = React.useMemo(() => {
+    const matching = deals.filter(deal => {
+      if (deal.categoryId !== category?.id) return false;
+      if (filter === 'top' && !(deal.trend > 0)) return false;
+      if (subcategory !== 'all' && !deal.subcategoryIds?.includes(subcategory)) return false;
+      const terms = query.toLocaleLowerCase().split(/\s+/).filter(Boolean);
+      const text = `${deal.name} ${deal.category} ${deal.offer} ${deal.description} ${deal.place}`.toLocaleLowerCase();
+      return terms.every(term => text.includes(term));
+    });
+    if (filter === 'nearest') return matching.sort((a, b) => (a.distanceKm || Infinity) - (b.distanceKm || Infinity));
+    if (filter === 'top') return matching.sort((a, b) => b.trend - a.trend);
+    return matching;
+  }, [category?.id, filter, query, revision, subcategory]);
+  const cardWidth = width - 40;
+  const submitSearch = () => { setQuery(input.trim()); setSubcategory('all'); Keyboard.dismiss(); };
+
+  return <SafeAreaView style={[styles.root, { backgroundColor: theme.background }]} edges={['top', 'bottom']}>
+    <StatusBar style={isDark ? 'light' : 'dark'} />
+    <FlatList
+      data={rows}
+      numColumns={1}
+      keyExtractor={item => String(item.vendorId || item.id)}
+      showsVerticalScrollIndicator={false}
+      contentContainerStyle={{ paddingBottom: Platform.OS === 'ios' ? Math.max(110, insets.bottom + 92) : 24 }}
+      ListHeaderComponent={<>
+        <CategoryHeader onBackPress={() => router.back()} accessory={<SearchBar compact placeholder={t('search_placeholder_category', { category: String(title).toLocaleLowerCase() })} value={input} onChangeText={setInput} onSubmit={submitSearch} />} />
+        {isCategoryActive ? <>
+          <FilterTabs selectedFilter={filter} onFilterChange={setFilter} />
+          {subcategories.length > 1 ? <SubCategoryChips subCategories={subcategories} selectedId={subcategory} onSelect={item => setSubcategory(item.id)} /> : null}
+        </> : null}
+        {status === 'offline' ? <View style={{ paddingHorizontal: 20 }}><CatalogueNotice /></View> : null}
+      </>}
+      renderItem={({ item }: { item: Deal }) => <RestaurantCard
+        id={String(item.vendorId || item.id)}
+        name={item.name}
+        imageUri={item.image}
+        logoUri={item.logo}
+        imageHeight={Math.round(cardWidth * 0.38)}
+        logoBottom={-35.6}
+        distance={item.distanceKm > 0 ? item.distance : undefined}
+        xcardEnabled={item.xcard}
+        distanceOnImage
+        overlapLogo
+        titleCaseName
+        contentStyle={{ minHeight: 48, justifyContent: 'flex-start', paddingTop: 8, paddingBottom: 0 }}
+        style={{ width: cardWidth, marginHorizontal: 20, marginBottom: 14, borderWidth: 1, borderColor: theme.border, borderRadius: 20, overflow: 'hidden' }}
+        onPress={() => router.push({ pathname: '/realx/vendor/[id]', params: { id: String(item.vendorId || item.id) } } as any)}
+      />}
+      ListEmptyComponent={status === 'loading' ? <ActivityIndicator color={theme.brand} style={{ marginTop: 30 }} /> : <View style={styles.empty}><Text style={[styles.emptyTitle, { color: theme.text }]}>{t('state_filtered_empty_title')}</Text><Text style={{ color: theme.mutedText }}>{t('state_filtered_empty_message')}</Text></View>}
+      onRefresh={() => void refresh()}
+      refreshing={status === 'loading'}
+    />
+  </SafeAreaView>;
 }
-const makeStyles = (C: ThemeColors) => StyleSheet.create({ card: { minHeight: 70, borderWidth: 1, borderColor: C.line, borderRadius: 17, backgroundColor: C.card, padding: 12, marginBottom: 9, flexDirection: 'row', alignItems: 'center', gap: 11 }, icon: { width: 40, height: 40, borderRadius: 13, alignItems: 'center', justifyContent: 'center', backgroundColor: C.soft }, name: { fontFamily: F.headingSemi, color: C.ink, fontSize: 14 }, body: { fontFamily: F.body, color: C.muted, fontSize: 11, marginTop: 3 } });
+
+const styles = StyleSheet.create({ root: { flex: 1 }, empty: { padding: 28, alignItems: 'center', gap: 8 }, emptyTitle: { fontSize: 18, fontWeight: '700' } });

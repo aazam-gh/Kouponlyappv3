@@ -1,32 +1,33 @@
 import { queryOptions } from '@tanstack/react-query'
 import { db } from '@/firebase/config'
-import { doc, getDoc, query, collection, where, getDocs, Timestamp, type DocumentReference, orderBy, limit, getAggregateFromServer, sum, count } from 'firebase/firestore'
+import { supabase } from '@/lib/supabase'
+import { doc, getDoc, query, collection, where, getDocs, Timestamp, type DocumentReference, orderBy, limit } from 'firebase/firestore'
 import { STALE_TIME } from '@/lib/constants'
 import type { Category } from '@/types/categories'
 
 export interface EmbeddedOffer {
+    id?: string
     titleEn: string
-    titleAr?: string
     descriptionEn?: string
-    descriptionAr?: string
     discountType: 'percentage' | 'amount' | 'buy1get1'
     discountValue?: number
-}
-
-export interface OnlineRedemptionConfig {
-    discountCode: string
-    purchaseUrl: string
-    dailyLimitPerUser: number
-    enabled: boolean
+    currency?: string
+    savingLabel?: string
+    offerValue?: number
+    startsAt?: string
+    endsAt?: string
+    termsEn?: string
+    redemptionInstructionsEn?: string
+    active?: boolean
+    redemptionMode?: 'inStore'
+    imageUrl?: string
 }
 
 export interface VendorLocation {
     id: string
     name?: string
-    nameAr?: string
     phoneNumber?: string
     address?: string
-    addressAr?: string
     latitude?: number
     longitude?: number
     geohash?: string
@@ -36,7 +37,6 @@ export interface VendorLocation {
 export interface Vendor {
     id: string
     name?: string
-    nameAr?: string
     email?: string
     phoneNumber?: string
     website?: string
@@ -45,20 +45,23 @@ export interface Vendor {
     profilePicture?: string
     coverImage?: string
     galleryImages?: string[]
+    rating?: number
+    distanceKm?: number
+    savingLabel?: string
+    offerValue?: number
+    place?: string
     isFeatured?: boolean
     tagsEn?: string[]
-    tagsAr?: string[]
-    vendorType?: 'in_store' | 'online'
-    xcard?: boolean
-    loyalty?: number[]
+    vendorType?: 'in_store'
+    categoryId?: string
     mainCategory?: string
     subcategory?: string[]
     isTrending?: boolean
+    newest?: number
+    sortOrder?: number
     searchTokens?: string[]
     shortDescription?: string
-    shortDescriptionAr?: string
     brandOfferName?: string
-    brandOfferNameAr?: string
     offers?: EmbeddedOffer[]
     latitude?: number
     longitude?: number
@@ -66,7 +69,6 @@ export interface Vendor {
     lng?: number
     geohash?: string
     address?: string
-    addressAr?: string
     locations?: VendorLocation[]
 }
 
@@ -85,7 +87,6 @@ export interface Transaction {
     // Optional fields
     studentRef?: DocumentReference
     vendorRef?: DocumentReference
-    pin?: string
     offerId?: string
     cashbackAmount?: number
     creatorCashbackAmount?: number
@@ -133,16 +134,6 @@ export const vendorQueryOptions = (vendorId: string) => queryOptions({
     staleTime: STALE_TIME.EXTENDED,
 })
 
-export const vendorPinQueryOptions = (vendorId: string) => queryOptions({
-    queryKey: ['vendor-pin', vendorId],
-    queryFn: async () => {
-        if (!vendorId) throw new Error('No vendor ID provided')
-        const snapshot = await getDoc(doc(db, 'vendor_pins', vendorId))
-        const pin = snapshot.data()?.pin
-        return typeof pin === 'string' && /^\d{4}$/.test(pin) ? pin : ''
-    },
-})
-
 export const vendorTransactionsQueryOptions = (vendorId: string) => queryOptions({
     queryKey: ['vendor-transactions', vendorId],
     queryFn: async () => {
@@ -175,36 +166,11 @@ export const vendorStatsQueryOptions = (vendorId: string) => queryOptions({
     queryKey: ['vendor-stats', vendorId],
     queryFn: async () => {
         if (!vendorId) return null
-
-        // ?? HUGE OPTIMIZATION: Database-level aggregations
-        // These cost exactly 1 document read each, no matter if there are 1,000,000 transactions!
-
-        const completedQ = query(collection(db, 'transactions'), where('vendorId', '==', vendorId), where('status', '==', 'completed'))
-        const completedAgg = await getAggregateFromServer(completedQ, {
-            totalRevenue: sum('finalAmount'),
-            totalDiscount: sum('discountAmount'),
-            count: count()
-        })
-
-        const pendingQ = query(collection(db, 'transactions'), where('vendorId', '==', vendorId), where('status', '==', 'pending'))
-        const pendingAgg = await getAggregateFromServer(pendingQ, { count: count() })
-
-        const totalQ = query(collection(db, 'transactions'), where('vendorId', '==', vendorId))
-        const totalAgg = await getAggregateFromServer(totalQ, { count: count() })
-
-        const vendorSnap = await getDoc(doc(db, 'vendors', vendorId))
-        const offerCount = vendorSnap.exists() ? (vendorSnap.data()?.offers?.length || 0) : 0
-
-        return {
-            totalRedemptions: totalAgg.data().count,
-            totalRevenue: completedAgg.data().totalRevenue,
-            totalDiscount: completedAgg.data().totalDiscount,
-            activeOffers: offerCount,
-            pendingTransactions: pendingAgg.data().count,
-            redemptionsTrend: 5.2,
-            revenueTrend: 8.4
-        } as VendorStats
+        const { data, error } = await supabase.rpc('couponly_vendor_dashboard_stats', { p_vendor_id: vendorId })
+        if (error) throw error
+        return data as VendorStats
     },
+    retry: false,
     staleTime: STALE_TIME.LONG,
 })
 
@@ -216,11 +182,6 @@ export const vendorChartDataQueryOptions = (vendorId: string, range: ChartRange)
         const rangeDays = range === '7d' ? 7 : range === '30d' ? 30 : 90
         const result: Record<string, DailyChartPoint> = {}
 
-        const startDate = new Date()
-        startDate.setHours(0, 0, 0, 0)
-        startDate.setDate(startDate.getDate() - (rangeDays - 1))
-
-        // Pre-fill array
         for (let i = rangeDays - 1; i >= 0; i--) {
             const date = new Date()
             date.setDate(date.getDate() - i)
@@ -228,36 +189,29 @@ export const vendorChartDataQueryOptions = (vendorId: string, range: ChartRange)
             result[dateStr] = { date: dateStr, redemptions: 0, revenue: 0 }
         }
 
-        // ?? OPTIMIZATION: Date boundary filters
-        // Only fetching transactions from within the requested chart date range!
-        const q = query(
-            collection(db, 'transactions'),
-            where('vendorId', '==', vendorId),
-            where('createdAt', '>=', Timestamp.fromDate(startDate))
-        )
-        const snapshot = await getDocs(q)
-
-        snapshot.docs.forEach(doc => {
-            const data = doc.data() as Transaction
-            if (data.status === 'completed' && data.createdAt) {
-                const dateData = data.createdAt.toDate()
-                const dateStr = dateData.toISOString().split('T')[0]
-                if (result[dateStr]) {
-                    result[dateStr].redemptions += 1
-                    result[dateStr].revenue += (data.finalAmount || 0)
-                }
-            }
+        const { data, error } = await supabase.rpc('couponly_vendor_dashboard_chart', {
+            p_vendor_id: vendorId,
+            p_range_days: rangeDays,
         })
+        if (error) throw error
+        for (const point of data ?? []) {
+            const date = String(point.date)
+            if (result[date]) {
+                result[date].redemptions = Number(point.redemptions)
+                result[date].revenue = Number(point.revenue)
+            }
+        }
 
         return Object.values(result)
     },
+    retry: false,
     staleTime: STALE_TIME.LONG,
 })
 
 export const categoriesQueryOptions = () => queryOptions({
     queryKey: ['categories'],
     queryFn: async () => {
-        const snapshot = await getDocs(collection(db, 'categories'))
+        const snapshot = await getDocs(query(collection(db, 'categories'), where('active', '==', true)))
         const cats = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Category))
         return cats.sort((a, b) => a.order - b.order)
     },

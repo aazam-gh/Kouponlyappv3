@@ -46,11 +46,13 @@
       <true/>
     </dict>
     <key>NSCameraUsageDescription</key>
-    <string>Kouponly uses the camera for your profile picture and creator campaign submissions.</string>
+    <string>Kouponly uses the camera for your profile picture.</string>
+    <key>NSLocationWhenInUseUsageDescription</key>
+    <string>Kouponly uses your location to show the closest food offers nearby.</string>
     <key>NSMicrophoneUsageDescription</key>
     <string>Allow $(PRODUCT_NAME) to access your microphone</string>
     <key>NSPhotoLibraryUsageDescription</key>
-    <string>Kouponly uses your photo library for your profile picture and creator campaign submissions.</string>
+    <string>Kouponly uses your photo library for your profile picture.</string>
     <key>NSUserActivityTypes</key>
     <array>
       <string>$(PRODUCT_BUNDLE_IDENTIFIER).expo.index_route</string>

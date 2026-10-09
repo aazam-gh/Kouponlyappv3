@@ -28,7 +28,7 @@ export const Route = createFileRoute('/admin/transactions/$id')({
             ...data,
             date: formattedDate || 'Unknown Date',
             rawDate: data.createdAt?.toDate ? data.createdAt.toDate().toISOString() : null,
-            transactionId: data.pin || id,
+            transactionId: id,
             vendorName: data.vendorName || 'Unknown Vendor',
             vendorId: data.vendorId || null,
             userId: data.userId || null,

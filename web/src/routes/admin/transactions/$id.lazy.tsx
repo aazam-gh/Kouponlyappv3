@@ -15,7 +15,7 @@ function TransactionDetailsRoute() {
     return (
         <div className="p-8 space-y-6 w-full max-w-[1200px] mx-auto">
             <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
-                <Link to="/admin/transactions">
+                <Link to="/admin/transactions" search={{ page: 1, pageSize: 10 }}>
                     <Button variant="ghost" size="icon" className="h-10 w-10">
                         <ArrowLeft className="h-5 w-5" />
                     </Button>
@@ -199,9 +199,9 @@ function TransactionDetailsRoute() {
                                 )}
 
                                 <div className="space-y-2 flex flex-col">
-                                    <span className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest flex items-center gap-1.5"><Receipt className="w-3.5 h-3.5" /> Transaction Reference (PIN)</span>
+                                    <span className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest flex items-center gap-1.5"><Receipt className="w-3.5 h-3.5" /> Transaction Reference</span>
                                     <span className="font-mono text-lg font-extrabold text-blue-700 tracking-wider bg-blue-50/50 p-3 rounded-xl border border-blue-100 text-center">
-                                        {transaction.pin || transaction.transactionId || 'N/A'}
+                                        {transaction.transactionId || 'N/A'}
                                     </span>
                                 </div>
                             </div>

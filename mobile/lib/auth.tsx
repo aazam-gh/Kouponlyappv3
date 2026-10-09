@@ -1,10 +1,11 @@
+import { isSchoolEmail, SCHOOL_EMAIL_MESSAGE } from './school-email';
 import * as Linking from 'expo-linking';
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import type { Session, User } from '@supabase/supabase-js';
 import type { EmailOtpType } from '@supabase/supabase-js';
 import { getSupabase, supabase, supabaseConfigured } from '@/lib/supabase';
 import { deleteAccountCloud } from '@/lib/backend';
-import { unregisterRealXPushTokenForCurrentUser } from '@/lib/realxPush';
+import { unregisterCouponlyPushTokenForCurrentUser } from '@/lib/couponlyPush';
 
 type AuthResult = { error?: string; confirmationRequired?: boolean };
 type AuthValue = {
@@ -14,11 +15,12 @@ type AuthValue = {
   isGuest: boolean;
   recoveryMode: boolean;
   signIn: (email: string, password: string) => Promise<AuthResult>;
-  signUp: (name: string, email: string, password: string) => Promise<AuthResult>;
+  signUp: (name: string, email: string, password: string, referralCode?: string) => Promise<AuthResult>;
   sendReset: (email: string) => Promise<AuthResult>;
   updatePassword: (password: string) => Promise<AuthResult>;
   updateEmail: (email: string) => Promise<AuthResult>;
   refreshSession: () => Promise<AuthResult>;
+  refreshStudentAccess: () => Promise<void>;
   signOut: () => Promise<void>;
   deleteAccount: () => Promise<AuthResult>;
   clearRecovery: () => void;
@@ -29,7 +31,7 @@ const AuthContext = createContext<AuthValue>({
   session: null, user: null, loading: true, isGuest: true, recoveryMode: false,
   signIn: noConfig, signUp: noConfig, sendReset: noConfig, updatePassword: noConfig,
   updateEmail: noConfig, refreshSession: noConfig, signOut: async () => {},
-  deleteAccount: noConfig, clearRecovery: () => {},
+  refreshStudentAccess: async () => {}, deleteAccount: noConfig, clearRecovery: () => {},
 });
 
 function authError(error: unknown): string {
@@ -75,10 +77,20 @@ async function handleAuthUrl(url: string, setRecoveryMode: (value: boolean) => v
   if (value('type') === 'recovery') setRecoveryMode(true);
 }
 
+async function accountAccess(uid: string): Promise<'student' | 'admin' | 'incomplete'> {
+  const { data, error } = await getSupabase().from('realx_students').select('id').eq('id', uid).maybeSingle();
+  if (error) throw error;
+  if (data) return 'student';
+  const { data: admin, error: roleError } = await getSupabase().rpc('kouponly_is_benefits_admin');
+  if (roleError) throw roleError;
+  return admin === true ? 'admin' : 'incomplete';
+}
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(supabaseConfigured);
   const [recoveryMode, setRecoveryMode] = useState(false);
+  const [studentStatus, setStudentStatus] = useState<'none' | 'checking' | 'student' | 'admin' | 'incomplete' | 'error'>('none');
 
   useEffect(() => {
     if (!supabase) {
@@ -121,6 +133,31 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
+  const refreshStudentAccess = useCallback(async () => {
+    const { data: { user: currentUser }, error: authErrorValue } = await getSupabase().auth.getUser();
+    if (authErrorValue) throw authErrorValue;
+    const uid = currentUser?.id;
+    if (!uid) return;
+    setStudentStatus('checking');
+    try {
+      setStudentStatus(await accountAccess(uid));
+    } catch (error) {
+      setStudentStatus('error');
+      throw error;
+    }
+  }, []);
+
+  useEffect(() => {
+    const uid = session?.user.id;
+    if (!uid) { setStudentStatus('none'); return; }
+    let active = true;
+    setStudentStatus('checking');
+    void accountAccess(uid)
+      .then(status => { if (active) setStudentStatus(status); })
+      .catch(() => { if (active) setStudentStatus('error'); });
+    return () => { active = false; };
+  }, [session?.user.id]);
+
   const signIn = useCallback(async (email: string, password: string): Promise<AuthResult> => {
     try {
       const { error } = await getSupabase().auth.signInWithPassword({ email: email.trim(), password });
@@ -128,12 +165,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } catch (error) { return { error: authError(error) }; }
   }, []);
 
-  const signUp = useCallback(async (name: string, email: string, password: string): Promise<AuthResult> => {
+  const signUp = useCallback(async (name: string, email: string, password: string, referralCode?: string): Promise<AuthResult> => {
+    if (!isSchoolEmail(email)) return { error: SCHOOL_EMAIL_MESSAGE };
     try {
       const { data, error } = await getSupabase().auth.signUp({
         email: email.trim(),
         password,
-        options: { data: { full_name: name.trim() }, emailRedirectTo: redirectUrl() },
+        options: { data: { full_name: name.trim(), ...(referralCode?.trim() ? { referral_code: referralCode.trim().toUpperCase() } : {}) }, emailRedirectTo: redirectUrl() },
       });
       return error ? { error: error.message } : { confirmationRequired: !data.session };
     } catch (error) { return { error: authError(error) }; }
@@ -154,6 +192,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const updateEmail = useCallback(async (email: string): Promise<AuthResult> => {
+    if (!isSchoolEmail(email)) return { error: SCHOOL_EMAIL_MESSAGE };
     try {
       const { error } = await getSupabase().auth.updateUser({ email: email.trim() });
       return error ? { error: error.message } : {};
@@ -169,8 +208,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signOut = useCallback(async () => {
     setRecoveryMode(false);
-    await unregisterRealXPushTokenForCurrentUser();
-    try { await getSupabase().auth.signOut(); } catch {}
+    await unregisterCouponlyPushTokenForCurrentUser().catch(() => {});
+    try { await getSupabase().auth.signOut({ scope: 'local' }); } catch {}
   }, []);
 
   const deleteAccount = useCallback(async (): Promise<AuthResult> => {
@@ -182,11 +221,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } catch (error) { return { error: authError(error) }; }
   }, []);
 
+  const studentUser = (studentStatus === 'student' || studentStatus === 'admin') ? session?.user ?? null : null;
   const value = useMemo<AuthValue>(() => ({
     session,
-    user: session?.user ?? null,
-    loading,
-    isGuest: !session?.user,
+    user: studentUser,
+    loading: loading || studentStatus === 'checking',
+    isGuest: !studentUser,
     recoveryMode,
     signIn,
     signUp,
@@ -194,10 +234,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     updatePassword,
     updateEmail,
     refreshSession,
+    refreshStudentAccess,
     signOut,
     deleteAccount,
     clearRecovery: () => setRecoveryMode(false),
-  }), [session, loading, recoveryMode, signIn, signUp, sendReset, updatePassword, updateEmail, refreshSession, signOut, deleteAccount]);
+  }), [session, studentUser, loading, studentStatus, recoveryMode, signIn, signUp, sendReset, updatePassword, updateEmail, refreshSession, refreshStudentAccess, signOut, deleteAccount]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

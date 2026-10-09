@@ -1,5 +1,5 @@
 import { type Icon } from "@tabler/icons-react"
-import { Link } from "@tanstack/react-router"
+import { Link, useLocation } from "@tanstack/react-router"
 
 import {
   SidebarGroup,
@@ -18,16 +18,18 @@ export function NavMain({
     icon?: Icon
   }[]
 }) {
+  const { pathname } = useLocation()
   return (
     <SidebarGroup>
       <SidebarGroupContent>
-        <SidebarMenu className="gap-3">
+        <SidebarMenu className="gap-1">
           {items.map((item) => (
             <SidebarMenuItem key={item.title}>
               <SidebarMenuButton
                 tooltip={item.title}
+                isActive={pathname.startsWith(item.url) || (item.url === '/admin/membership' && pathname.startsWith('/admin/transactions'))}
                 asChild
-                className="h-12 px-4 rounded-xl transition-all data-[active=true]:bg-brand-green data-[active=true]:text-white data-[active=true]:hover:bg-brand-green/90 hover:bg-slate-100 group"
+                className="h-12 px-4 rounded-xl transition-colors data-[active=true]:bg-[#18B852] data-[active=true]:text-[#0A0F0C] data-[active=true]:hover:bg-[#128A43] hover:bg-sidebar-accent group"
               >
                 <Link
                   to={item.url}
@@ -36,10 +38,10 @@ export function NavMain({
                 >
                   {item.icon && (
                     <item.icon
-                      className="size-6 stroke-[1.5] transition-colors group-data-[active=true]:text-white"
+                      className="size-6 stroke-[1.5] transition-colors text-sidebar-foreground group-data-[active=true]:text-[#0A0F0C]"
                     />
                   )}
-                  <span className="font-bold text-base text-slate-900 group-data-[active=true]:text-white">{item.title}</span>
+                  <span className="font-medium text-sm text-sidebar-foreground group-data-[active=true]:text-[#0A0F0C]">{item.title}</span>
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>

@@ -7,7 +7,6 @@ import React, {
   useState,
 } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import type { StorageAsset } from "@/lib/cloud.types";
 import {
   fetchPreferences,
   fetchProfile,
@@ -29,7 +28,6 @@ type Profile = {
 };
 type Preferences = {
   offer_alerts: boolean;
-  creator_updates: boolean;
   location: string;
   language: string;
 };
@@ -44,21 +42,20 @@ type Value = {
   savePreferences: (value: Preferences) => Promise<void>;
   chooseAvatar: () => Promise<void>;
 };
-const demo: Profile = {
-  full_name: "Neil Jose Pillard",
-  email: "neil.j.pillard@gmail.com",
-  city: "Kochi, Kerala",
-  mobile: "+91 98765 43210",
+const emptyProfile: Profile = {
+  full_name: "",
+  email: "",
+  city: "",
+  mobile: "",
   avatar_path: null,
 };
 const defaults: Preferences = {
   offer_alerts: true,
-  creator_updates: true,
-  location: "Kochi",
+  location: "",
   language: "English",
 };
 const Context = createContext<Value>({
-  profile: demo,
+  profile: emptyProfile,
   preferences: defaults,
   avatarUrl: null,
   uploading: false,
@@ -70,7 +67,7 @@ const Context = createContext<Value>({
 });
 export function ProfileProvider({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
-  const [profile, setProfile] = useState<Profile>(demo);
+  const [profile, setProfile] = useState<Profile>(emptyProfile);
   const [preferences, setPreferences] = useState(defaults);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
@@ -79,7 +76,7 @@ export function ProfileProvider({ children }: { children: React.ReactNode }) {
     `kouponly.user.${user?.id}.${kind}.pending.v1`;
   const refresh = useCallback(async () => {
     if (!user) {
-      setProfile(demo);
+      setProfile(emptyProfile);
       setPreferences(defaults);
       setAvatarUrl(null);
       return;
@@ -109,7 +106,7 @@ export function ProfileProvider({ children }: { children: React.ReactNode }) {
         (user.user_metadata.full_name as string | undefined) ||
         "",
       email: user.email ?? row?.email ?? "",
-      city: row?.city ?? "Kochi, Kerala",
+      city: row?.city ?? "",
       mobile: row?.mobile ?? "",
       avatar_path: row?.avatar_path ?? null,
     };
@@ -118,7 +115,6 @@ export function ProfileProvider({ children }: { children: React.ReactNode }) {
     else if (pref)
       setPreferences({
         offer_alerts: pref.offer_alerts,
-        creator_updates: pref.creator_updates,
         location: pref.location,
         language: pref.language,
       });
@@ -174,12 +170,7 @@ export function ProfileProvider({ children }: { children: React.ReactNode }) {
     setProgress(0);
     const previous = profile.avatar_path;
     try {
-      const upload = uploadStorageAsset(
-        asset as StorageAsset,
-        user.id,
-        undefined,
-        setProgress,
-      );
+      const upload = uploadStorageAsset(asset, user.id, setProgress);
       await upload.promise;
       setProfile((value) => ({ ...value, avatar_path: asset.path }));
       setAvatarUrl(await signedUrl("avatars", asset.path));

@@ -31,7 +31,6 @@ function AddUniversityPage() {
     const [university, setUniversity] = useState<UniversityItem>({
         id: `uni_${Math.random().toString(36).substr(2, 9)}`,
         nameEn: '',
-        nameAr: '',
         logoUrl: '',
         bannerUrl: '',
         link: '',
@@ -69,10 +68,6 @@ function AddUniversityPage() {
     const handleSave = async () => {
         if (!university.nameEn.trim()) {
             toast.error('Please enter English name')
-            return
-        }
-        if (!university.nameAr.trim()) {
-            toast.error('Please enter Arabic name')
             return
         }
         if (!university.logoUrl) {
@@ -215,18 +210,6 @@ function AddUniversityPage() {
                                 value={university.nameEn}
                                 onChange={(e) => setUniversity(prev => ({ ...prev, nameEn: e.target.value }))}
                                 placeholder="University Name"
-                                className="w-full h-14 px-6 rounded-[1.25rem] bg-white border border-gray-100 font-bold text-gray-900 outline-none focus:border-purple-400 transition-all shadow-sm focus:ring-4 focus:ring-purple-50"
-                            />
-                        </div>
-                        <div className="space-y-2 text-right">
-                            <label className="text-sm font-bold text-gray-700 mr-1 flex items-center justify-end gap-1">
-                                اسم الجامعة (العربية) <Type className="w-3" />
-                            </label>
-                            <input
-                                value={university.nameAr}
-                                onChange={(e) => setUniversity(prev => ({ ...prev, nameAr: e.target.value }))}
-                                placeholder="اسم الجامعة"
-                                dir="rtl"
                                 className="w-full h-14 px-6 rounded-[1.25rem] bg-white border border-gray-100 font-bold text-gray-900 outline-none focus:border-purple-400 transition-all shadow-sm focus:ring-4 focus:ring-purple-50"
                             />
                         </div>

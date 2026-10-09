@@ -17,7 +17,7 @@ npx supabase functions deploy delete-account --project-ref incgawktquflywvypxiq
 
 The hosted Auth redirect allowlist includes the app callback `kouponly://auth`. If you use Expo Go rather than the configured native app scheme, add the exact Expo Go redirect URL for that development session. Email/password sign-up, confirmation, recovery, password/email updates, refresh, and deletion are implemented. Configure production SMTP before enabling mandatory confirmation. The Supabase CLI migration history was seeded from the SQL Editor bootstrap; after authenticating the CLI, run `npx supabase migration list --project-ref incgawktquflywvypxiq` before future `db push` operations.
 
-Private `avatars` and `campaign-media` buckets, their owner-folder policies, catalogue seed records, and Realtime publication are created by migrations. The repository includes a new atomic `complete-redemption` function; the mobile client currently calls the matching authenticated RPC directly. Regenerate catalogue SQL with `npm run supabase:catalogue`, and refresh mobile types from the linked cloud schema with `npx supabase gen types typescript --linked`.
+Private `avatars` and `campaign-media` buckets, their owner-folder policies, catalogue seed records, and Realtime publication are created by migrations. The repository includes a new atomic `complete-redemption` function; the mobile client currently calls the matching authenticated RPC directly. Mobile reads the normalized vendor taxonomy, offers, and locations directly; bundled catalogue seeds are no longer generated. Refresh mobile types from the linked cloud schema with `npx supabase gen types typescript --linked`.
 
 ## Optional local backend verification
 

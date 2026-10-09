@@ -321,18 +321,6 @@ function UniversitiesManagement() {
                                                 className="w-full h-11 px-4 rounded-xl bg-white border border-gray-100 font-bold text-sm text-gray-900 outline-none focus:border-purple-400 transition-all shadow-sm"
                                             />
                                         </div>
-                                        <div className="space-y-1.5 text-right">
-                                            <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mr-1 flex items-center justify-end gap-1">
-                                                Name (AR) <Type className="w-3 h-3" />
-                                            </label>
-                                            <input
-                                                value={uni.nameAr}
-                                                onChange={(e) => handleUpdateUniversity(uni.id, { nameAr: e.target.value })}
-                                                placeholder="اسم الجامعة باللغة العربية"
-                                                dir="rtl"
-                                                className="w-full h-11 px-4 rounded-xl bg-white border border-gray-100 font-bold text-sm text-gray-900 outline-none focus:border-purple-400 transition-all shadow-sm"
-                                            />
-                                        </div>
                                     </div>
 
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

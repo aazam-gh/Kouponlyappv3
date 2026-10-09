@@ -1,23 +1,228 @@
-import { useCatalogue } from "@/lib/catalogue";
-import * as Linking from "expo-linking";
-import { useLocalSearchParams } from "expo-router";
-import { Bookmark, Heart, Info, MapPin, Navigation, Phone, Share2, Star, TicketPercent, X } from "lucide-react-native";
-import React, { useState } from "react";
-import { Image, Modal, Pressable, Share, StyleSheet, Text, View } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { AccessiblePressable, Empty, GlassSurface, PrimaryButton, Screen, safeGoBack } from "@/components/ui";
-import { RedemptionSheet } from "@/components/RedemptionSheet";
-import { dealById, onlineUrlFor } from "@/lib/data";
-import { useStore } from "@/lib/store";
-import { F,shadow,type ThemeColors,useAppTheme } from "@/lib/theme";
-import { router } from "expo-router";
+import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
+import Ionicons from '@expo/vector-icons/Ionicons';
+import React, { useMemo, useState } from 'react';
+import { AppState, Image, Linking, Modal, Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
+import { AccessiblePressable, Empty, Screen, safeGoBack } from '@/components/ui';
+import { CatalogueNotice, useCatalogue } from '@/lib/catalogue';
+import { dealById } from '@/lib/data';
+import { getSupabase } from '@/lib/supabase';
+import { useStore } from '@/lib/store';
+import { F, type ThemeColors, useAppTheme } from '@/lib/theme';
+import { useBenefits } from '@/lib/benefits';
+import { usePostHog } from 'posthog-react-native';
+import { useAuth } from '@/lib/auth';
+import { useAppLocale } from '@/context/LocaleContext';
+import { StatusBar } from 'expo-status-bar';
 
-export default function DealDetail(){useCatalogue();const {colors:C}=useAppTheme();const s=React.useMemo(()=>makeStyles(C),[C]);const insets=useSafeAreaInsets();const {id}=useLocalSearchParams<{id:string}>();const deal=dealById(id);const {state,toggleSaved,toggleSavedOffer,notify}=useStore();const [redeeming,setRedeeming]=useState<number|null>(null);const [info,setInfo]=useState(false);if(!deal)return <Screen><Empty icon="?" title="Offer not found" body="This offer may no longer be available."/></Screen>;const saved=state.saved.includes(deal.id);const offers=[deal.offer,"Complimentary dessert with two mains","20% off your total bill"];const online=deal.redemption==="online";const partnerUrl=online?onlineUrlFor(deal.name,deal.externalUrl):undefined;const directions=`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${deal.name}, ${deal.place}, Kerala`)}`;return <><Screen style={s.screen} testID="deal-detail"><View style={s.imageWrap}><Image accessible={false} source={{uri:deal.image}} style={s.image}/><View style={[s.topbar,{top:insets.top+8}]}><GlassSurface interactive role="control" style={s.glassButton}><AccessiblePressable accessibilityLabel="Go back" onPress={()=>safeGoBack()} style={s.topAction}><Text style={s.back}>‹</Text></AccessiblePressable></GlassSurface><View style={s.topRight}><GlassSurface interactive role="control" style={s.smallGlass}><AccessiblePressable accessibilityLabel={saved?"Remove from saved":"Save place"} accessibilityState={{selected:saved}} haptic="selection" onPress={()=>{toggleSaved(deal.id);notify(saved?"Removed from saved":"Saved for later")}} style={s.topAction}><Heart color={C.ink} size={20} fill={saved?C.lime:"transparent"}/></AccessiblePressable></GlassSurface><GlassSurface interactive role="control" style={s.smallGlass}><AccessiblePressable accessibilityLabel="Share" onPress={()=>Share.share({message:`${deal.name} on Kouponly\n${deal.offer} — ${deal.saving}`})} style={s.topAction}><Share2 color={C.ink} size={20}/></AccessiblePressable></GlassSurface></View></View><View style={s.tag}><Text style={s.tagText}>{deal.category.toUpperCase()}</Text></View></View>
- <View style={s.content}><View style={s.heading}><View style={{flex:1}}><Text style={s.title}>{deal.name}</Text><View style={s.place}><MapPin size={15}/><Text style={s.placeText}>{deal.place} · {deal.distance}</Text></View></View><View style={s.rating}><Star size={14} fill={C.ink}/><Text style={s.ratingText}>{deal.rating}</Text></View></View>
- <View style={s.actions}><Pressable onPress={()=>Linking.openURL("tel:+914844002400")}><Phone size={19}/><Text>Call</Text></Pressable><Pressable onPress={()=>Linking.openURL(directions)}><Navigation size={19}/><Text>Directions</Text></Pressable><Pressable onPress={()=>setInfo(true)}><Info size={19}/><Text>Info</Text></Pressable></View>
- <View style={s.sectionHead}><View><Text style={s.eyebrow}>MEMBER PRICES</Text><Text style={s.sectionTitle}>Available offers</Text></View><View accessibilityLabel={`${offers.length} available offers`} style={s.count}><Text style={s.countText}>{offers.length}</Text></View></View>
- {offers.map((offer,index)=>{const key=`${deal.id}-${index}`;const used=state.offerUsage[key]??0;const remaining=3-used;const expired=remaining<=0;const offerSaved=state.savedOffers.includes(key);return <View accessibilityLabel={`Offer ${index+1}. ${offer}. ${expired?"Expired":`${remaining} uses remaining`}`} style={[s.ticket,expired&&s.expired]} key={key}><View style={s.ticketIcon}><TicketPercent color={C.ink} size={21}/></View><View style={{flex:1}}><Text style={s.ticketSmall}>OFFER {String(index+1).padStart(2,"0")}</Text><Text style={s.ticketTitle}>{offer}</Text><Text style={s.ticketSaving}>{index===0?deal.saving:`Save ₹${250+index*150}`}</Text><Text style={s.remaining}>{expired?"Expired · renews 1 Sep":`${remaining}/3 remaining · renews 1 Sep`}</Text></View><View style={s.ticketActions}><AccessiblePressable accessibilityLabel={offerSaved?"Remove saved offer":"Save this offer"} accessibilityState={{selected:offerSaved}} haptic="selection" onPress={()=>{toggleSavedOffer(key);notify(offerSaved?"Offer removed from saved":"Offer saved")}} style={[s.saveOffer,offerSaved&&s.saveOfferActive]}><Bookmark color={C.ink} size={17} fill={offerSaved?C.ink:"transparent"}/></AccessiblePressable><AccessiblePressable testID={`redeem-offer-${index}`} disabled={expired} accessibilityLabel={expired?"Offer expired":"Redeem offer"} haptic="light" onPress={()=>setRedeeming(index)} style={[s.redeem,expired&&s.redeemDisabled]}><Text style={s.redeemText}>{expired?"Expired":"Redeem"}</Text></AccessiblePressable></View></View>})}
- <View style={s.about}><Text style={s.sectionTitle}>Why you’ll love it</Text><Text style={s.description}>{deal.description}</Text></View></View></Screen>
- <RedemptionSheet visible={redeeming!==null} id={`deal-${deal.id}-${redeeming??0}`} title={`${deal.name} · ${offers[redeeming??0]}`} mode={online?"online":"inStore"} externalUrl={partnerUrl} onClose={()=>setRedeeming(null)}/>
- <Modal visible={info} transparent animationType="slide" onRequestClose={()=>setInfo(false)} accessibilityViewIsModal><Pressable accessibilityLabel="Close partner information" style={s.modalBack} onPress={()=>setInfo(false)}/><View style={s.info}><View style={s.grabber}/><AccessiblePressable accessibilityLabel="Close partner information" onPress={()=>setInfo(false)} style={s.close}><X color={C.ink} size={18}/></AccessiblePressable><View style={s.infoIcon}><Info color={C.ink} size={26}/></View><Text style={s.eyebrow}>PARTNER INFORMATION</Text><Text accessibilityRole="header" style={s.infoTitle}>{deal.name}</Text><Text style={s.description}>{deal.description}</Text><View style={s.infoRow}><MapPin color={C.ink} size={16}/><Text style={s.infoText}>{deal.place}</Text></View><View style={s.infoRow}><Star color={C.ink} size={16}/><Text style={s.infoText}>{deal.rating} member rating</Text></View><View style={s.infoRow}><TicketPercent color={C.ink} size={16}/><Text style={s.infoText}>Offers renew on 1 September</Text></View><PrimaryButton label="Open directions" onPress={()=>Linking.openURL(directions)}/></View></Modal></>}
-const makeStyles=(C:ThemeColors)=>StyleSheet.create({screen:{paddingHorizontal:0,paddingTop:0},imageWrap:{height:330},image:{width:"100%",height:"100%"},topbar:{position:"absolute",left:15,right:15,top:8,flexDirection:"row",justifyContent:"space-between"},topRight:{flexDirection:"row",gap:8},glassButton:{width:52,height:52,borderRadius:19,overflow:"hidden"},smallGlass:{width:50,height:50,borderRadius:18,overflow:"hidden"},topAction:{flex:1,alignItems:"center",justifyContent:"center"},back:{fontFamily:F.heading,fontSize:35,lineHeight:38,color:C.ink},tag:{position:"absolute",left:18,bottom:17,backgroundColor:"#101010",borderRadius:12,paddingHorizontal:10,paddingVertical:8},tagText:{fontFamily:F.bodyBold,color:C.onDark,fontSize:11},content:{padding:18},heading:{flexDirection:"row",alignItems:"flex-start",gap:10},title:{fontFamily:F.heading,fontSize:30,color:C.ink,letterSpacing:-1},place:{flexDirection:"row",alignItems:"center",gap:6,marginTop:7},placeText:{fontFamily:F.body,fontSize:13,color:C.ink},rating:{flexDirection:"row",alignItems:"center",gap:4,backgroundColor:C.lime,padding:9,borderRadius:12},ratingText:{fontFamily:F.bodyBold,fontSize:13,color:C.inkOnAccent},actions:{flexDirection:"row",gap:9,marginVertical:20},actionsButton:{},sectionHead:{flexDirection:"row",justifyContent:"space-between",alignItems:"flex-end",marginBottom:12},eyebrow:{fontFamily:F.bodyBold,fontSize:11,color:C.ink,letterSpacing:1},sectionTitle:{fontFamily:F.headingSemi,fontSize:23,color:C.ink,marginTop:4},count:{width:44,height:44,borderRadius:14,backgroundColor:C.lime,alignItems:"center",justifyContent:"center"},countText:{fontFamily:F.bodyBold,fontSize:14,color:C.inkOnAccent,fontVariant:["tabular-nums"]},ticket:{minHeight:150,borderRadius:21,borderWidth:1,borderColor:C.line,backgroundColor:C.card,padding:12,flexDirection:"row",alignItems:"center",gap:10,marginBottom:10,...shadow},expired:{opacity:.62},ticketIcon:{width:48,height:48,borderRadius:15,backgroundColor:C.soft,alignItems:"center",justifyContent:"center"},ticketSmall:{fontFamily:F.bodyBold,fontSize:11,color:C.ink,letterSpacing:.7},ticketTitle:{fontFamily:F.headingSemi,fontSize:16,color:C.ink,marginVertical:4},ticketSaving:{fontFamily:F.bodyBold,fontSize:12,color:C.ink},remaining:{fontFamily:F.body,fontSize:11,color:C.muted,marginTop:4},ticketActions:{gap:7,alignItems:"center"},saveOffer:{width:44,height:44,borderRadius:13,backgroundColor:C.soft},saveOfferActive:{backgroundColor:C.lime},redeem:{minHeight:44,borderRadius:13,backgroundColor:C.ink,paddingHorizontal:12},redeemDisabled:{backgroundColor:C.muted},redeemText:{fontFamily:F.bodyBold,fontSize:12,color:C.paper},about:{borderTopWidth:1,borderTopColor:C.line,paddingTop:18,marginTop:12},description:{fontFamily:F.body,fontSize:14,lineHeight:21,color:C.muted,marginTop:9,marginBottom:16},modalBack:{...StyleSheet.absoluteFillObject,backgroundColor:C.backdrop},info:{position:"absolute",left:0,right:0,bottom:0,backgroundColor:C.elevated,borderTopLeftRadius:30,borderTopRightRadius:30,padding:23,paddingBottom:36},grabber:{width:38,height:5,borderRadius:3,backgroundColor:C.muted,opacity:.45,alignSelf:"center",marginTop:-12,marginBottom:20},close:{position:"absolute",right:14,top:14,width:44,height:44,borderRadius:15,backgroundColor:C.soft},infoIcon:{width:58,height:58,borderRadius:20,backgroundColor:C.soft,alignItems:"center",justifyContent:"center",marginBottom:15},infoTitle:{fontFamily:F.heading,fontSize:28,color:C.ink,marginTop:6},infoRow:{flexDirection:"row",alignItems:"center",gap:8,paddingVertical:10},infoText:{fontFamily:F.body,fontSize:14,color:C.ink}});
+export default function DealDetail({ dealId }: { dealId?: string } = {}) {
+  const posthog = usePostHog();
+  const {status} = useCatalogue();
+  const router = useRouter();
+  const { colors: C } = useAppTheme();
+  const { isRTL } = useAppLocale();
+  const { t } = useTranslation();
+  const s = useMemo(() => styles(C), [C]);
+  const insets = useSafeAreaInsets();
+  const { width } = useWindowDimensions();
+  const params = useLocalSearchParams<{ id: string; offer?: string }>();
+  const id = dealId || params.id;
+  const offerParam = params.offer;
+  const selectedIndex = Number(offerParam ?? 0);
+  const [vendorLookup, setVendorLookup] = useState<{ id: string; resolvedId?: string; failed: boolean } | null>(null);
+  React.useEffect(() => {
+    let active = true;
+    if (!id || /^\d+$/.test(id)) return () => { active = false; };
+    void (async () => {
+      try { const {data,error}=await getSupabase().from('realx_vendors').select('catalogue_deal_id').eq('id', id).maybeSingle(); if(active)setVendorLookup({id,resolvedId:data?.catalogue_deal_id?String(data.catalogue_deal_id):undefined,failed:!!error||!data}); }
+      catch { if(active)setVendorLookup({id,failed:true}); }
+    })();
+    return () => { active = false; };
+  }, [id]);
+  const resolvedId = vendorLookup?.id === id ? vendorLookup.resolvedId : undefined;
+  const lookupFailed = vendorLookup?.id === id && vendorLookup.failed;
+  const deal = dealById(id) ?? (resolvedId ? dealById(resolvedId) : undefined);
+  const { state, notify } = useStore();
+  const { user } = useAuth();
+  const { benefits } = useBenefits();
+  const [savedOfferIds, setSavedOfferIds] = useState<string[]>([]);
+  const [locationsOpen, setLocationsOpen] = useState(false);
+  const carouselRef = React.useRef<ScrollView>(null);
+  const carouselIndex = React.useRef(0);
+  const [activeGalleryIndex, setActiveGalleryIndex] = useState(0);
+  const headerImages = deal?.galleryImages?.length ? deal.galleryImages.slice(0, 12) : deal ? [deal.image] : [];
+  React.useEffect(() => {
+    carouselIndex.current = 0;
+    setActiveGalleryIndex(0);
+    carouselRef.current?.scrollTo({x:0,animated:false});
+  }, [deal?.id, width]);
+  useFocusEffect(React.useCallback(() => {
+    if (headerImages.length < 2) return;
+    const timer = setInterval(() => {
+      if (AppState.currentState !== 'active') return;
+      const next = (carouselIndex.current + 1) % headerImages.length;
+      carouselIndex.current = next;
+      setActiveGalleryIndex(next);
+      carouselRef.current?.scrollTo({x:next * width,animated:true});
+    }, 4500);
+    return () => clearInterval(timer);
+  }, [deal?.id, headerImages.length, width]));
+
+  React.useEffect(() => {
+    let active = true;
+    if (!user || !deal?.vendorId) { setSavedOfferIds([]); return () => { active = false; }; }
+    void getSupabase().from('realx_student_saved_items').select('item_id').eq('student_id', user.id).eq('item_type', 'offer')
+      .then(({ data, error }) => { if (active && !error) setSavedOfferIds((data || []).map(row => row.item_id)); });
+    return () => { active = false; };
+  }, [user?.id, deal?.vendorId]);
+  if (!deal) return <Screen>{status==='loading' || (id && !/^\d+$/.test(id) && !resolvedId && !lookupFailed) ? <CatalogueNotice/> : status==='cloud' ? <Empty icon="?" title="Offer not found" body="This offer may no longer be available." /> : <CatalogueNotice/>}</Screen>;
+  const saved = state.saved.includes(deal.id);
+  const selectedOffer = deal.offers?.find(offer => offer.index === selectedIndex) ?? deal.offers?.[0];
+  const offerKey = `${deal.id}-${selectedOffer?.index ?? 0}`;
+  const branch = deal.locations?.[0];
+  const phone = branch?.phoneNumber || deal.phoneNumber;
+  const hours = branch?.openingHours || deal.openingHours;
+  const openLocation = (location = branch) => {
+    const query = location?.latitude != null && location.longitude != null ? `${location.latitude},${location.longitude}` : `${deal.name}, ${location?.address || deal.place}`;
+    void Linking.openURL(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`);
+  };
+  const formattedHours = formatOpeningHours(hours, isRTL, t('closed'));
+  return <>
+    <StatusBar style="light" />
+    <Screen testID="deal-detail" style={s.screen}>
+      <View style={[s.imageWrap, { marginTop: -insets.top, height: 250 + insets.top }]}>
+        <ScrollView
+          ref={carouselRef}
+          testID="vendor-header-carousel"
+          horizontal
+          pagingEnabled
+          showsHorizontalScrollIndicator={false}
+          onMomentumScrollEnd={event => { const index = Math.round(event.nativeEvent.contentOffset.x / width); carouselIndex.current = index; setActiveGalleryIndex(index); }}
+        >
+          {headerImages.map((uri, index) => <View key={`${uri}-${index}`} style={{ width, height: '100%' }}>
+            <Image testID={index === 0 ? 'offer-image' : undefined} accessible={false} source={{ uri }} style={s.image} />
+          </View>)}
+        </ScrollView>
+        <View style={[s.topbar, { top: insets.top + 8 }]}>
+          <AccessiblePressable accessibilityLabel="Go back" onPress={() => safeGoBack()} style={s.imageAction}><Ionicons name={isRTL ? 'arrow-forward' : 'arrow-back'} size={24} color={C.ink} /></AccessiblePressable>
+        </View>
+        {headerImages.length > 1 ? <View pointerEvents="none" style={s.imageCounter}><Ionicons name="images-outline" size={14} color={C.ink}/><Text style={s.galleryCount}>{activeGalleryIndex + 1} / {headerImages.length}</Text></View> : null}
+      </View>
+      <View style={s.content}>
+        <View style={s.vendorNameRow}>
+          <Text accessibilityRole="header" style={s.title}>{deal.name.toUpperCase()}</Text>
+          {deal.logo ? <View style={s.logoWrap}><Image source={{uri:deal.logo}} resizeMode="contain" style={s.logo}/></View> : null}
+        </View>
+        <View style={s.metaStack}>
+          <View style={[s.metaLine, s.metaLineSpread, isRTL && s.rowReverse]}>
+            <AccessiblePressable accessibilityLabel="Choose or open vendor locations" onPress={()=>deal.locations && deal.locations.length>1?setLocationsOpen(value=>!value):openLocation()} style={[s.locationButton,isRTL&&s.rowReverse]}><Ionicons name="location-outline" size={18} color={C.lime}/><Text numberOfLines={1} style={s.locationButtonText}>Location{deal.locations?.length ? ` (${deal.locations.length})`:''}</Text></AccessiblePressable>
+            {deal.distanceKm > 0 ? <View style={[s.nearestBranchChip,isRTL&&s.rowReverse]}><Ionicons name="navigate-outline" size={13} color={C.lime}/><Text numberOfLines={1} style={s.nearestBranchText}>{deal.distance}</Text></View>:null}
+          </View>
+          <View style={[s.metaLine, s.metaLineSpread, isRTL&&s.rowReverse]}>
+            {phone ? <AccessiblePressable accessibilityLabel={`Call ${phone}`} onPress={()=>void Linking.openURL(`tel:${phone.replace(/[^\d+]/g,'')}`)} style={[s.phoneButton,isRTL&&s.rowReverse]}><Ionicons name="call-outline" size={15} color={C.lime}/><Text numberOfLines={1} style={s.phoneButtonText}>{phone}</Text></AccessiblePressable>:<View/>}
+            <View style={[s.tagsRow,isRTL&&s.rowReverse]}>
+              {deal.trend > 0 ? <View style={s.tagChip}><Ionicons name="trending-up" size={14} color="#fff"/><Text style={s.tagText}>{t('trending')}</Text></View> : null}
+              {deal.xcard ? <View style={[s.tagChip,{backgroundColor:C.lime}]}><Ionicons name="cash-outline" size={14} color={C.inkOnAccent}/><Text style={[s.tagText,{color:C.inkOnAccent}]}>{t('cashback')}</Text></View> : null}
+            </View>
+          </View>
+        </View>
+        {deal.vendorInformation?.message ? <View style={s.vendorInfo}><View style={s.infoHeading}><Ionicons name="information-circle-outline" size={22} color={C.lime}/><Text style={s.infoTitle}>{deal.vendorInformation.title || 'Information'}</Text></View><Text style={[s.hours, isRTL && s.textRtl]}>{deal.vendorInformation.message}</Text></View>:null}
+        {formattedHours ? <View style={s.infoCard}><View style={s.infoHeading}><Ionicons name="time-outline" size={20} color={C.lime}/><Text style={s.infoTitle}>Opening hours</Text></View><Text style={[s.hours, isRTL && s.textRtl]}>{formattedHours}</Text></View>:null}
+        <View style={s.offersList}>{(deal.offers?.length ? deal.offers : [{id:offerKey,index:0,title:deal.offer,description:deal.description,saving:deal.saving,redemption:deal.redemption??'inStore'}]).map(offer=>{
+          const key=`${deal.id}-${offer.index}`, isSaved=savedOfferIds.includes(offer.id), count=deal.vendorId && benefits?.usedVendorIds.includes(deal.vendorId) ? 1 : 0;
+          const toggleOfferSave = async () => {
+            if (!user) { notify('Sign in to save offers'); return; }
+            const removing = savedOfferIds.includes(offer.id);
+            const result = removing
+              ? await getSupabase().from('realx_student_saved_items').delete().eq('student_id', user.id).eq('item_type', 'offer').eq('item_id', offer.id)
+              : await getSupabase().from('realx_student_saved_items').upsert({ student_id: user.id, item_type: 'offer', item_id: offer.id, payload: { vendorId: deal.vendorId, title: offer.title } }, { onConflict: 'student_id,item_type,item_id' });
+            if (result.error) { notify(result.error.message); return; }
+            setSavedOfferIds(ids => removing ? ids.filter(id => id !== offer.id) : [...ids, offer.id]);
+            posthog.capture(removing ? 'offer_unsaved' : 'offer_saved', { offer_id: offer.id, category: deal.category });
+            notify(removing ? 'Offer removed from saved' : 'Offer saved');
+          };
+          return <View key={offer.id} style={s.offerCard}>
+            {deal.xcard ? <Image source={require('../../assets/images/cashback.webp')} style={s.xcardBadge} /> : null}
+            <AccessiblePressable accessibilityLabel={isSaved?'Remove saved offer':'Save this offer'} accessibilityState={{selected:isSaved}} onPress={()=>void toggleOfferSave()} style={[s.offerSaveButton,isSaved&&{backgroundColor:C.lime}]}><Ionicons name={isSaved?'bookmark':'bookmark-outline'} size={22} color={isSaved?C.inkOnAccent:C.lime}/></AccessiblePressable>
+            <View style={s.offerInfoContainer}><Text style={[s.offerTitle, isRTL && s.textRtl]}>{offer.title.toUpperCase()}</Text>{offer.description ? <Text style={[s.offerDescription, isRTL && s.textRtl]}>{offer.description}</Text> : null}</View>
+            <View style={s.offerActionsRow}><AccessiblePressable testID={`redeem-offer-${offer.index}`} disabled={count>0} onPress={()=>router.push({pathname:'/redeem/[id]',params:{id:String(deal.id),vendorId:deal.vendorId,offerIndex:String(offer.index)}} as any)} style={[s.redeem,count>0&&s.disabled]}><Ionicons name="flash" size={18} color={C.inkOnAccent}/><Text style={s.redeemText}>{count?'USED UP':'REDEEM'}</Text></AccessiblePressable></View>
+          </View>;
+        })}</View>
+      </View>
+    </Screen>
+    <Modal visible={locationsOpen && Boolean(deal.locations?.length)} transparent animationType="slide" onRequestClose={()=>setLocationsOpen(false)}><Pressable style={s.modalOverlay} onPress={()=>setLocationsOpen(false)}><Pressable style={[s.branchSheet,{paddingBottom:Math.max(insets.bottom,20)}]} onPress={event=>event.stopPropagation()}><View style={s.handle}/><View style={s.branchHeader}><Text style={s.sectionTitle}>Branches</Text><AccessiblePressable accessibilityLabel="Close branches" onPress={()=>setLocationsOpen(false)} style={s.imageAction}><Ionicons name="close-circle" size={25} color={C.ink}/></AccessiblePressable></View><ScrollView showsVerticalScrollIndicator={false}>{deal.locations?.map((location,index)=><AccessiblePressable key={location.id} accessibilityLabel={`Directions to ${location.name || location.address}`} onPress={()=>{setLocationsOpen(false);openLocation(location)}} style={[s.branchRow, isRTL && s.rowReverse]}><View style={s.branchIcon}><Ionicons name="location-outline" size={19} color={C.lime}/></View><View style={{flex:1}}><Text style={[s.locationText, isRTL && s.textRtl]}>{location.name || `Branch ${index+1}`}</Text>{location.address ? <Text style={[s.branchAddress, isRTL && s.textRtl]}>{location.address}</Text>:null}{location.phoneNumber ? <Text style={[s.branchAddress, isRTL && s.textRtl]}>{location.phoneNumber}</Text>:null}</View><Ionicons name="navigate-outline" size={17} color={C.lime}/></AccessiblePressable>)}</ScrollView></Pressable></Pressable></Modal>
+  </>;
+}
+
+function formatOpeningHours(value: unknown, isRTL: boolean, closedLabel: string) {
+  if (typeof value === 'string') return value;
+  if (!value || typeof value !== 'object') return '';
+  const dayNames: Record<string, string> = {
+    monday: 'Monday', tuesday: 'Tuesday',
+    wednesday: 'Wednesday', thursday: 'Thursday',
+    friday: 'Friday', saturday: 'Saturday', sunday: 'Sunday',
+  };
+  return Object.entries(value as Record<string, unknown>).map(([day, hours]) => {
+    const label = dayNames[day.toLowerCase()] || day;
+    if (typeof hours === 'string') return `${label}: ${hours}`;
+    if (Array.isArray(hours)) return `${label}: ${hours.join(' - ')}`;
+    if (hours && typeof hours === 'object') {
+      const row = hours as Record<string, unknown>;
+      if (row.closed === true) return `${label}: ${closedLabel}`;
+      const open = row.open ?? row.opens ?? '';
+      const close = row.close ?? row.closes ?? '';
+      if (open || close) return `${label}: ${open}${open && close ? ' - ' : ''}${close}`;
+    }
+    return `${label}: ${closedLabel}`;
+  }).join('\n');
+}
+
+const styles = (C: ThemeColors) => StyleSheet.create({
+  screen: { paddingHorizontal: 0, paddingTop: 0 },
+  imageWrap: { height: 250, marginBottom: 12 },
+  image: { width: '100%', height: '100%', borderBottomLeftRadius: 24, borderBottomRightRadius: 24 },
+  topbar: { position: 'absolute', left: 16, right: 16, flexDirection: 'row', justifyContent: 'space-between' },
+  imageAction: { width: 40, height: 40, borderRadius: 20, backgroundColor: C.paper, borderWidth: StyleSheet.hairlineWidth, borderColor: C.line },
+  logoWrap: { width: 72, height: 72, flexShrink: 0, borderRadius: 16, backgroundColor: C.card, borderWidth: 1, borderColor: C.line, alignItems: 'center', justifyContent: 'center' },
+  logo: { width: '100%', height: '100%', borderRadius: 16 },
+  rowReverse: { flexDirection: 'row-reverse' },
+  textRtl: { textAlign: 'right', writingDirection: 'rtl' },
+  content: { paddingHorizontal: 20, paddingBottom: 28 },
+  vendorNameRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  title: { flex: 1, fontFamily: F.heading, fontSize: 26, letterSpacing: .5, textTransform:'uppercase', color: C.ink },
+  metaStack:{marginTop:12,gap:10}, metaLine:{flexDirection:'row',alignItems:'center',flexWrap:'wrap',gap:10}, metaLineSpread:{justifyContent:'space-between'},
+  locationButton:{flexDirection:'row',alignItems:'center',gap:6,paddingHorizontal:14,paddingVertical:8,borderRadius:20,backgroundColor:C.soft,maxWidth:'58%'}, locationButtonText:{fontFamily:F.body,fontSize:14,color:C.ink,flexShrink:1},
+  nearestBranchChip:{flexDirection:'row',alignItems:'center',gap:4,minWidth:110,paddingHorizontal:10,paddingVertical:7,borderRadius:18,backgroundColor:C.soft}, nearestBranchText:{fontFamily:F.bodySemi,fontSize:14,color:C.ink},
+  phoneButton:{flexDirection:'row',alignItems:'center',gap:5,maxWidth:'48%',paddingHorizontal:10,paddingVertical:7,borderRadius:18,backgroundColor:C.soft}, phoneButtonText:{fontFamily:F.bodySemi,fontSize:14,color:C.ink,flexShrink:1},
+  tagsRow:{flexDirection:'row',alignItems:'center',flexWrap:'wrap',gap:8,flex:1,justifyContent:'flex-end'},
+  tagChip: { flexDirection:'row', alignItems:'center', gap:4, paddingHorizontal:10, paddingVertical:6, borderRadius:20, backgroundColor:'#000000' },
+  trendingTag: { backgroundColor:'#000000' },
+  tagText: { color:'#FFFFFF', fontFamily:F.bodyBold, fontSize:12, textTransform:'uppercase', letterSpacing:.3 },
+  pill: { flexDirection:'row', alignItems:'center', gap:6, paddingHorizontal:12, minHeight:36, borderRadius:18, backgroundColor:C.card, borderWidth:1, borderColor:C.line },
+  pillText: { fontFamily:F.bodySemi, fontSize:12, color:C.ink },
+  sectionTitle: { fontFamily: F.headingSemi, fontSize: 21, color: C.ink },
+  infoTitle:{flex:1,fontFamily:F.bodyBold,fontSize:16,color:C.ink},
+  directions: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  directionsText: { fontFamily: F.bodySemi, fontSize: 12, color: C.ink },
+  imageCounter:{position:'absolute',right:12,bottom:12,minHeight:32,paddingHorizontal:11,borderRadius:16,flexDirection:'row',alignItems:'center',gap:6,backgroundColor:C.card}, galleryCount: { fontFamily:F.body, fontSize:13, color:C.muted },
+  vendorInfo:{ padding:16, marginTop:18, borderRadius:20, borderWidth:1, borderColor:C.lime, backgroundColor:C.soft, gap:8 },
+  offersList: { marginTop:24, gap:20 },
+  infoCard: { padding:16, marginTop:20, borderRadius:20, borderWidth:StyleSheet.hairlineWidth, borderColor:C.line, backgroundColor:C.soft, gap:12 },
+  infoHeading: { flexDirection:'row', alignItems:'center', gap:8 },
+  hours: { fontFamily:F.body, fontSize:13, lineHeight:20, color:C.muted },
+  locationRow: { minHeight:42, flexDirection:'row', alignItems:'center', gap:8 },
+  locationText: { flex:1, fontFamily:F.body, fontSize:13, color:C.ink },
+  modalOverlay:{ flex:1, justifyContent:'flex-end', backgroundColor:'rgba(0,0,0,.42)' }, branchSheet:{ maxHeight:'80%', borderTopLeftRadius:32, borderTopRightRadius:32, paddingHorizontal:24, backgroundColor:C.paper }, handle:{ width:40, height:5, borderRadius:3, backgroundColor:C.line, alignSelf:'center', marginTop:12, marginBottom:12 }, branchHeader:{ minHeight:52, flexDirection:'row', alignItems:'center', justifyContent:'space-between', marginBottom:8 }, branchRow:{ minHeight:76, flexDirection:'row', alignItems:'center', gap:12, padding:12, marginBottom:8, borderRadius:18, backgroundColor:C.soft }, branchIcon:{ width:42,height:42,borderRadius:14,alignItems:'center',justifyContent:'center',backgroundColor:C.card }, branchAddress:{ fontFamily:F.body,fontSize:12,lineHeight:17,color:C.muted,marginTop:3 },
+  offerCard: { marginBottom: 8, position: 'relative', gap: 0 },
+  xcardBadge: { position: 'absolute', top: 0, right: 0, width: 58, height: 58, zIndex: 10 },
+  offerSaveButton: { position: 'absolute', top: 12, right: 16, width: 48, height: 48, borderRadius: 24, backgroundColor: C.card, alignItems: 'center', justifyContent: 'center', zIndex: 40, elevation: 8 },
+  offerInfoContainer: { minHeight: 82, position: 'relative', borderRadius: 30, paddingHorizontal: 24, paddingVertical: 16, paddingEnd: 72, backgroundColor: C.soft, gap: 4 },
+  offerTitle: { fontFamily: F.heading, fontSize: 20, letterSpacing: -0.5, textTransform: 'uppercase', color: C.ink },
+  offerDescription: { fontFamily: F.body, fontSize: 14, lineHeight: 20, color: C.muted },
+  offerActionsRow: { flexDirection: 'row', borderRadius: 30, paddingHorizontal: 8, paddingVertical: 8, backgroundColor: C.soft },
+  redeem: { flex: 1, height: 56, borderRadius: 30, backgroundColor: C.lime, flexDirection: 'row', gap: 8, alignItems: 'center', justifyContent: 'center' },
+  disabled: { opacity: .45 },
+  unavailable: { flex: 1, fontFamily: F.body, fontSize: 12, lineHeight: 17, color: C.muted, alignSelf: 'center' },
+  redeemText: { fontFamily: F.bodyBold, fontSize: 14, color: C.paper, textTransform: 'uppercase', letterSpacing: 0.5 },
+});

@@ -48,14 +48,12 @@ function SubCategoryItem({
     isUpdating
 }: SubCategoryItemProps) {
     const [nameEnglish, setNameEnglish] = useState(sub.nameEnglish)
-    const [nameArabic, setNameArabic] = useState(sub.nameArabic)
 
     useEffect(() => {
         setNameEnglish(sub.nameEnglish)
-        setNameArabic(sub.nameArabic)
-    }, [sub.nameEnglish, sub.nameArabic])
+    }, [sub.nameEnglish])
 
-    const hasChanges = nameEnglish !== sub.nameEnglish || nameArabic !== sub.nameArabic
+    const hasChanges = nameEnglish !== sub.nameEnglish
 
     return (
         <div className="flex flex-col gap-4 p-5 bg-[#F8F9F9] rounded-2xl border border-gray-100 shadow-sm group hover:border-purple-200 transition-all duration-300">
@@ -87,15 +85,6 @@ function SubCategoryItem({
                             className="h-9 rounded-xl bg-white border-gray-100 text-sm font-bold px-3 shadow-none focus:ring-1 focus:ring-purple-200"
                         />
                     </div>
-                    <div className="space-y-1">
-                        <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider ml-1 text-right block">Arabic Name</label>
-                        <Input
-                            value={nameArabic}
-                            dir="rtl"
-                            onChange={(e) => setNameArabic(e.target.value)}
-                            className="h-9 rounded-xl bg-white border-gray-100 text-sm font-bold px-3 shadow-none focus:ring-1 focus:ring-purple-200 text-right"
-                        />
-                    </div>
                 </div>
             </div>
 
@@ -111,7 +100,7 @@ function SubCategoryItem({
                 {hasChanges && (
                     <Button
                         className="flex-1 h-9 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold gap-2 transition-all shadow-md"
-                        onClick={() => onUpdate(index, { nameEnglish, nameArabic })}
+                        onClick={() => onUpdate(index, { nameEnglish })}
                         disabled={isUpdating}
                     >
                         {isUpdating ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : 'Update Sub'}
@@ -235,7 +224,6 @@ function ManageCategory() {
         if (!category) return
         const newSub: SubCategory = {
             nameEnglish: 'New Sub-Category',
-            nameArabic: 'فئة فرعية جديدة',
             imageUrl: ''
         }
         const updatedSubs = [...(category.subcategories || []), newSub]
@@ -387,22 +375,13 @@ function ManageCategory() {
             </div>
 
             {/* Titles Input */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div className="grid grid-cols-1 gap-8">
                 <div className="space-y-3">
                     <label className="text-sm font-bold text-gray-900 ml-1">Category Title (English)</label>
                     <Input
                         value={category.nameEnglish}
                         onChange={(e) => handleUpdateCategory({ nameEnglish: e.target.value })}
                         className="h-12 rounded-xl bg-[#F8F9F9] border-gray-100 font-bold px-6 focus:ring-purple-200 focus:bg-white transition-all shadow-sm"
-                    />
-                </div>
-                <div className="space-y-3">
-                    <label className="text-sm font-bold text-gray-900 ml-1 text-right block">Category Title (Arabic)</label>
-                    <Input
-                        value={category.nameArabic}
-                        dir="rtl"
-                        onChange={(e) => handleUpdateCategory({ nameArabic: e.target.value })}
-                        className="h-12 rounded-xl bg-[#F8F9F9] border-gray-100 font-bold px-6 focus:ring-purple-200 focus:bg-white transition-all shadow-sm text-right"
                     />
                 </div>
             </div>

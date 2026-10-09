@@ -1,0 +1,277 @@
+import { useQuery } from '@tanstack/react-query';
+import { Image } from 'expo-image';
+import { useRouter } from 'expo-router';
+import { useEffect, useRef, useState } from 'react';
+import {
+    ActivityIndicator,
+    Animated,
+    Pressable,
+    ScrollView,
+    StyleSheet,
+    useWindowDimensions,
+    View,
+} from 'react-native';
+import type { NativeScrollEvent, NativeSyntheticEvent } from 'react-native';
+
+import { useAppTheme } from '../../context/AppThemeContext';
+import { StateSurface } from '../StateSurface';
+import { triggerSubtleHaptic } from '../../utils/haptics';
+import { homeQueryOptions, type HomeBannerItem } from '../../utils/homeQueries';
+import { logger } from '../../utils/logger';
+import { HOME_CAROUSEL_GAP, HOME_HORIZONTAL_GUTTER } from './layout';
+
+const BANNER_HEIGHT = 192;
+const BANNER_SIDE_PADDING = HOME_HORIZONTAL_GUTTER;
+const BANNER_GAP = HOME_CAROUSEL_GAP;
+const BANNER_AUTO_SCROLL_MS = 4000;
+
+export type BannerItem = HomeBannerItem;
+
+type PromoBannerProps = {
+    banners?: BannerItem[];
+    onBannerPress?: (banner: BannerItem) => void;
+};
+
+export default function PromoBanner({ banners: bannersOverride, onBannerPress }: PromoBannerProps) {
+    const { theme } = useAppTheme();
+    const {
+        data: fetchedBanners = [],
+        error,
+        isLoading,
+        refetch,
+    } = useQuery({ ...homeQueryOptions.promoBanners(), enabled: !bannersOverride });
+    const banners = bannersOverride ?? fetchedBanners;
+    const [currentIndex, setCurrentIndex] = useState(0);
+    const currentIndexRef = useRef(0);
+    const scrollViewRef = useRef<ScrollView | null>(null);
+    const isUserInteractingRef = useRef(false);
+    const { width: screenWidth } = useWindowDimensions();
+    const router = useRouter();
+    const bannerWidth = screenWidth - (BANNER_SIDE_PADDING * 2);
+    const bannerScrollInterval = bannerWidth + BANNER_GAP;
+    const maxIndex = Math.max(0, banners.length - 1);
+    useEffect(() => {
+        if (error) logger.error('Error fetching banners:', error);
+    }, [error]);
+
+    useEffect(() => {
+        if (banners.length <= 1) {
+            return;
+        }
+
+        const interval = setInterval(() => {
+            if (isUserInteractingRef.current) {
+                return;
+            }
+
+            const nextIndex = (currentIndexRef.current + 1) % banners.length;
+            currentIndexRef.current = nextIndex;
+            setCurrentIndex(nextIndex);
+        }, BANNER_AUTO_SCROLL_MS);
+
+        return () => clearInterval(interval);
+    }, [banners.length]);
+
+    useEffect(() => {
+        if (!scrollViewRef.current || banners.length === 0) {
+            return;
+        }
+
+        const safeIndex = Math.min(currentIndex, maxIndex);
+
+        scrollViewRef.current.scrollTo({
+            x: safeIndex * bannerScrollInterval,
+            animated: true,
+        });
+    }, [bannerScrollInterval, banners.length, currentIndex, maxIndex]);
+
+    const getBannerVendorId = (banner: BannerItem) => {
+        const vendorId = banner.vendorId?.trim() || banner.id?.trim();
+        return vendorId || null;
+    };
+
+    const handleScrollBegin = () => {
+        isUserInteractingRef.current = true;
+    };
+
+    const handleScrollEnd = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+        if (banners.length <= 1) {
+            isUserInteractingRef.current = false;
+            return;
+        }
+
+        const nextIndex = Math.min(
+            maxIndex,
+            Math.max(0, Math.round(event.nativeEvent.contentOffset.x / bannerScrollInterval)),
+        );
+
+        currentIndexRef.current = nextIndex;
+        setCurrentIndex(nextIndex);
+        isUserInteractingRef.current = false;
+    };
+
+    const handlePress = (banner: BannerItem) => {
+        const vendorId = getBannerVendorId(banner);
+
+        if (!vendorId) {
+            logger.warn('Promo banner is missing a linked vendorId:', banner.bannerId);
+            return;
+        }
+
+        triggerSubtleHaptic();
+        if (onBannerPress) {
+            onBannerPress({ ...banner, vendorId });
+        } else {
+            router.push({ pathname: '/realx/vendor/[id]', params: { id: vendorId } } as any);
+        }
+    };
+
+    if (isLoading) {
+        return (
+            <View style={[styles.container, styles.loaderContainer]}>
+                <ActivityIndicator size="large" color={theme.brand} />
+            </View>
+        );
+    }
+
+    if (error && banners.length === 0) {
+        return <StateSurface kind="error" compact onRetry={() => void refetch()} />;
+    }
+
+    if (banners.length === 0) {
+        return (
+            <View style={[styles.container, styles.loaderContainer]}>
+                <StateSurface kind="empty" compact />
+            </View>
+        );
+    }
+
+    return (
+        <View style={styles.container}>
+            <Animated.ScrollView
+                ref={scrollViewRef}
+                horizontal
+                style={styles.carousel}
+                showsHorizontalScrollIndicator={false}
+                nestedScrollEnabled
+                directionalLockEnabled
+                canCancelContentTouches
+                keyboardShouldPersistTaps="always"
+                decelerationRate="normal"
+                scrollEventThrottle={16}
+                onScrollBeginDrag={handleScrollBegin}
+                onMomentumScrollBegin={handleScrollBegin}
+                onScrollEndDrag={handleScrollEnd}
+                onMomentumScrollEnd={handleScrollEnd}
+                contentContainerStyle={styles.scrollContent}
+            >
+                {banners.map((banner, index) => {
+                    const imageUri = banner.images.mobile || banner.images.desktop;
+
+                    return (
+                        <Pressable
+                            key={banner.bannerId || banner.vendorId || banner.id || index}
+                            style={({ pressed }) => [
+                                styles.bannerColumn,
+                                { width: bannerWidth },
+                                pressed && styles.bannerPressed,
+                            ]}
+                            onPress={() => handlePress(banner)}
+                            accessibilityRole="button"
+                            accessibilityLabel={banner.altText || 'Open vendor'}
+                        >
+                            <View style={styles.bannerPill}>
+                                <Image
+                                    source={{ uri: imageUri }}
+                                    style={styles.bannerImage}
+                                    contentFit="cover"
+                                    cachePolicy="memory-disk"
+                                    accessibilityLabel={banner.altText || 'Banner Image'}
+                                />
+                            </View>
+                        </Pressable>
+                    );
+                })}
+            </Animated.ScrollView>
+            {banners.length > 1 ? (
+                <View style={styles.pagination} accessibilityLabel="Hero banner navigation">
+                    {banners.map((banner, index) => (
+                        <Pressable
+                            key={`hero-indicator-${banner.bannerId || banner.id || index}`}
+                            onPress={() => {
+                                currentIndexRef.current = index;
+                                setCurrentIndex(index);
+                            }}
+                            hitSlop={8}
+                            accessibilityRole="button"
+                            accessibilityLabel={`Show hero banner ${index + 1} of ${banners.length}`}
+                            accessibilityState={{ selected: currentIndex === index }}
+                            style={styles.indicatorButton}
+                        >
+                            <View style={[styles.indicator, currentIndex === index ? styles.activeIndicator : styles.inactiveIndicator]} />
+                        </Pressable>
+                    ))}
+                </View>
+            ) : null}
+        </View>
+    );
+}
+
+const styles = StyleSheet.create({
+    container: {
+        paddingVertical: 12,
+    },
+    loaderContainer: {
+        height: BANNER_HEIGHT,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    carousel: {
+        height: BANNER_HEIGHT,
+    },
+    pagination: {
+        height: 24,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 7,
+    },
+    indicatorButton: {
+        width: 32,
+        height: 24,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    indicator: {
+        height: 6,
+        borderRadius: 999,
+    },
+    inactiveIndicator: {
+        width: 6,
+        backgroundColor: '#D6D9D7',
+    },
+    activeIndicator: {
+        width: 20,
+        backgroundColor: '#18B852',
+    },
+    scrollContent: {
+        paddingHorizontal: BANNER_SIDE_PADDING,
+        gap: BANNER_GAP,
+    },
+    bannerColumn: {
+        height: BANNER_HEIGHT,
+    },
+    bannerPressed: {
+        opacity: 0.9,
+    },
+    bannerPill: {
+        width: '100%',
+        height: BANNER_HEIGHT,
+        borderRadius: 30,
+        overflow: 'hidden',
+    },
+    bannerImage: {
+        width: '100%',
+        height: '100%',
+    },
+});

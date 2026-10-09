@@ -75,10 +75,9 @@ function TransactionDetail() {
           </DetailCard>
         )}
 
-        {(tx.offerId || tx.pin) && (
+        {(tx.offerId || tx.redemptionCardAmount != null || tx.remainingAmount != null) && (
           <DetailCard title="Offer & Redemption">
             {tx.offerId && <DetailRow label="Offer ID" value={tx.offerId} mono />}
-            {tx.pin && <DetailRow label="PIN" value={tx.pin} mono />}
             {tx.redemptionCardAmount != null && <DetailRow label="Redemption Card Amount" value={`QAR ${tx.redemptionCardAmount}`} />}
             {tx.remainingAmount != null && <DetailRow label="Remaining Amount" value={`QAR ${tx.remainingAmount}`} />}
           </DetailCard>

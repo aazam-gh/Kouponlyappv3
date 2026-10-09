@@ -1,142 +1,124 @@
 import React from "react";
-import { cleanup, fireEvent, render } from "@testing-library/react-native";
+import { cleanup, fireEvent, render, waitFor } from "@testing-library/react-native";
+import { Alert } from 'react-native';
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { StoreProvider } from "../lib/store";
+import { NearbyProvider } from "../lib/nearby";
 import { router, useLocalSearchParams } from "expo-router";
-import MapScreen from "../app/(tabs)/map";
+import { loadFixture, clearFixture, fixture } from '../test/catalogue-fixture';
+import MapScreen from "../components/screens/explore-screen";
 import MeScreen from "../app/(tabs)/me";
-import CategoryScreen from "../app/category/[slug]";
-import AccountScreen from "../app/account/[section]";
-import DealScreen from "../app/deal/[id]";
-import ListingScreen from "../app/listing/[id]";
 
+import DealScreen from "../app/deal/[id]";
+import VendorRoute from "../app/realx/vendor/[id]";
+import HistoryScreen from '../app/realx/history';
+
+jest.mock('../lib/benefits', () => ({ useBenefits: () => ({benefits: null, isAdmin: false}) }));
+
+jest.mock('supercluster', () => ({
+  __esModule: true,
+  default: class {
+    points: any[] = [];
+    load(points: any[]) { this.points = points; }
+    getClusters() {
+      if (this.points.length < 2) return this.points;
+      const longitude = this.points.reduce((sum, point) => sum + point.geometry.coordinates[0], 0) / this.points.length;
+      const latitude = this.points.reduce((sum, point) => sum + point.geometry.coordinates[1], 0) / this.points.length;
+      return [{ type: 'Feature', id: 'cluster-test', properties: { cluster: true, cluster_id: 1, point_count: this.points.length }, geometry: { type: 'Point', coordinates: [longitude, latitude] } }];
+    }
+    getLeaves() { return this.points; }
+  },
+}));
+
+jest.mock('../context/AppThemeContext', () => ({ useAppTheme: () => ({ isDark: false, theme: { background: '#fff', surfaceElevated: '#fff', cardMuted: '#f1f4ef', brand: '#18b852', brandText: '#128a43', text: '#0a0f0c', mutedText: '#5f6861', border: '#e2e8e1', icon: '#111713', danger: '#d92d20', actionSolid: '#0e7a38', onActionSolid: '#fff' } }) }));
+jest.mock('../context/LocaleContext', () => ({ useAppLocale: () => ({ locale: 'en', isRTL: false }) }));
+jest.mock('../lib/auth', () => ({ useAuth: () => ({ user: null, signOut: jest.fn(async () => {}) }) }));
+jest.mock('../lib/profile', () => ({ useProfile: () => ({ profile: { full_name: '', email: '' }, avatarUrl: null }) }));
+
+jest.mock('expo-crypto',()=>({randomUUID:jest.fn(()=>'12345678-1234-1234-1234-123456789012')}));
+jest.mock('react-native-maps',()=>({__esModule:true,default:require('react-native').View,Marker:require('react-native').View,Callout:require('react-native').View}));
+jest.mock('expo-location',()=>({Accuracy:{Balanced:1},getForegroundPermissionsAsync:jest.fn(async()=>({status:'granted',canAskAgain:true})),hasServicesEnabledAsync:jest.fn(async()=>true),getCurrentPositionAsync:jest.fn(async()=>({coords:{latitude:10,longitude:76}}))}));
+jest.mock('../lib/nearby-vendors',()=>({fetchNearbyFoodOffers:jest.fn(async()=>[]),fetchVendorMapLocations:jest.fn(async()=>[
+  {...require('../test/catalogue-fixture').fixture().deals[0],vendorId:'vendor-1',locationId:'branch-1',branchName:'Waterfront',latitude:25.2854,longitude:51.531},
+  {...require('../test/catalogue-fixture').fixture().deals[0],vendorId:'vendor-1',locationId:'branch-2',branchName:'Marina',place:'Marina road',latitude:25.2855,longitude:51.5311},
+])}));
+beforeEach(loadFixture);
 const params = useLocalSearchParams as jest.Mock;
 const frame = { x: 0, y: 0, width: 393, height: 852 };
 const wrap = async (node: React.ReactNode) => render(
   <SafeAreaProvider initialMetrics={{ frame, insets: { top: 59, left: 0, right: 0, bottom: 34 } }}>
-    <StoreProvider>{node}</StoreProvider>
+    <NearbyProvider><StoreProvider>{node}</StoreProvider></NearbyProvider>
   </SafeAreaProvider>,
 );
 
 afterEach(() => {
   cleanup();
+  clearFixture();
   params.mockReturnValue({});
   jest.clearAllMocks();
 });
 
 describe("reachable route coverage", () => {
-  it("covers Me navigation and guest actions", async () => {
+  it('uses the source guest auth prompt for redemption history', async () => {
+    const alert = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+    await wrap(<HistoryScreen />);
+    await waitFor(() => expect(router.replace).toHaveBeenCalledWith('/realx/profile'));
+    expect(alert).toHaveBeenCalledWith('Create an account to continue', 'Log in or sign up to view redemption history.', expect.any(Array));
+    alert.mockRestore();
+  });
+
+  it("matches the guest profile menu and opens sign in", async () => {
     const view = await wrap(<MeScreen />);
-    expect(view.getByText("Your Kouponly profile")).toBeTruthy();
-    await fireEvent.press(view.getByTestId("profile-sign-in"));
-    expect(router.push).toHaveBeenCalledWith("/auth");
-    await fireEvent.press(view.getByTestId("rewards-card"));
-    expect(router.push).toHaveBeenCalledWith("/rewards");
-    await fireEvent.press(view.getByTestId("creator-dashboard-earnings"));
-    expect(router.push).toHaveBeenCalledWith("/account/earnings");
+    expect(view.getByText("You're browsing as a guest")).toBeTruthy();
+    expect(view.getByText("Terms and Conditions")).toBeTruthy();
+    expect(view.getByText("Privacy Policy")).toBeTruthy();
+    await fireEvent.press(view.getByText("LOG IN"));
+    expect(router.push).toHaveBeenCalledWith({ pathname: '/realx/onboarding', params: { flow: 'login' } });
+    await fireEvent.press(view.getByText("Create Account"));
+    expect(router.push).toHaveBeenCalledWith('/realx/welcome');
   });
 
-  it("covers map search, filters, pins, location reset, and preview", async () => {
+  it("shows Kouponly partner map locations and directions", async () => {
     const view = await wrap(<MapScreen />);
-    expect(view.getByText("Map your next plan.")).toBeTruthy();
-    await fireEvent.changeText(view.getByTestId("map-search"), "Starbucks");
-    expect(view.getByText("Starbucks")).toBeTruthy();
-    await fireEvent.press(view.getByLabelText("Clear map search"));
-    await fireEvent.press(view.getByText("Food"));
-    await fireEvent.press(view.getByLabelText("Show Centre Square partners"));
-    await fireEvent.press(view.getByTestId("map-preview"));
-    expect(router.push).toHaveBeenCalledWith(expect.stringMatching(/^\/deal\//));
+    expect(view.getByTestId("couponly-map-screen")).toBeTruthy();
+    expect(view.getByTestId("map-search")).toBeTruthy();
+    await waitFor(() => expect(view.getByLabelText("2 nearby places")).toBeTruthy());
+    await fireEvent.press(view.getByLabelText("2 nearby places"));
+    await fireEvent.press(view.getByLabelText("Open Test Kitchen Waterfront"));
+    expect(view.getByText("Test Kitchen")).toBeTruthy();
+    expect(view.getByText("Waterfront · Waterfront road")).toBeTruthy();
+    expect(view.getByText(/\d+\.\d km/)).toBeTruthy();
+    expect(view.getByText("Directions")).toBeTruthy();
+    expect(view.getByLabelText("Save partner")).toBeTruthy();
+    await fireEvent.press(view.getByLabelText("Filter Cafe"));
+    expect(view.getByLabelText("Filter Cafe").props.accessibilityState.selected).toBe(true);
+    expect(view.queryByText("No partners found")).toBeNull();
   });
 
-  it("covers category filtering and nearest sorting", async () => {
-    params.mockReturnValue({ slug: "mains" });
-    const view = await wrap(<CategoryScreen />);
-    expect(view.getAllByText("Mains").length).toBeGreaterThan(0);
-    await fireEvent.changeText(view.getByTestId("category-search"), "Biryani");
-    await fireEvent.press(view.getByText("Biryani"));
-    await fireEvent.press(view.getByTestId("nearest-toggle"));
-    expect(view.getByText("Nearest first")).toBeTruthy();
-  });
-
-  it.each([
-    ["personal", "Personal details"],
-    ["savings", "Savings history"],
-    ["earnings", "Your earnings"],
-    ["membership", "Membership"],
-    ["gifts", "Gift Kouponly"],
-    ["settings", "Settings"],
-    ["help", "Help & support"],
-    ["feedback", "Share feedback"],
-    ["legal", "Terms & privacy"],
-  ])("renders account section %s", async (section, title) => {
-    params.mockReturnValue({ section });
-    const view = await wrap(<AccountScreen />);
-    expect(view.getByText(title)).toBeTruthy();
-  });
-
-  it("covers account editing, gifts, settings, FAQs, and feedback validation", async () => {
-    params.mockReturnValue({ section: "personal" });
-    const personal = await wrap(<AccountScreen />);
-    await fireEvent.press(personal.getByText("Edit profile"));
-    expect(personal.getByText("Save changes")).toBeTruthy();
-    await fireEvent.press(personal.getByText("Save changes"));
-    expect(personal.getByText("Edit profile")).toBeTruthy();
-    await cleanup();
-
-    params.mockReturnValue({ section: "gifts" });
-    const gifts = await wrap(<AccountScreen />);
-    await fireEvent.press(gifts.getByText("Accept gift"));
-    expect(gifts.getByText("Accepted")).toBeTruthy();
-    await fireEvent.press(gifts.getByText("Sent"));
-    await fireEvent.press(gifts.getByText("Send a gift"));
-    await fireEvent.changeText(gifts.getByPlaceholderText("Recipient mobile"), "+919999");
-    await fireEvent.press(gifts.getByText("Create & send claim link"));
-    expect(gifts.getByText("Sent to +919999 · just now")).toBeTruthy();
-    await cleanup();
-
-    params.mockReturnValue({ section: "help" });
-    const help = await wrap(<AccountScreen />);
-    await fireEvent.press(help.getByText("How do I redeem an offer?"));
-    expect(help.getByText(/Open the relevant offer/)).toBeTruthy();
-    await cleanup();
-
-    params.mockReturnValue({ section: "feedback" });
-    const feedback = await wrap(<AccountScreen />);
-    const send = feedback.getByRole("button", { name: "Send feedback" });
-    expect(send.props.accessibilityState.disabled).toBe(true);
-    await fireEvent.changeText(feedback.getByPlaceholderText(/Tell us what worked/), "Great app");
-    await fireEvent.press(feedback.getByText("Send feedback"));
-    expect(feedback.getByText("Thank you for being honest")).toBeTruthy();
-  });
-
-  it("covers deal info, save, and offer entry points", async () => {
-    params.mockReturnValue({ id: "1" });
+  it("covers real deal details, save, and redemption entry", async () => {
+    params.mockReturnValue({ id: "101" });
     const view = await wrap(<DealScreen />);
-    expect(view.getByText("Paragon Restaurant")).toBeTruthy();
-    await fireEvent.press(view.getByLabelText("Save place"));
-    await fireEvent.press(view.getByText("Info"));
-    expect(view.getByText("PARTNER INFORMATION")).toBeTruthy();
-    const closeButtons = view.getAllByLabelText("Close partner information");
-    await fireEvent.press(closeButtons[closeButtons.length - 1]);
-    expect(view.getByTestId("redeem-offer-0")).toBeTruthy();
+    expect(view.getByText("TEST KITCHEN")).toBeTruthy();
+    expect(view.getByText("RICE LUNCH DISCOUNT")).toBeTruthy();
+    expect(view.getByTestId("redeem-offer-1")).toBeTruthy();
   });
 
-  it("covers listing destinations and online listing redemption", async () => {
-    params.mockReturnValue({ id: "bd-intern" });
-    const work = await wrap(<ListingScreen />);
-    await fireEvent.press(work.getByTestId("listing-action"));
-    expect(router.push).toHaveBeenCalledWith("/work");
-    await cleanup();
+  it('shows all vendor offers and branches in deal details',async()=>{
+    params.mockReturnValue({id:'101',offer:'2'});
+    const view=await wrap(<DealScreen/>);
+    expect(view.getAllByText('SWEETS DISCOUNT').length).toBeGreaterThan(0);
+    expect(view.getByText('Dessert details')).toBeTruthy();
+    expect(view.getByLabelText('Choose or open vendor locations')).toBeTruthy();
+    expect(view.getByTestId('redeem-offer-2')).toBeTruthy();
+    await fireEvent.press(view.getByLabelText('Choose or open vendor locations'));
+    expect(view.getByText('Branches')).toBeTruthy();
+    expect(view.getByText('Second branch')).toBeTruthy();
+  });
 
-    params.mockReturnValue({ id: "reward-coffee" });
-    const rewards = await wrap(<ListingScreen />);
-    await fireEvent.press(rewards.getByTestId("listing-action"));
-    expect(router.push).toHaveBeenCalledWith("/rewards");
-    await cleanup();
-
-    params.mockReturnValue({ id: "backwater-cruise" });
-    const online = await wrap(<ListingScreen />);
-    await fireEvent.press(online.getByTestId("listing-action"));
-    expect(online.getByText("Use this offer now?")).toBeTruthy();
+  it('renders vendor details directly from the catalogue vendor ID',async()=>{
+    params.mockReturnValue({id:'vendor-1'});
+    const view=await wrap(<VendorRoute/>);
+    expect(view.getByTestId('deal-detail')).toBeTruthy();
+    expect(view.getByText('TEST KITCHEN')).toBeTruthy();
   });
 });

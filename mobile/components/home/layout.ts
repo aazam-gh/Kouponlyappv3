@@ -1,0 +1,5 @@
+export const HOME_HORIZONTAL_GUTTER = 20;
+export const HOME_SECTION_TOP_SPACING = 24;
+export const HOME_SECTION_HEADER_GAP = 16;
+export const HOME_CAROUSEL_GAP = 12;
+export const HOME_COMPACT_BANNER_HEIGHT = 108;

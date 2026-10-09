@@ -1,4 +1,4 @@
-import { createFileRoute, Link, Outlet, redirect, useLocation } from '@tanstack/react-router'
+import { createFileRoute, Link, Outlet, useLocation } from '@tanstack/react-router'
 import { useQuery } from '@tanstack/react-query'
 import { ArrowLeft } from 'lucide-react'
 import { vendorQueryOptions, type Vendor } from '@/queries'
@@ -8,10 +8,7 @@ export type { Vendor }
 export const Route = createFileRoute('/admin/vendors/$vendorId/settings')({
     component: VendorSettingsLayout,
     loader: async ({ context: { queryClient }, params: { vendorId } }) => {
-        const vendor = await queryClient.ensureQueryData(vendorQueryOptions(vendorId))
-        if (vendor.vendorType === 'online') {
-            throw redirect({ to: '/admin/online-vendors/$vendorId/settings', params: { vendorId } })
-        }
+        await queryClient.ensureQueryData(vendorQueryOptions(vendorId))
     },
 })
 
@@ -26,7 +23,7 @@ function VendorSettingsLayout() {
             <div className="flex items-center gap-4">
                 <Link
                     to="/admin/vendors"
-                    search={{ page: 1, pageSize: 10, search: '', sort: 'name-asc', xcard: 'all' }}
+                    search={{ page: 1, pageSize: 10, search: '', sort: 'name-asc' }}
                     className="p-2 -ml-2 rounded-full hover:bg-muted transition-colors"
                 >
                     <ArrowLeft className="h-5 w-5" />
@@ -39,21 +36,21 @@ function VendorSettingsLayout() {
             </div>
 
             <div className="w-full border-b">
-                <div className="flex w-full max-w-xl bg-muted/50 p-1 rounded-lg gap-1">
+                <div className="flex w-full overflow-x-auto bg-muted/50 p-1 rounded-xl gap-1">
                     <Link
                         to="/admin/vendors/$vendorId/settings/branding"
                         params={{ vendorId }}
-                        className={`flex-1 flex items-center justify-center h-10 rounded-md text-sm font-medium transition-all ${location.pathname.endsWith('branding')
+                        className={`min-w-36 flex-1 flex items-center justify-center h-10 rounded-md text-sm font-medium transition-all ${location.pathname.endsWith('branding')
                             ? 'bg-white text-black shadow-sm'
                             : 'text-muted-foreground hover:text-black hover:bg-white/50'
                             }`}
                     >
-                        Branding
+                        Profile & appearance
                     </Link>
                     <Link
                         to="/admin/vendors/$vendorId/settings/offers"
                         params={{ vendorId }}
-                        className={`flex-1 flex items-center justify-center h-10 rounded-md text-sm font-medium transition-all ${location.pathname.endsWith('offers')
+                        className={`min-w-36 flex-1 flex items-center justify-center h-10 rounded-md text-sm font-medium transition-all ${location.pathname.endsWith('offers')
                             ? 'bg-white text-black shadow-sm'
                             : 'text-muted-foreground hover:text-black hover:bg-white/50'
                             }`}
@@ -63,22 +60,22 @@ function VendorSettingsLayout() {
                     <Link
                         to="/admin/vendors/$vendorId/settings/location"
                         params={{ vendorId }}
-                        className={`flex-1 flex items-center justify-center h-10 rounded-md text-sm font-medium transition-all ${location.pathname.endsWith('location')
+                        className={`min-w-36 flex-1 flex items-center justify-center h-10 rounded-md text-sm font-medium transition-all ${location.pathname.endsWith('location')
                             ? 'bg-white text-black shadow-sm'
                             : 'text-muted-foreground hover:text-black hover:bg-white/50'
                             }`}
                     >
-                        Location
+                        Branches & map
                     </Link>
                     <Link
                         to="/admin/vendors/$vendorId/settings/invoices"
                         params={{ vendorId }}
-                        className={`flex-1 flex items-center justify-center h-10 rounded-md text-sm font-medium transition-all ${location.pathname.endsWith('invoices')
+                        className={`min-w-36 flex-1 flex items-center justify-center h-10 rounded-md text-sm font-medium transition-all ${location.pathname.endsWith('invoices')
                             ? 'bg-white text-black shadow-sm'
                             : 'text-muted-foreground hover:text-black hover:bg-white/50'
                             }`}
                     >
-                        Invoices
+                        Coupon analytics
                     </Link>
                 </div>
             </div>

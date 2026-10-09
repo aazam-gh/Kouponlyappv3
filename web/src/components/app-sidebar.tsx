@@ -90,7 +90,7 @@ export function AppSidebar({
               className="data-[slot=sidebar-menu-button]:!p-1.5"
             >
               <a href="/">
-                <span className="text-2xl font-bold text-primary ml-1">realX</span>
+                <span className="text-2xl font-bold text-primary ml-1">Kouponly</span>
               </a>
             </SidebarMenuButton>
           </SidebarMenuItem>

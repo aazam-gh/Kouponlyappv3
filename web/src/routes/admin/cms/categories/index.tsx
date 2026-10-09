@@ -76,7 +76,6 @@ function CategoriesOverview() {
 
             const newCatData = {
                 nameEnglish: 'New Category',
-                nameArabic: 'فئة جديدة',
                 imageUrl: downloadURL,
                 order: categories.length + 1,
                 subcategories: []
