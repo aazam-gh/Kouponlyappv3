@@ -11,6 +11,17 @@ begin
   raise exception 'Use the monthly coupon redemption flow' using errcode='42501';
 end $$;
 
+-- This migration may run after the couponly_* backend rename.
+do $$
+begin
+  if to_regprocedure('public.couponly_redeem_offer(text,text,numeric,text,numeric,integer,text,uuid)') is not null then
+    execute replace(pg_get_functiondef('public.realx_redeem_offer(text,text,numeric,text,numeric,integer,text,uuid)'::regprocedure),
+      'public.realx_redeem_offer(', 'public.couponly_redeem_offer(');
+  end if;
+end $$;
+
 -- The former implementation contains the balance debit and is no longer callable.
 drop function if exists public.realx_redeem_offer_legacy(text,text,numeric,text,numeric,integer,text,uuid);
 drop function if exists public.realx_redeem_gift_card(text,numeric,uuid);
+drop function if exists public.couponly_redeem_offer_legacy(text,text,numeric,text,numeric,integer,text,uuid);
+drop function if exists public.couponly_redeem_gift_card(text,numeric,uuid);

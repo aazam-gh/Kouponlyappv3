@@ -1,7 +1,11 @@
+import { Colors as BorderPalette } from '@/constants/Colors';
+import Animated from 'react-native-reanimated';
+import { CONTENT_ENTER } from '@/utils/motion';
+import ScalePressable from '@/components/ScalePressable';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Image, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AppHeader from '../../components/navigation/AppHeader';
 import { useAppTheme } from '../../context/AppThemeContext';
@@ -12,6 +16,7 @@ import { dealById } from '../../lib/data';
 import { benefitsError, makeMutationId, redeemSubscriptionCoupon, useBenefits } from '../../lib/benefits';
 import { usePostHog } from 'posthog-react-native';
 import { useStore } from '../../lib/store';
+import ProfileSprites from '@/components/profile/ProfileSprites';
 
 export default function RedeemScreen() {
   const posthog = usePostHog();
@@ -39,9 +44,10 @@ export default function RedeemScreen() {
   };
   const goBack = () => router.canGoBack() ? router.back() : router.replace('/realx' as any);
   return <View style={[styles.screen, {paddingTop:insets.top}]}>
+    <ProfileSprites />
     <AppHeader title={receipt ? '' : 'Redeem coupon'} onBackPress={goBack} />
     <ScrollView contentInsetAdjustmentBehavior="never" contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 24, paddingTop:12 }]}>
-      {receipt ? <>
+      <Animated.View key={receipt ? "receipt" : "confirm"} entering={CONTENT_ENTER} style={{ gap: 20 }}>{receipt ? <>
         <View style={styles.ticket}>
           <Vendor name={receipt.vendorName} logo={deal?.logo} />
           <View style={styles.codeCard}>
@@ -68,7 +74,7 @@ export default function RedeemScreen() {
           {used ? <><Text style={styles.error}>Your coupon at this vendor is already used.</Text>{error && request.current.mutation ? <Action label="Recover confirmation" disabled={busy} onPress={() => void confirm()} /> : null}</> : offer.redemption === 'online' ? <Text style={styles.body}>Online coupon redemption is not available.</Text> : <Action label={busy ? 'Confirming…' : 'Confirm redemption'} disabled={busy} onPress={() => void confirm()} />}
         </> : !benefitsFailure ? <Text style={styles.body}>Verify your @rajagiri.edu.in email to access free coupons.</Text> : null}
         {error || benefitsFailure ? <><Text selectable accessibilityRole="alert" style={styles.error}>{error || benefitsFailure}</Text><Action label="Refresh coupons" onPress={() => void refresh().catch(() => {})} /></> : null}
-      </>}
+      </>}</Animated.View>
     </ScrollView>
   </View>;
 }
@@ -85,7 +91,7 @@ function makeStyles(theme: ReturnType<typeof useAppTheme>['theme']) {
     vendorName:{flex:1,color:theme.text,fontSize:26,letterSpacing:.5,...Typography.getTextVariantStyle('display')},
     logoTile:{width:64,height:64,borderRadius:16,borderWidth:1,borderColor:theme.border,backgroundColor:theme.card,alignItems:'center',justifyContent:'center'},
     logo:{width:48,height:48},
-    offerPanel:{backgroundColor:theme.cardMuted,borderRadius:28,padding:24,gap:14},
+    offerPanel:{backgroundColor:theme.cardMuted,borderColor:BorderPalette.border,borderWidth:1,borderRadius:28,padding:24,gap:14},
     mode:{flexDirection:'row',gap:8,alignItems:'center'},
     eyebrow:{color:theme.mutedText,fontSize:11,letterSpacing:1,...Typography.getTextVariantStyle('bodyStrong')},
     offerTitle:{color:theme.text,fontSize:20,lineHeight:30,...Typography.getTextVariantStyle('bodyStrong')},
@@ -94,13 +100,13 @@ function makeStyles(theme: ReturnType<typeof useAppTheme>['theme']) {
     noticeTitle:{color:theme.text,fontSize:15,...Typography.getTextVariantStyle('bodyStrong')},
     error:{color:theme.danger,fontSize:14,...Typography.getTextVariantStyle('body')},
     centerCopy:{color:theme.mutedText,fontSize:13,lineHeight:21,textAlign:'center',...Typography.getTextVariantStyle('body')},
-    ticket:{backgroundColor:theme.cardMuted,borderRadius:28,padding:20,gap:16},
-    codeCard:{backgroundColor:theme.brandSoft,borderColor:theme.brand,borderWidth:1,borderRadius:20,padding:16,alignItems:'center',gap:12},
+    ticket:{backgroundColor:theme.cardMuted,borderColor:BorderPalette.border,borderWidth:1,borderRadius:28,padding:20,gap:16},
+    codeCard:{backgroundColor:theme.brandSoft,borderColor:BorderPalette.border,borderWidth:1,borderRadius:20,padding:16,alignItems:'center',gap:12},
     code:{color:theme.brand,fontSize:40,letterSpacing:8,...Typography.getTextVariantStyle('display')},
     timestamp:{flexDirection:'row',gap:8,alignItems:'center',justifyContent:'center',flexWrap:'wrap'},
   });
 }
 
 function Action({ label, onPress, disabled = false }: { label: string; onPress: () => void; disabled?: boolean }) {
-  const { theme } = useAppTheme(); return <TouchableOpacity accessibilityRole="button" accessibilityState={{disabled, busy:disabled}} disabled={disabled} onPress={onPress} style={{ minHeight: 54, padding: 14, borderRadius: 30, backgroundColor: theme.actionSolid, opacity: disabled ? 0.5 : 1, alignItems: 'center', justifyContent: 'center' }}><Text style={{ color: theme.buttonText, ...Typography.getTextVariantStyle('bodyStrong') }}>{label}</Text></TouchableOpacity>;
+  const { theme } = useAppTheme(); return <ScalePressable accessibilityRole="button" accessibilityState={{disabled, busy:disabled}} disabled={disabled} onPress={onPress} style={{ minHeight: 54, padding: 14, borderRadius: 30, backgroundColor: theme.actionSolid, opacity: disabled ? 0.5 : 1, alignItems: 'center', justifyContent: 'center' }}><Text style={{ color: theme.buttonText, ...Typography.getTextVariantStyle('bodyStrong') }}>{label}</Text></ScalePressable>;
 }

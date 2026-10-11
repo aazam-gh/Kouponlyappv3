@@ -11,6 +11,7 @@ const base64ToBytes=(value:string)=>Uint8Array.from(atob(value),c=>c.charCodeAt(
 const normalizeEmail=(value:unknown)=>String(value||"").trim().toLowerCase();
 const isEmail=(value:string)=>/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(value);
 const isSchoolEmail=(email:string)=>/^[^@\s]+@rajagiri\.edu\.in$/.test(email);
+const isInternalMobileTestEmail=(email:string)=>normalizeEmail(email)==="info@kouponly.in";
 const normalizeDigits=(value:any)=>String(value??"").replace(/[٠-٩۰-۹]/g,(digit)=>{const arabic="٠١٢٣٤٥٦٧٨٩",persian="۰۱۲۳۴۵۶۷۸۹";const i=arabic.indexOf(digit);return String(i>-1?i:persian.indexOf(digit));});
 const asRows=(response:any)=>response.data||[];
 async function existsStudent(service:any,email:string){const {data,error}=await service.from("couponly_students").select("id").eq("email",email).limit(1);if(error)throw error;return Boolean(data?.length);}
@@ -65,7 +66,8 @@ Deno.serve(async(request)=>{
         const email=normalizeEmail(data.email),purpose=String(data.purpose||"");
         if(!isEmail(email)||!["signup","login","verification"].includes(purpose))throw Object.assign(new Error("A valid email and OTP purpose are required"),{status:400});
         const ip=request.headers.get("x-forwarded-for")?.split(",")[0]||"unknown";
-        if(purpose!=="login"&&!isSchoolEmail(email))throw Object.assign(new Error("Use your @rajagiri.edu.in email address"),{status:403});
+        if(purpose==="signup"&&!isSchoolEmail(email)&&!isInternalMobileTestEmail(email))throw Object.assign(new Error("Use your @rajagiri.edu.in email address"),{status:403});
+        if(purpose==="verification"&&!isSchoolEmail(email))throw Object.assign(new Error("Use your @rajagiri.edu.in email address"),{status:403});
         await incrementRateLimit(service,await sha256("send:"+email+":"+purpose+":"+ip),5,900);
         if(purpose!=="login"&&await existsStudent(service,email))throw Object.assign(new Error("An account with this email already exists"),{status:409});
         if(purpose==="login"&&!await existsStudent(service,email)){

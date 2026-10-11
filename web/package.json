@@ -8,6 +8,7 @@
     "build": "npm run build:prod",
     "build:dev": "vite build --mode development && tsc --noEmit",
     "build:prod": "vite build --mode production && tsc --noEmit",
+    "deploy": "npm run build && CLOUDFLARE_ACCOUNT_ID=14d099a698f8fa918f9711f75daedd64 wrangler pages deploy dist --project-name kouponly-admin --branch main",
     "preview": "vite preview --port 3001 --strictPort",
     "check": "tsc --noEmit"
   },

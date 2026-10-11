@@ -8,6 +8,10 @@ const numberValue = (value: unknown, fallback = 0) => {
   const parsed = typeof value === 'number' ? value : Number(value);
   return Number.isFinite(parsed) ? parsed : fallback;
 };
+const labelValues = (value: unknown, legacyValue: unknown): string[] => {
+  const labels = Array.isArray(value) ? value : [legacyValue];
+  return labels.filter((label): label is string => typeof label === 'string' && label.trim().length > 0).map(label => label.trim()).slice(0, 3);
+};
 
 function isOfferAvailable(offer: MarketplaceOfferRow, now: number) {
   if (offer.active === false) return false;
@@ -84,6 +88,8 @@ export function projectVendorCatalogue(
       id, vendorId: vendor.id, categoryId: mainCategory.id, subcategoryIds,
       offers: vendorOffers.map(row => ({ id: row.id, index: offerIndexes.get(row.id)!, title: row.title,
         logo: stringValue(row.image_url) || undefined, description: row.description || '', saving: row.saving_label || '', terms: row.terms || undefined, redemptionInstructions: row.redemption_instructions || undefined,
+        cardLabels: labelValues(row.card_labels ?? row.payload?.cardLabels, row.card_label ?? row.payload?.cardLabel),
+        cardLabel: labelValues(row.card_labels ?? row.payload?.cardLabels, row.card_label ?? row.payload?.cardLabel)[0],
         redemption: row.redemption_mode === 'online' ? 'online' : 'inStore', discountType: row.discount_type || row.payload?.discountType, discountValue: numberValue(row.discount_value ?? row.payload?.discountValue, NaN) })),
       galleryImages: Array.isArray(vendor.gallery_images) ? vendor.gallery_images.filter((url: unknown) => typeof url === "string" && url.trim()) : [],
       phoneNumber: stringValue(vendor.phone, stringValue(payload.phoneNumber, stringValue(payload.phone, ''))) || undefined,
@@ -102,6 +108,8 @@ export function projectVendorCatalogue(
       rating,
       offer: offerTitle,
       saving,
+      cardLabels: labelValues(offer.card_labels ?? offer.payload?.cardLabels, offer.card_label ?? offer.payload?.cardLabel),
+      cardLabel: labelValues(offer.card_labels ?? offer.payload?.cardLabels, offer.card_label ?? offer.payload?.cardLabel)[0],
       offerValue,
       newest: numberValue(vendor.newest),
       trend: numberValue(vendor.trend),

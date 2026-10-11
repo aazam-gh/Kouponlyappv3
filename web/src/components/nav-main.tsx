@@ -29,7 +29,7 @@ export function NavMain({
                 tooltip={item.title}
                 isActive={pathname.startsWith(item.url) || (item.url === '/admin/membership' && pathname.startsWith('/admin/transactions'))}
                 asChild
-                className="h-12 px-4 rounded-xl transition-colors data-[active=true]:bg-[#18B852] data-[active=true]:text-[#0A0F0C] data-[active=true]:hover:bg-[#128A43] hover:bg-sidebar-accent group"
+                className="h-11 rounded-xl px-3 transition-colors data-[active=true]:bg-[#B7F52B] data-[active=true]:text-[#0A0F0C] data-[active=true]:hover:bg-[#A8E521] hover:bg-sidebar-accent group"
               >
                 <Link
                   to={item.url}
@@ -38,10 +38,10 @@ export function NavMain({
                 >
                   {item.icon && (
                     <item.icon
-                      className="size-6 stroke-[1.5] transition-colors text-sidebar-foreground group-data-[active=true]:text-[#0A0F0C]"
+                      className="size-5 stroke-[1.7] transition-colors text-sidebar-foreground/75 group-data-[active=true]:text-[#0A0F0C]"
                     />
                   )}
-                  <span className="font-medium text-sm text-sidebar-foreground group-data-[active=true]:text-[#0A0F0C]">{item.title}</span>
+                  <span className="text-sm font-medium text-sidebar-foreground group-data-[active=true]:text-[#0A0F0C]">{item.title}</span>
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>

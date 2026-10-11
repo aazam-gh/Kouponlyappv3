@@ -8,8 +8,8 @@ export const makeMutationId = () => Crypto.randomUUID();
 type Row = Record<string, any>;
 type EdgeEnvelope<T> = { data: T; error?: { code?: string; message?: string } };
 
-function fail(error: { message?: string } | null | undefined, action: string): never {
-  throw new Error(error?.message || `${action} failed. Please try again.`);
+function fail(error: { message?: string; code?: string } | null | undefined, action: string): never {
+  throw Object.assign(new Error(error?.message || `${action} failed. Please try again.`), {code:error?.code});
 }
 
 async function rows(query: PromiseLike<{ data: Row[] | null; error: { message: string } | null }>, action: string): Promise<Row[]> {
@@ -159,19 +159,33 @@ export async function deleteAccountCloud() {
   return result.data;
 }
 
-type LocalProfile = { full_name: string; email: string; city: string; mobile?: string; avatar_path?: string | null };
+type LocalProfile = {
+  full_name: string; email: string; city: string; mobile?: string; avatar_path?: string | null;
+  date_of_birth?: string | null; first_name_edit_used?: boolean; last_name_edit_used?: boolean;
+  date_of_birth_edit_used?: boolean; mobile_edit_used?: boolean; avatar_edit_used?: boolean;
+};
 type LocalPreferences = { offer_alerts: boolean; location: string; language: string };
 
 export async function updateProfile(value: Partial<LocalProfile>): Promise<void> {
   const client = getSupabase();
   const { data: { user }, error: userError } = await client.auth.getUser();
   if (userError || !user) fail(userError, 'Profile update');
+  const personal: Record<string, string> = {};
+  if (value.full_name !== undefined) {
+    const [first_name = '', ...last] = value.full_name.trim().split(/\s+/);
+    personal.first_name = first_name;
+    personal.last_name = last.join(' ');
+  }
+  if (value.date_of_birth !== undefined && value.date_of_birth) personal.date_of_birth = value.date_of_birth;
+  if (value.mobile !== undefined) personal.mobile = value.mobile;
+  if (value.avatar_path !== undefined && value.avatar_path) personal.avatar_path = value.avatar_path;
+  if (Object.keys(personal).length) {
+    const { error } = await client.rpc('update_own_profile_details', { p_values: personal });
+    if (error) fail(error, 'Profile update');
+  }
   const fields = {
-    ...(value.full_name !== undefined ? { full_name: value.full_name.trim() } : {}),
     ...(value.email !== undefined ? { email: value.email.trim() } : {}),
     ...(value.city !== undefined ? { city: value.city.trim() } : {}),
-    ...(value.mobile !== undefined ? { mobile: value.mobile.trim() } : {}),
-    ...(value.avatar_path !== undefined ? { avatar_path: value.avatar_path } : {}),
   };
   if (!Object.keys(fields).length) return;
   const { data, error } = await client.from('profiles').update(fields).eq('user_id', user.id).select('user_id').maybeSingle();
@@ -183,7 +197,7 @@ export async function fetchProfile(): Promise<LocalProfile | null> {
   const client = getSupabase();
   const { data: { user }, error: userError } = await client.auth.getUser();
   if (userError || !user) return null;
-  return single(client.from('profiles').select('full_name,email,city,mobile,avatar_path').eq('user_id', user.id).maybeSingle(), 'Profile load') as Promise<LocalProfile | null>;
+  return single(client.from('profiles').select('full_name,email,city,mobile,avatar_path,date_of_birth,first_name_edit_used,last_name_edit_used,date_of_birth_edit_used,mobile_edit_used,avatar_edit_used').eq('user_id', user.id).maybeSingle(), 'Profile load') as Promise<LocalProfile | null>;
 }
 
 export async function updatePreferences(value: LocalPreferences): Promise<void> {
@@ -221,7 +235,7 @@ export function subscribeToUser(userId: string, onChange: () => void) {
   return { unsubscribe: () => { void client.removeChannel(channel); } };
 }
 
-const catalogueTables = ['realx_categories','realx_subcategories','realx_vendor_subcategories','realx_vendors','realx_offers','realx_vendor_locations','realx_cms_documents'] as const;
+const catalogueTables = ['couponly_categories','couponly_subcategories','couponly_vendor_subcategories','couponly_vendors','couponly_offers','couponly_vendor_locations','couponly_cms_documents'] as const;
 export function subscribeToCatalogue(onChange: () => void) {
   if (!supabaseConfigured) return { unsubscribe: () => {} };
   const client = getSupabase();
@@ -305,6 +319,8 @@ export function uploadStorageAsset(asset: StorageAsset, userId: string, onProgre
     task.request = upload.request;
     await upload.promise;
     try {
+      const {data:{user: currentUser},error}=await client.auth.getUser();
+      if(error || currentUser?.id!==userId || task.cancelled)throw new Error('The upload session changed. Please try again.');
       await updateProfile({ avatar_path: asset.path });
     } catch (error) {
       await client.storage.from(asset.bucket).remove([asset.path]);

@@ -1,10 +1,11 @@
+import ScalePressable from '@/components/ScalePressable';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Image } from 'expo-image';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { StyleSheet, Text, TouchableOpacity, useWindowDimensions, View } from 'react-native';
+import { StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AppText from '../../components/AppText';
 import {
@@ -20,6 +21,7 @@ import { useAppTheme } from '../../context/AppThemeContext';
 import { useAppLocale } from '../../context/LocaleContext';
 import { Typography } from '../../constants/Typography';
 import { Colors } from '../../constants/Colors';
+import ProfileSprites from '@/components/profile/ProfileSprites';
 
 const backgroundIcons: {
     name: keyof typeof Ionicons.glyphMap;
@@ -185,6 +187,7 @@ export default function OnboardingScreen() {
     return (
         <View style={styles.container}>
                 <StatusBar style="dark" />
+            <ProfileSprites />
             {backgroundIcons.map((icon, index) => (
                 <View
                     key={`${icon.name}-${index}`}
@@ -251,7 +254,7 @@ export default function OnboardingScreen() {
                                     style={styles.buttonGlowWrapper}
                                     glowStyle={[styles.buttonGlow, { backgroundColor: theme.brandSoft, borderColor: theme.brandSoft }]}
                                 >
-                                    <TouchableOpacity
+                                    <ScalePressable
                                         style={[styles.button, { backgroundColor: theme.actionSolid }]}
                                         disabled={isDiscoverTransitioning}
                                         onPress={handleLogin}
@@ -266,10 +269,10 @@ export default function OnboardingScreen() {
                                         >
                                             <Ionicons name={isRTL ? 'arrow-back' : 'arrow-forward'} size={24} color={theme.actionSolid} />
                                         </View>
-                                    </TouchableOpacity>
+                                    </ScalePressable>
                                 </OnboardingGlowMotion>
                             </OnboardingButtonMotion>
-                            <TouchableOpacity
+                            <ScalePressable
                                 style={[styles.createAccountButton, { borderColor: theme.actionSolid }]}
                                 onPress={handleCreateAccount}
                                 activeOpacity={0.85}
@@ -278,8 +281,8 @@ export default function OnboardingScreen() {
                                 <Text style={[styles.createAccountButtonText, { color: theme.brandText }]}>
                                     {t('onboarding_v2_create_account')}
                                 </Text>
-                            </TouchableOpacity>
-                            <TouchableOpacity
+                            </ScalePressable>
+                            <ScalePressable
                                 style={styles.guestButton}
                                 onPress={handleGuest}
                                 activeOpacity={0.75}
@@ -288,7 +291,7 @@ export default function OnboardingScreen() {
                                 <Text style={[styles.guestButtonText, { color: theme.brandText }]}>
                                     {t('continue_as_guest')}
                                 </Text>
-                            </TouchableOpacity>
+                            </ScalePressable>
                         </View>
                     </View>
                 </SafeAreaView>

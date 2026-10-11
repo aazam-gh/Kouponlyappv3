@@ -1,12 +1,14 @@
+import { useMotionPreferences } from '@/lib/theme';
 import React, { useEffect, useRef } from 'react';
-import { Pressable, StyleSheet, type StyleProp, type ViewStyle } from 'react-native';
+import { StyleSheet, type StyleProp, type ViewStyle } from 'react-native';
+import ScalePressable from '../ScalePressable';
 import Animated, {
   Easing,
+  cancelAnimation,
   FadeInUp,
   ReduceMotion,
   runOnJS,
   useAnimatedStyle,
-  useReducedMotion,
   useSharedValue,
   withDelay,
   withRepeat,
@@ -64,7 +66,7 @@ export function OnboardingDiscoverTransitionMotion({
   onComplete,
   style,
 }: DiscoverTransitionMotionProps) {
-  const prefersReducedMotion = useReducedMotion();
+  const { reduceMotion: prefersReducedMotion } = useMotionPreferences();
   const progress = useSharedValue(0);
 
   useEffect(() => {
@@ -122,7 +124,7 @@ export function OnboardingDiscoverTransitionMotion({
 }
 
 export function OnboardingGlowMotion({ children, glowStyle, style }: GlowMotionProps) {
-  const prefersReducedMotion = useReducedMotion();
+  const { reduceMotion: prefersReducedMotion } = useMotionPreferences();
   const glowOpacity = useSharedValue(prefersReducedMotion ? 0.45 : 0.32);
 
   useEffect(() => {
@@ -139,6 +141,7 @@ export function OnboardingGlowMotion({ children, glowStyle, style }: GlowMotionP
       -1,
       false,
     );
+    return () => cancelAnimation(glowOpacity);
   }, [glowOpacity, prefersReducedMotion]);
 
   const animatedGlowStyle = useAnimatedStyle(() => ({
@@ -165,7 +168,7 @@ export function OnboardingRoleCardMotion({
   selected = false,
   style,
 }: RoleCardMotionProps) {
-  const prefersReducedMotion = useReducedMotion();
+  const { reduceMotion: prefersReducedMotion } = useMotionPreferences();
   const hasEntered = useRef(false);
   const opacity = useSharedValue(0);
   const scale = useSharedValue(0.985);
@@ -234,37 +237,7 @@ export function OnboardingPressableMotion({
   onPress,
   style,
 }: OnboardingPressableMotionProps) {
-  const prefersReducedMotion = useReducedMotion();
-  const scale = useSharedValue(1);
-
-  const animatedStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: scale.value }],
-  }));
-
-  const handlePressIn = () => {
-    if (!prefersReducedMotion) {
-      scale.value = withTiming(0.98, { duration: 100, reduceMotion });
-    }
-  };
-
-  const handlePressOut = () => {
-    scale.value = withTiming(1, { duration: 140, easing: Easing.out(Easing.cubic), reduceMotion });
-  };
-
-  return (
-    <Animated.View style={animatedStyle}>
-      <Pressable
-        accessibilityRole="button"
-        disabled={disabled}
-        onPress={onPress}
-        onPressIn={handlePressIn}
-        onPressOut={handlePressOut}
-        style={style}
-      >
-        {children}
-      </Pressable>
-    </Animated.View>
-  );
+  return <ScalePressable disabled={disabled} onPress={onPress} style={style}>{children}</ScalePressable>;
 }
 
 type ButtonMotionProps = MotionViewProps & {
@@ -278,7 +251,7 @@ export function OnboardingButtonMotion({
   enabled,
   style,
 }: ButtonMotionProps) {
-  const prefersReducedMotion = useReducedMotion();
+  const { reduceMotion: prefersReducedMotion } = useMotionPreferences();
   const opacity = useSharedValue(enabled ? 1 : disabledOpacity);
   const scale = useSharedValue(enabled ? 1 : 0.98);
 

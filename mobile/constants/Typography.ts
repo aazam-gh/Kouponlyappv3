@@ -1,9 +1,9 @@
 import type { TextStyle } from 'react-native';
 
 const FontFamilyTokens = {
-    display: 'PoppinsBold',
-    body: 'Poppins',
-    bodyStrong: 'PoppinsBold',
+    display: 'Outfit_700Bold',
+    body: 'Outfit_400Regular',
+    bodyStrong: 'Outfit_700Bold',
 } as const;
 
 export type TextVariant = 'display' | 'body' | 'bodyStrong';
@@ -52,13 +52,13 @@ function getTextDirectionStyle({
 }
 
 export const Typography = {
-    hanson: {
+    display: {
         bold: FontFamilyTokens.display,
     },
-    poppins: {
+    outfit: {
         medium: FontFamilyTokens.body,
         semiBold: FontFamilyTokens.bodyStrong,
-        bold: 'PoppinsBold',
+        bold: 'Outfit_700Bold',
     },
     fontFamily: FontFamilyTokens,
     variants: textVariantStyles,

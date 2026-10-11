@@ -5,6 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AppHeader from '../../components/navigation/AppHeader';
 import { useAppTheme } from '../../context/AppThemeContext';
 import { benefitsRpc, useBenefits } from '../../lib/benefits';
+import ProfileSprites from '@/components/profile/ProfileSprites';
 
 export default function MvpActivityScreen() {
   const router = useRouter(); const { theme } = useAppTheme(); const insets = useSafeAreaInsets(); const { isAdmin } = useBenefits();
@@ -15,7 +16,7 @@ export default function MvpActivityScreen() {
     if (isAdmin) void benefitsRpc<NonNullable<typeof counts>>('kouponly_admin_mvp_overview').then(value => { if (active) setCounts(value); }).catch(e => { if (active) setError(e.message); });
     return () => { active = false; };
   }, [isAdmin]);
-  return <View style={{ flex: 1, backgroundColor: theme.background }}><ScrollView contentInsetAdjustmentBehavior="automatic" contentContainerStyle={{ padding: 24, paddingTop: Platform.OS === 'android' ? insets.top : 0, paddingBottom: insets.bottom + 24 }}>
+  return <View style={{ flex: 1, backgroundColor: theme.background }}><ProfileSprites /><ScrollView contentInsetAdjustmentBehavior="automatic" contentContainerStyle={{ padding: 24, paddingTop: Platform.OS === 'android' ? insets.top : 0, paddingBottom: insets.bottom + 24 }}>
     <AppHeader title="MVP activity" onBackPress={() => router.back()} />
     {!isAdmin ? <Text style={{ color: theme.text }}>Administrator access required.</Text> : <>
       <Text style={{ color: theme.text }}>Free Rajagiri membership. No payments or prepaid activation.</Text>

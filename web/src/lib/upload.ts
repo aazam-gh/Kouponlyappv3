@@ -4,7 +4,10 @@ import { storage } from '@/firebase/config'
 export function compressImage(file: File, maxWidth: number, quality: number): Promise<File> {
     return new Promise((resolve, reject) => {
         const img = new Image()
+        const source = URL.createObjectURL(file)
         img.onload = () => {
+            URL.revokeObjectURL(source)
+            try {
             const canvas = document.createElement('canvas')
             let { width, height } = img
             if (width > maxWidth) {
@@ -13,7 +16,8 @@ export function compressImage(file: File, maxWidth: number, quality: number): Pr
             }
             canvas.width = width
             canvas.height = height
-            const ctx = canvas.getContext('2d')!
+            const ctx = canvas.getContext('2d')
+            if (!ctx) throw new Error('Image compression is unavailable')
             ctx.drawImage(img, 0, 0, width, height)
             canvas.toBlob(
                 (blob) => {
@@ -23,9 +27,13 @@ export function compressImage(file: File, maxWidth: number, quality: number): Pr
                 'image/webp',
                 quality
             )
+            } catch (error) { reject(error) }
         }
-        img.onerror = reject
-        img.src = URL.createObjectURL(file)
+        img.onerror = () => {
+            URL.revokeObjectURL(source)
+            reject(new Error('Image could not be decoded'))
+        }
+        img.src = source
     })
 }
 

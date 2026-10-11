@@ -1,15 +1,10 @@
+import { Colors as BorderPalette } from '@/constants/Colors';
+import ScalePressable from '@/components/ScalePressable';
 import { useQuery } from '@tanstack/react-query';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { useEffect } from 'react';
-import {
-    ActivityIndicator,
-    StyleProp,
-    StyleSheet,
-    TouchableOpacity,
-    View,
-    ViewStyle,
-} from 'react-native';
+import { ActivityIndicator, StyleProp, StyleSheet, View, ViewStyle } from 'react-native';
 
 import { Colors } from '../../constants/Colors';
 import { Typography } from '../../constants/Typography';
@@ -88,7 +83,7 @@ export default function FeaturedBanner({ item, style }: FeaturedBannerProps) {
 
     return (
         <View style={[styles.section, style]}>
-            <TouchableOpacity
+            <ScalePressable
                 activeOpacity={0.9}
                 onPress={handlePress}
                 style={styles.card}
@@ -134,7 +129,7 @@ export default function FeaturedBanner({ item, style }: FeaturedBannerProps) {
                     </View>
 
                 </View>
-            </TouchableOpacity>
+            </ScalePressable>
         </View>
     );
 }
@@ -221,7 +216,7 @@ const styles = StyleSheet.create({
         height: 76,
         borderRadius: 17,
         borderWidth: 1,
-        borderColor: '#FFFFFF',
+        borderColor: BorderPalette.border,
         overflow: 'hidden',
         backgroundColor: '#f0f0f0',
         boxShadow: '0 12px 24px rgba(0, 0, 0, 0.24)',

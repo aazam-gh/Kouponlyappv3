@@ -1,3 +1,4 @@
+import { useMotionPreferences } from '@/lib/theme';
 import { useEffect, useMemo } from 'react';
 import { StyleSheet, Text, type StyleProp, type TextStyle, View, type ViewStyle } from 'react-native';
 import Animated, {
@@ -5,7 +6,6 @@ import Animated, {
   type SharedValue,
   useAnimatedStyle,
   useDerivedValue,
-  useReducedMotion,
   useSharedValue,
   withDelay,
   withSpring,
@@ -102,7 +102,7 @@ export default function StaggeredHeadingText({
   text,
   textStyle,
 }: StaggeredHeadingTextProps) {
-  const prefersReducedMotion = useReducedMotion();
+  const { reduceMotion: prefersReducedMotion } = useMotionPreferences();
   const progress = useSharedValue(prefersReducedMotion ? 1 : 0);
   const characters = useMemo(() => splitText(text), [text]);
 

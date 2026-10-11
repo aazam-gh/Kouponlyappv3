@@ -1,4 +1,4 @@
-import { isSchoolEmail, SCHOOL_EMAIL_MESSAGE } from './school-email';
+import { canCreateMobileAccount, isSchoolEmail, SCHOOL_EMAIL_MESSAGE } from './school-email';
 import { getSupabase, supabaseConfigured } from '@/lib/supabase';
 
 export type VerificationRole = 'student' | 'creator';
@@ -26,7 +26,8 @@ export const checkCouponlyStudentLogin = (email: string) =>
   invoke<{ exists: boolean }>('checkStudentExistsLogin', { email });
 
 export async function sendCouponlyEmailCode(email: string, purpose: 'signup'|'login'|'verification') {
-  if (purpose !== 'login' && !isSchoolEmail(email)) throw new Error(SCHOOL_EMAIL_MESSAGE);
+  if (purpose === 'signup' && !canCreateMobileAccount(email)) throw new Error(SCHOOL_EMAIL_MESSAGE);
+  if (purpose === 'verification' && !isSchoolEmail(email)) throw new Error(SCHOOL_EMAIL_MESSAGE);
   return invoke<{ success: true; expiresIn: number }>('sendOtp', { email, purpose });
 }
 export async function verifyCouponlyEmailCode(email: string, purpose: 'signup'|'login'|'verification', code: string) {

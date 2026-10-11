@@ -6,6 +6,7 @@ const primaryRed = '#E60000';
 const limeGreen = '#B7F52B';
 const brandGreen = '#18B852';
 const brandGreenLight = '#E8FAF0';
+const softenedBlackBorder = 'rgba(0, 0, 0, 0.5)';
 
 export type AppThemeMode = 'light' | 'dark';
 
@@ -21,8 +22,8 @@ const light = {
   subtitle: '#5F6861',
   mutedText: '#5F6861',
   subtleText: '#8B938B',
-  border: '#E2E8E1',
-  borderStrong: '#CBD6CD',
+  border: softenedBlackBorder,
+  borderStrong: softenedBlackBorder,
   icon: '#111713',
   iconMuted: '#7B857F',
   tabIconDefault: '#666666',
@@ -35,7 +36,7 @@ const light = {
   onActionSolid: '#0A0F0C',
   buttonText: '#0A0F0C',
   inputBackground: 'rgba(255,255,255,0.82)',
-  inputBorder: 'rgba(10,15,12,0.10)',
+  inputBorder: softenedBlackBorder,
   inputPlaceholder: 'rgba(10,15,12,0.48)',
   inputText: 'rgba(10,15,12,0.78)',
   inputHighlight: 'rgba(255,255,255,0.92)',
@@ -44,7 +45,7 @@ const light = {
   overlay: 'rgba(0,0,0,0.35)',
   tabBar: '#FFFFFF',
   logoTile: '#FFFFFF',
-  logoTileBorder: '#E8ECE6',
+  logoTileBorder: softenedBlackBorder,
   logoTileText: '#0B0F0D',
   mediaBase: '#111111',
   imageScrim: 'rgba(0,0,0,0.28)',
@@ -100,6 +101,7 @@ const dark = {
 export type AppThemeColors = typeof light;
 
 export const Colors = {
+  border: softenedBlackBorder,
   light,
   dark,
   limeGreen,

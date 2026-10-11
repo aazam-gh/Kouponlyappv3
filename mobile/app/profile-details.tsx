@@ -1,5 +1,6 @@
+import ScalePressable from '@/components/ScalePressable';
 import React from 'react';
-import { ActivityIndicator, Alert, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, StyleSheet, Text, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { OnboardingScaffold, InlineNotice } from '@/components/onboarding/OnboardingUI';
@@ -38,7 +39,7 @@ export default function ProfileDetailsScreen() {
   const names = profile.full_name.trim().split(/\s+/);
   const firstName = names[0] || '';
   const lastName = names.slice(1).join(' ');
-  const rawDob = typeof user?.user_metadata?.dob === 'string' ? user.user_metadata.dob : '';
+  const rawDob = profile.date_of_birth || '';
   const dobDate = rawDob && /^\d{4}-\d{2}-\d{2}$/.test(rawDob) ? new Date(`${rawDob}T12:00:00`) : null;
   const dateOfBirth = dobDate ? dobDate.toLocaleDateString('en-GB') : 'DD/MM/YYYY';
   const confirmDelete = () => Alert.alert(t('delete_account'), t('delete_account_confirmation'), [
@@ -68,13 +69,14 @@ export default function ProfileDetailsScreen() {
         <InfoRow label={t('first_name')} value={firstName || t('first_name_placeholder')} isRTL={isRTL} />
         <InfoRow label={t('last_name')} value={lastName || t('last_name_placeholder')} isRTL={isRTL} />
         <InfoRow label={t('date_of_birth')} value={dateOfBirth} isRTL={isRTL} />
+        <InfoRow label={t('phone_number')} value={profile.mobile || t('phone_number_empty')} isRTL={isRTL} />
       </View>
       <ResponsiveText variant="bodyStrong" style={[styles.sectionTitle, { color: theme.text }, isRTL && styles.textRTL]}>{t('account_information')}</ResponsiveText>
       <InfoRow label={t('email_address')} value={profile.email || user?.email || t('email_address_placeholder')} isRTL={isRTL} />
       <View style={[styles.dangerZone, { borderTopColor: theme.border }]}>
-        <TouchableOpacity accessibilityRole="button" accessibilityState={{ disabled: deleting }} disabled={deleting} onPress={confirmDelete} activeOpacity={0.75} style={[styles.deleteButton, { borderColor: theme.danger, opacity: deleting ? 0.45 : 1 }]}>
+        <ScalePressable accessibilityRole="button" accessibilityState={{ disabled: deleting }} disabled={deleting} onPress={confirmDelete} activeOpacity={0.75} style={[styles.deleteButton, { borderColor: theme.danger, opacity: deleting ? 0.45 : 1 }]}>
           {deleting ? <ActivityIndicator color={theme.danger} /> : <Text style={[styles.deleteButtonText, { color: theme.danger }]}>{t('delete_account')}</Text>}
-        </TouchableOpacity>
+        </ScalePressable>
       </View>
     </OnboardingFlowSectionMotion>}
   </OnboardingScaffold>;
@@ -83,7 +85,7 @@ export default function ProfileDetailsScreen() {
 const styles = StyleSheet.create({
   identityCard: { flexDirection: 'row', alignItems: 'center', gap: 16, marginTop: -18 }, identityCardRTL: { flexDirection: 'row-reverse' },
   avatarRing: { width: 104, height: 104, borderRadius: 52, borderWidth: 1, alignItems: 'center', justifyContent: 'center' }, avatarMain: { borderWidth: 3, borderColor: '#FFFFFF' },
-  identityCopy: { flex: 1, alignItems: 'flex-start', gap: 4 }, identityCopyRTL: { alignItems: 'flex-end' }, identityName: { fontSize: 18, lineHeight: 25 }, identityEmail: { fontSize: 13, lineHeight: 19, fontFamily: 'Poppins' },
-  loader: { marginVertical: 40 }, content: { gap: 12 }, sectionTitle: { fontSize: 15, lineHeight: 22 }, infoList: { gap: 8 }, infoRow: { minHeight: 66, borderRadius: 16, borderWidth: 1, paddingHorizontal: 16, paddingVertical: 11, gap: 3 }, infoRowRTL: { alignItems: 'flex-end' }, infoLabel: { fontSize: 12, lineHeight: 18, fontFamily: 'Poppins' }, infoValue: { fontSize: 16, lineHeight: 23, fontFamily: 'Poppins' },
-  dangerZone: { marginTop: 16, paddingTop: 24, borderTopWidth: StyleSheet.hairlineWidth }, deleteButton: { minHeight: 44, borderRadius: 22, borderWidth: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 16 }, deleteButtonText: { fontSize: 13, lineHeight: 19, fontFamily: 'Poppins' }, textRTL: { textAlign: 'right', writingDirection: 'rtl' },
+  identityCopy: { flex: 1, alignItems: 'flex-start', gap: 4 }, identityCopyRTL: { alignItems: 'flex-end' }, identityName: { fontSize: 18, lineHeight: 25 }, identityEmail: { fontSize: 13, lineHeight: 19, fontFamily: 'Outfit_400Regular' },
+  loader: { marginVertical: 40 }, content: { gap: 12 }, sectionTitle: { fontSize: 15, lineHeight: 22 }, infoList: { gap: 8 }, infoRow: { minHeight: 66, borderRadius: 16, borderWidth: 1, paddingHorizontal: 16, paddingVertical: 11, gap: 3 }, infoRowRTL: { alignItems: 'flex-end' }, infoLabel: { fontSize: 12, lineHeight: 18, fontFamily: 'Outfit_400Regular' }, infoValue: { fontSize: 16, lineHeight: 23, fontFamily: 'Outfit_400Regular' },
+  dangerZone: { marginTop: 16, paddingTop: 24, borderTopWidth: StyleSheet.hairlineWidth }, deleteButton: { minHeight: 44, borderRadius: 22, borderWidth: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 16 }, deleteButtonText: { fontSize: 13, lineHeight: 19, fontFamily: 'Outfit_400Regular' }, textRTL: { textAlign: 'right', writingDirection: 'rtl' },
 });

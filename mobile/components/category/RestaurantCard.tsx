@@ -1,5 +1,6 @@
+import ScalePressable from '@/components/ScalePressable';
 import { MapPin } from 'lucide-react-native';
-import { Pressable, StyleProp, StyleSheet, Text, TextStyle, View, ViewStyle } from 'react-native';
+import { StyleProp, StyleSheet, Text, TextStyle, View, ViewStyle } from 'react-native';
 import { Typography } from '../../constants/Typography';
 import { Colors } from '../../constants/Colors';
 import { useAppTheme } from '../../context/AppThemeContext';
@@ -8,38 +9,40 @@ import { RemoteImage } from '../RemoteImage';
 
 type Props = {
   id: string; name: string; imageUri?: string; logoUri?: string; onPress?: () => void;
-  style?: StyleProp<ViewStyle>; loading?: boolean; contentStyle?: StyleProp<ViewStyle>; imageHeight?: number; logoBottom?: number;
+  style?: StyleProp<ViewStyle>; loading?: boolean; contentStyle?: StyleProp<ViewStyle>; imageHeight?: number; logoBottom?: number; logoSize?: number; borderColor?: string;
   nameStyle?: StyleProp<TextStyle>; distance?: string; distanceStyle?: StyleProp<TextStyle>;
   xcardEnabled?: boolean; distanceOnImage?: boolean; overlapLogo?: boolean;
-  offerCard?: boolean; discountLabel?: string;
+  offerCard?: boolean; discountLabel?: string; badgeLabel?: string; badgeLabels?: string[]; stackBadgeLabels?: boolean;
   titleCaseName?: boolean;
 };
 
 export default function RestaurantCard({ name, imageUri, logoUri, onPress, style, loading = false,
-  contentStyle, imageHeight = 120, logoBottom = -22, nameStyle, distance, distanceStyle, xcardEnabled = false, offerCard = false, discountLabel,
+  contentStyle, imageHeight = 120, logoBottom = -22, logoSize = 64, borderColor, nameStyle, distance, distanceStyle, xcardEnabled = false, offerCard = false, discountLabel, badgeLabel, badgeLabels, stackBadgeLabels = false,
   distanceOnImage = true, overlapLogo = true, titleCaseName = false }: Props) {
   const { theme } = useAppTheme();
+  const cardBorderColor = borderColor ?? theme.border;
   const displayName = titleCaseName ? name.toLowerCase().replace(/(^|\s)\S/g, letter => letter.toUpperCase()) : name;
   const offer = discountLabel;
-  const accessibleName = [displayName, offerCard ? offer : undefined, distance, !offerCard && xcardEnabled ? '5% cashback' : undefined].filter(Boolean).join('. ');
-  return <Pressable
-    style={[styles.container, { backgroundColor: theme.background, borderColor: theme.border }, style]}
+  const labels = (badgeLabels?.length ? badgeLabels : badgeLabel ? [badgeLabel] : []).map(label => label.trim()).filter(Boolean).slice(0, stackBadgeLabels ? 3 : 1);
+  const accessibleName = [displayName, offerCard ? offer : undefined, ...(!offerCard ? labels : []), distance, !offerCard && xcardEnabled ? '5% cashback' : undefined].filter(Boolean).join('. ');
+  return <ScalePressable
+    style={[styles.container, { backgroundColor: theme.background, borderColor: cardBorderColor }, style]}
     onPress={() => { if (!loading) { triggerSubtleHaptic(); onPress?.(); } }}
     disabled={loading} accessibilityRole="button" accessibilityLabel={accessibleName}
     accessibilityHint={onPress ? 'Opens vendor details' : undefined} accessibilityState={{ disabled: loading }}>
     <View style={[styles.imageContainer, { height: imageHeight }]}>
       {loading ? <View style={styles.imagePlaceholder} /> : imageUri ? <RemoteImage source={{ uri: imageUri }} style={StyleSheet.absoluteFill} imageStyle={styles.image} contentFit="cover" /> : <View style={styles.imagePlaceholder}><Text style={styles.placeholderEmoji}>🏪</Text></View>}
-      {offerCard ? offer ? <View style={styles.offerBadge}><Text numberOfLines={1} style={styles.offerBadgeText}>{offer}</Text></View> : null : <View style={styles.pills}>
-        <Text style={styles.studentPill}>STUDENT COMBOS</Text>
+      {offerCard ? offer ? <View style={styles.offerBadge}><Text numberOfLines={1} style={styles.offerBadgeText}>{offer}</Text></View> : null : (labels.length || xcardEnabled) ? <View style={stackBadgeLabels ? styles.stackedPills : styles.pills}>
+        {labels.map((label, index) => <Text key={`${label}-${index}`} numberOfLines={1} style={styles.cardLabelPill}>{label}</Text>)}
         {xcardEnabled ? <Text style={styles.cashbackPill}>5% CASHBACK!</Text> : null}
-      </View>}
+      </View> : null}
       {distanceOnImage && distance ? <View style={styles.distanceBadge}><MapPin size={13} color="#FFFFFF"/><Text style={[styles.distance, distanceStyle]}>{distance}</Text></View> : null}
-      {overlapLogo ? <View style={[styles.logoFrame, { backgroundColor: theme.background, borderColor: theme.border, bottom: logoBottom }]}>
+      {overlapLogo ? <View style={[styles.logoFrame, { backgroundColor: theme.background, borderColor: cardBorderColor, bottom: logoBottom, width: logoSize, height: logoSize, borderRadius: logoSize * 0.25 }]}>
         {loading ? <View style={styles.logoImage} /> : logoUri ? <RemoteImage source={{ uri: logoUri }} style={styles.logoImage} contentFit="cover" /> : <Text style={[styles.logoEmoji, { color: theme.text }]}>🏪</Text>}
       </View> : null}
     </View>
     {offerCard && !overlapLogo ? <View style={styles.offerContent}>
-      <View style={[styles.offerLogo, { backgroundColor: theme.background, borderColor: theme.border }]}>
+      <View style={[styles.offerLogo, { backgroundColor: theme.background, borderColor: cardBorderColor }]}>
         {loading ? <View style={styles.logoImage} /> : logoUri ? <RemoteImage source={{ uri: logoUri }} style={styles.logoImage} contentFit="cover" /> : <Text style={[styles.logoEmoji, { color: theme.text }]}>🏪</Text>}
       </View>
       <View style={styles.offerCopy}>
@@ -47,14 +50,14 @@ export default function RestaurantCard({ name, imageUri, logoUri, onPress, style
         {distance ? <View style={styles.offerDistance}><MapPin size={14} color={theme.mutedText}/><Text style={styles.offerDistanceText}>{distance}</Text></View> : null}
       </View>
     </View> : <View style={[styles.content, contentStyle, !overlapLogo && { paddingRight: 12 }]}>
-      {!overlapLogo && <View style={[styles.logoInline, { backgroundColor: theme.background, borderColor: theme.border }]}>
+      {!overlapLogo && <View style={[styles.logoInline, { backgroundColor: theme.background, borderColor: cardBorderColor }]}>
         {loading ? <View style={styles.logoImage} /> : logoUri ? <RemoteImage source={{ uri: logoUri }} style={styles.logoImage} contentFit="cover" /> : <Text style={[styles.logoEmoji, { color: theme.text }]}>🏪</Text>}
       </View>}
       <Text allowFontScaling numberOfLines={1} style={[styles.name, { color: theme.text, ...Typography.getTextVariantStyle('bodyStrong'), writingDirection: 'ltr' }, nameStyle]}>{displayName}</Text>
       {!distanceOnImage && distance ? <View style={styles.distanceRow}><MapPin size={14} color={theme.mutedText}/><Text style={[styles.distanceText, distanceStyle]}>{distance}</Text></View> : null}
       {loading ? <View style={styles.loadingText} /> : null}
     </View>}
-  </Pressable>;
+  </ScalePressable>;
 }
 
 const styles = StyleSheet.create({
@@ -64,7 +67,8 @@ const styles = StyleSheet.create({
   placeholderEmoji: { fontSize: 40, opacity: 0.3 },
   image: { width: '100%', height: '100%' },
   pills: { position: 'absolute', top: 10, left: 10, flexDirection: 'row', gap: 6, maxWidth: '85%' },
-  studentPill: { overflow: 'hidden', borderRadius: 999, paddingHorizontal: 9, paddingVertical: 6, backgroundColor: '#F39A00', color: '#FFFFFF', fontSize: 10, fontWeight: '700' },
+  stackedPills: { position: 'absolute', top: 10, left: 10, alignItems: 'flex-start', gap: 5, maxWidth: '65%' },
+  cardLabelPill: { overflow: 'hidden', borderRadius: 999, paddingHorizontal: 9, paddingVertical: 6, backgroundColor: '#F39A00', color: '#FFFFFF', fontSize: 10, fontWeight: '700' },
   cashbackPill: { overflow: 'hidden', borderRadius: 999, paddingHorizontal: 9, paddingVertical: 6, backgroundColor: '#6E45D5', color: '#FFFFFF', fontSize: 10, fontWeight: '700' },
   offerBadge: { position: 'absolute', top: 10, left: 10, maxWidth: '82%', borderRadius: 999, paddingHorizontal: 11, paddingVertical: 7, backgroundColor: Colors.limeGreen },
   offerBadgeText: { color: '#111111', fontSize: 12, lineHeight: 16, fontWeight: '700' },

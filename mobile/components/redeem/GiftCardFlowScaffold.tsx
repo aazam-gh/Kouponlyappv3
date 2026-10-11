@@ -1,14 +1,7 @@
+import ScalePressable from '@/components/ScalePressable';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { ReactNode } from 'react';
-import {
-    ScrollView,
-    StyleProp,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
-    ViewStyle,
-} from 'react-native';
+import { ScrollView, StyleProp, StyleSheet, Text, View, ViewStyle } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import { useAppLocale } from '@/context/LocaleContext';
@@ -60,7 +53,7 @@ export default function GiftCardFlowScaffold({
                     isRTL && styles.headerRTL,
                 ]}
             >
-                <TouchableOpacity
+                <ScalePressable
                     style={[styles.iconButton, { backgroundColor: theme.cardMuted }]}
                     onPress={onBack}
                     disabled={!onBack}
@@ -68,7 +61,7 @@ export default function GiftCardFlowScaffold({
                     accessibilityLabel={t('back')}
                 >
                     <Ionicons name={isRTL ? 'arrow-forward' : 'arrow-back'} size={22} color={theme.text} />
-                </TouchableOpacity>
+                </ScalePressable>
                 <View
                     style={[
                         styles.logoContainer,
@@ -77,7 +70,7 @@ export default function GiftCardFlowScaffold({
                     ]}
                     pointerEvents="none"
                 />
-                <TouchableOpacity
+                <ScalePressable
                     style={[styles.iconButton, { backgroundColor: theme.cardMuted }]}
                     onPress={onClose}
                     disabled={!onClose}
@@ -85,7 +78,7 @@ export default function GiftCardFlowScaffold({
                     accessibilityLabel={t('close')}
                 >
                     <Ionicons name="close" size={22} color={theme.text} />
-                </TouchableOpacity>
+                </ScalePressable>
             </View>
 
             <View style={styles.progressSection} accessibilityRole="progressbar" accessibilityValue={{ min: 1, max: totalSteps, now: step }}>

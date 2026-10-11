@@ -4,15 +4,19 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
 jest.mock('../context/AppThemeContext', () => ({ useAppTheme: () => ({ isDark: false, theme: { background:'#fff', card:'#fff', cardMuted:'#f1f4ef', border:'#e2e8e1', text:'#0a0f0c', mutedText:'#5f6861', subtleText:'#5f6861', brand:'#18b852', brandText:'#128a43', brandSoft:'#e8f8ed', actionSolid:'#0e7a38', onActionSolid:'#fff', inputPlaceholder:'#5f6861', danger:'#d92d20', info:'#2563eb', warning:'#b7791f' } }) }));
 jest.mock('../context/LocaleContext', () => ({ useAppLocale: () => ({ locale:'en', isRTL:false }) }));
+jest.mock('../lib/theme', () => ({ ...jest.requireActual('../lib/theme'), useMotionPreferences: () => ({ reduceMotion: true, reduceTransparency: false }) }));
 jest.mock('react-native-reanimated', () => {
   const React = require('react');
   const Native = require('react-native');
   const entering = { duration: () => entering, delay: () => entering, easing: () => entering, withInitialValues: () => entering, reduceMotion: () => entering };
   return {
     __esModule: true,
-    default: { View: Native.View, Text: Native.Text },
+    default: { View: Native.View, Text: Native.Text, createAnimatedComponent: (Component: unknown) => Component },
+    cubicBezier: (...args: number[]) => args,
+    cancelAnimation: jest.fn(),
     Easing: { out: (value: unknown) => value, inOut: (value: unknown) => value, cubic: 1, quad: 1, bezier: () => 1 },
     FadeInUp: entering,
+    FadeIn: entering, FadeOut: entering, LinearTransition: entering,
     ReduceMotion: { System: 'system' },
     runOnJS: (fn: (...args: any[]) => void) => fn,
     useAnimatedStyle: (fn: () => unknown) => fn(),

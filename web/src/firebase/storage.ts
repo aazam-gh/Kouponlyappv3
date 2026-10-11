@@ -28,7 +28,7 @@ export async function deleteObject(reference:StorageRef) {
 }
 export async function getDownloadURL(reference:StorageRef) {
   const bucket=supabase.storage.from(backendBucket(reference.bucket));
-  if(reference.bucket==='couponly-public-media')return bucket.getPublicUrl(reference.path).data.publicUrl;
+  if(backendBucket(reference.bucket)==='realx-public-media')return bucket.getPublicUrl(reference.path).data.publicUrl;
   const {data,error}=await bucket.createSignedUrl(reference.path,3600);
   if(error)throw error;
   return data.signedUrl;
@@ -37,9 +37,12 @@ async function convertPublicImageToWebp(reference:StorageRef,file:Blob) {
   if(reference.bucket!=='couponly-public-media'||!/^image\/(jpeg|png)$/i.test(file.type)||typeof createImageBitmap==='undefined'||typeof document==='undefined')return file;
   try {
     const bitmap=await createImageBitmap(file);
-    const canvas=document.createElement('canvas');canvas.width=bitmap.width;canvas.height=bitmap.height;
-    const context=canvas.getContext('2d');if(!context){bitmap.close();return file;}
-    context.drawImage(bitmap,0,0);bitmap.close();
+    const canvas=document.createElement('canvas');
+    try {
+      canvas.width=bitmap.width;canvas.height=bitmap.height;
+      const context=canvas.getContext('2d');if(!context)return file;
+      context.drawImage(bitmap,0,0);
+    } finally { bitmap.close(); }
     const converted=await new Promise<Blob|null>(resolve=>canvas.toBlob(resolve,'image/webp',0.8));
     return converted?.type==='image/webp'?converted:file;
   } catch { return file; }

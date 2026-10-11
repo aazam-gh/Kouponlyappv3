@@ -2,6 +2,7 @@ import * as React from 'react';
 import type { User as SupabaseUser } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
 import { identifyAnalyticsUser, resetAnalyticsUser } from './analytics';
+import { useQueryClient } from '@tanstack/react-query';
 
 export type AdminUser = SupabaseUser & {
   uid: string;
@@ -35,6 +36,9 @@ async function loadRole(user: SupabaseUser | null) {
   return {admin:data?.role==='admin'};
 }
 export function AuthContextProvider({children}:{children:React.ReactNode}) {
+  const queryClient=useQueryClient();
+  const roleRequest=React.useRef(0);
+  const owner=React.useRef<string|null>(null);
   const [user,setUser]=React.useState<AdminUser|null>(null);
   const [isInitialLoading,setInitialLoading]=React.useState(true);
   const [isAdmin,setAdmin]=React.useState(false);
@@ -43,23 +47,29 @@ export function AuthContextProvider({children}:{children:React.ReactNode}) {
     let active=true;
     const {data:{subscription}}=supabase.auth.onAuthStateChange((_event,session)=>{
       const next=asAdminUser(session?.user||null);
+      const request=++roleRequest.current;
+      if(owner.current!==next?.id){queryClient.clear();setAdmin(false);}
+      owner.current=next?.id??null;
       setUser(next);
       if(!next){setAdmin(false);setInitialLoading(false);return;}
       queueMicrotask(()=>{void loadRole(session!.user).then(role=>{
-        if(active){setAdmin(role.admin);setInitialLoading(false);}
-      }).catch(()=>{if(active){setAdmin(false);setInitialLoading(false);}});});
+        if(active && request===roleRequest.current){setAdmin(role.admin);setInitialLoading(false);}
+      }).catch(()=>{if(active && request===roleRequest.current){setAdmin(false);setInitialLoading(false);}});});
     });
-    return ()=>{active=false;subscription.unsubscribe();};
-  },[]);
+    return ()=>{active=false;++roleRequest.current;subscription.unsubscribe();};
+  },[queryClient]);
   const logout=React.useCallback(async()=>{
     const {error}=await supabase.auth.signOut();if(error)throw error;
+    ++roleRequest.current;owner.current=null;queryClient.clear();
     resetAnalyticsUser();
     setUser(null);setAdmin(false);setInitialLoading(false);
-  },[]);
+  },[queryClient]);
   const loginWithEmail=React.useCallback(async(email:string,password:string)=>{
     const {data,error}=await supabase.auth.signInWithPassword({email,password});
     if(error)throw error;
+    const request=++roleRequest.current;
     const role=await loadRole(data.user);
+    if(request!==roleRequest.current || owner.current!==data.user?.id)throw new Error('The sign-in session changed. Please sign in again.');
     setUser(asAdminUser(data.user));setAdmin(role.admin);setInitialLoading(false);
     return role;
   },[]);

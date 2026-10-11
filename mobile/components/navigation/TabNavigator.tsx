@@ -1,12 +1,15 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Tabs } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-import { StyleSheet } from 'react-native';
+import { type Ref } from 'react';
+import { StyleSheet, type View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { TAB_BAR_BASE_HEIGHT } from '../../constants/Layout';
 import { useAppLocale } from '../../context/LocaleContext';
 import { useAppTheme } from '../../context/AppThemeContext';
 import { triggerSubtleHaptic } from '../../utils/haptics';
 import { TabBarVisibilityProvider } from '../TabBarScrollVisibility';
+import ScalePressable from '../ScalePressable';
 
 export default function TabNavigator() {
   return <TabBarVisibilityProvider><TabContent /></TabBarVisibilityProvider>;
@@ -27,13 +30,15 @@ function TabContent() {
     safeAreaInsets={{ top: 0, right: insets.right, bottom: insets.bottom, left: insets.left }}
     screenListeners={{ tabPress: () => requestAnimationFrame(triggerSubtleHaptic) }}
     screenOptions={{
+      animation: 'none',
+      tabBarButton: ({ ref, ...props }) => <ScalePressable {...props} ref={ref as Ref<View>} pressedScale={1} />,
       tabBarActiveTintColor: theme.brand,
       tabBarInactiveTintColor: theme.iconMuted,
       tabBarStyle: {
         position: 'absolute', left: 0, right: 0, bottom: 0,
         display: 'flex',
         backgroundColor: theme.surface,
-        height: 64 + insets.bottom,
+        height: TAB_BAR_BASE_HEIGHT + insets.bottom,
         paddingTop: 4,
         paddingBottom: Math.max(insets.bottom, 8),
         paddingHorizontal: 8,

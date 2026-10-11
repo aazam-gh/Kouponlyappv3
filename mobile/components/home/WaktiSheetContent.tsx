@@ -1,17 +1,12 @@
+import { useMotionPreferences } from '@/lib/theme';
+import ScalePressable from '@/components/ScalePressable';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { GlassView } from 'expo-glass-effect';
 import { Image } from 'expo-image';
 import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import {
-    Platform,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
-    useWindowDimensions,
-} from 'react-native';
-import Animated, { useAnimatedStyle, useSharedValue, withDelay, withRepeat, withSequence, withSpring, withTiming } from 'react-native-reanimated';
+import { Platform, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import Animated, { useAnimatedStyle, useSharedValue, cancelAnimation, withDelay, withRepeat, withSequence, withTiming } from 'react-native-reanimated';
 
 import { Colors } from '../../constants/Colors';
 import { useAppLocale } from '../../context/LocaleContext';
@@ -56,9 +51,11 @@ function FeatureChip({
     isDark,
     isRTL,
 }: FeatureChipProps) {
+    const { reduceMotion } = useMotionPreferences();
     const pulseProgress = useSharedValue(0);
 
     useEffect(() => {
+        if (reduceMotion) { pulseProgress.value = 0; return; }
         pulseProgress.value = withDelay(
             index * 260,
             withRepeat(
@@ -70,7 +67,8 @@ function FeatureChip({
                 false,
             ),
         );
-    }, [index, pulseProgress]);
+        return () => cancelAnimation(pulseProgress);
+    }, [index, pulseProgress, reduceMotion]);
 
     const chipAnimatedStyle = useAnimatedStyle(() => ({
         transform: [
@@ -137,6 +135,7 @@ function FeatureChip({
 
 export default function WaktiSheetContent({ isDark = true, onStoreOpened, fitToContent = false }: WaktiSheetContentProps) {
     const { height, width } = useWindowDimensions();
+    const { reduceMotion } = useMotionPreferences();
     const { t } = useTranslation();
     const { isRTL } = useAppLocale();
     const ctaLabel = t('wakti_sheet_cta');
@@ -167,20 +166,11 @@ export default function WaktiSheetContent({ isDark = true, onStoreOpened, fitToC
     const ctaLabelMaxWidth = contentWidth - ctaHorizontalPadding * 2 - 56;
     const backgroundWidth = width * 5;
     const backgroundHeight = height * 4;
-    const logoScale = useSharedValue(1);
     const logoGlow = useSharedValue(0);
-    const ctaScale = useSharedValue(1);
-    const logoAnimatedStyle = useAnimatedStyle(() => ({
-        transform: [{ scale: logoScale.value }],
-    }));
     const logoGlowAnimatedStyle = useAnimatedStyle(() => ({
         opacity: logoGlow.value,
         transform: [{ scale: 0.94 + logoGlow.value * 0.08 }],
     }));
-    const ctaAnimatedStyle = useAnimatedStyle(() => ({
-        transform: [{ scale: ctaScale.value }],
-    }));
-
     const handleStorePress = async () => {
         const didOpenStore = await openWaktiStore();
         if (didOpenStore) {
@@ -190,25 +180,9 @@ export default function WaktiSheetContent({ isDark = true, onStoreOpened, fitToC
 
     const handleLogoPressIn = () => {
         triggerSubtleHaptic();
-        logoGlow.value = withTiming(isDark ? 0.52 : 0.42, { duration: 140 });
-        logoScale.value = withSpring(1.05, { damping: 12, stiffness: 260 });
+        if (!reduceMotion) logoGlow.value = withTiming(isDark ? 0.52 : 0.42, { duration: 120 });
     };
-
-    const handleLogoPressOut = () => {
-        logoGlow.value = withTiming(0, { duration: 180 });
-        logoScale.value = withSequence(
-            withSpring(0.98, { damping: 13, stiffness: 280 }),
-            withSpring(1, { damping: 12, stiffness: 240 }),
-        );
-    };
-
-    const handleCtaPressIn = () => {
-        ctaScale.value = withSpring(0.97, { damping: 14, stiffness: 320 });
-    };
-
-    const handleCtaPressOut = () => {
-        ctaScale.value = withSpring(1, { damping: 11, stiffness: 260 });
-    };
+    const handleLogoPressOut = () => { logoGlow.value = withTiming(0, { duration: 120 }); };
 
     return (
         <View
@@ -270,10 +244,11 @@ export default function WaktiSheetContent({ isDark = true, onStoreOpened, fitToC
                 ))}
             </View>
             <View style={[styles.contentColumn, { width: contentWidth, rowGap: contentGap }]}>
-                <TouchableOpacity
+                <ScalePressable
                     activeOpacity={1}
                     onPressIn={handleLogoPressIn}
                     onPressOut={handleLogoPressOut}
+                    pressedScale={1}
                     style={[styles.logoTapTarget, { marginTop: isShortScreen ? 4 : 8, width: logoSize, height: logoSize }]}
                     accessibilityRole="button"
                     accessibilityLabel="Wakti AI logo"
@@ -289,7 +264,7 @@ export default function WaktiSheetContent({ isDark = true, onStoreOpened, fitToC
                             logoGlowAnimatedStyle,
                         ]}
                     />
-                    <Animated.View style={[styles.logoWrap, { width: logoSize, height: logoSize }, logoAnimatedStyle]}>
+                    <Animated.View style={[styles.logoWrap, { width: logoSize, height: logoSize }]}>
                         <Image
                             source={waktiBannerImage}
                             style={[styles.logo, { width: logoSize, height: logoSize }]}
@@ -297,7 +272,7 @@ export default function WaktiSheetContent({ isDark = true, onStoreOpened, fitToC
                             accessibilityLabel="Wakti AI logo"
                         />
                     </Animated.View>
-                </TouchableOpacity>
+                </ScalePressable>
 
                 <View style={[styles.copy, { rowGap: contentGap }, isRTL && styles.copyRTL]}>
                     <Text
@@ -330,12 +305,10 @@ export default function WaktiSheetContent({ isDark = true, onStoreOpened, fitToC
                             />
                         ))}
                     </View>
-                    <Animated.View style={[styles.ctaMotionWrap, ctaAnimatedStyle]}>
-                        <TouchableOpacity
+                    <View style={styles.ctaMotionWrap}>
+                        <ScalePressable
                             activeOpacity={0.9}
                             onPress={handleStorePress}
-                            onPressIn={handleCtaPressIn}
-                            onPressOut={handleCtaPressOut}
                             style={[
                                 styles.cta,
                                 {
@@ -364,8 +337,8 @@ export default function WaktiSheetContent({ isDark = true, onStoreOpened, fitToC
                             >
                                 {ctaLabel}
                             </Text>
-                        </TouchableOpacity>
-                    </Animated.View>
+                        </ScalePressable>
+                    </View>
                 </View>
             </View>
         </View>

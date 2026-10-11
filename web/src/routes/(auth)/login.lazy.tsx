@@ -7,7 +7,7 @@ export const Route = createLazyFileRoute('/(auth)/login')({
 
 function LoginComponent() {
   return (
-    <div className="grid min-h-svh bg-[#FAFAFA] lg:grid-cols-[1fr_0.9fr]">
+    <div className="admin-auth-shell grid min-h-svh bg-[#FAFAFA] lg:grid-cols-[1fr_0.9fr]">
       <div className="flex flex-col px-6 py-7 md:px-12 md:py-10">
         <a href="/" className="flex w-fit items-center gap-2.5 text-[#0A0A0A]" aria-label="Kouponly home">
           <span className="grid size-9 place-items-center rounded-xl bg-[#18B852] text-lg font-black">K</span>

@@ -1,16 +1,10 @@
+import { useMotionPreferences } from '@/lib/theme';
+import ScalePressable from '@/components/ScalePressable';
 import { useQuery } from '@tanstack/react-query';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
-import {
-    ActivityIndicator,
-    Animated,
-    Pressable,
-    ScrollView,
-    StyleSheet,
-    useWindowDimensions,
-    View,
-} from 'react-native';
+import { ActivityIndicator, Animated, ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
 import type { NativeScrollEvent, NativeSyntheticEvent } from 'react-native';
 
 import { useAppTheme } from '../../context/AppThemeContext';
@@ -18,6 +12,7 @@ import { StateSurface } from '../StateSurface';
 import { triggerSubtleHaptic } from '../../utils/haptics';
 import { homeQueryOptions, type HomeBannerItem } from '../../utils/homeQueries';
 import { logger } from '../../utils/logger';
+import { Colors } from '../../constants/Colors';
 import { HOME_CAROUSEL_GAP, HOME_HORIZONTAL_GUTTER } from './layout';
 
 const BANNER_HEIGHT = 192;
@@ -34,6 +29,7 @@ type PromoBannerProps = {
 
 export default function PromoBanner({ banners: bannersOverride, onBannerPress }: PromoBannerProps) {
     const { theme } = useAppTheme();
+    const { reduceMotion } = useMotionPreferences();
     const {
         data: fetchedBanners = [],
         error,
@@ -55,7 +51,7 @@ export default function PromoBanner({ banners: bannersOverride, onBannerPress }:
     }, [error]);
 
     useEffect(() => {
-        if (banners.length <= 1) {
+        if (reduceMotion || banners.length <= 1) {
             return;
         }
 
@@ -70,7 +66,7 @@ export default function PromoBanner({ banners: bannersOverride, onBannerPress }:
         }, BANNER_AUTO_SCROLL_MS);
 
         return () => clearInterval(interval);
-    }, [banners.length]);
+    }, [banners.length, reduceMotion]);
 
     useEffect(() => {
         if (!scrollViewRef.current || banners.length === 0) {
@@ -81,9 +77,9 @@ export default function PromoBanner({ banners: bannersOverride, onBannerPress }:
 
         scrollViewRef.current.scrollTo({
             x: safeIndex * bannerScrollInterval,
-            animated: true,
+            animated: !reduceMotion,
         });
-    }, [bannerScrollInterval, banners.length, currentIndex, maxIndex]);
+    }, [bannerScrollInterval, banners.length, currentIndex, maxIndex, reduceMotion]);
 
     const getBannerVendorId = (banner: BannerItem) => {
         const vendorId = banner.vendorId?.trim() || banner.id?.trim();
@@ -169,7 +165,7 @@ export default function PromoBanner({ banners: bannersOverride, onBannerPress }:
                     const imageUri = banner.images.mobile || banner.images.desktop;
 
                     return (
-                        <Pressable
+                        <ScalePressable
                             key={banner.bannerId || banner.vendorId || banner.id || index}
                             style={({ pressed }) => [
                                 styles.bannerColumn,
@@ -189,14 +185,14 @@ export default function PromoBanner({ banners: bannersOverride, onBannerPress }:
                                     accessibilityLabel={banner.altText || 'Banner Image'}
                                 />
                             </View>
-                        </Pressable>
+                        </ScalePressable>
                     );
                 })}
             </Animated.ScrollView>
             {banners.length > 1 ? (
                 <View style={styles.pagination} accessibilityLabel="Hero banner navigation">
                     {banners.map((banner, index) => (
-                        <Pressable
+                        <ScalePressable
                             key={`hero-indicator-${banner.bannerId || banner.id || index}`}
                             onPress={() => {
                                 currentIndexRef.current = index;
@@ -209,7 +205,7 @@ export default function PromoBanner({ banners: bannersOverride, onBannerPress }:
                             style={styles.indicatorButton}
                         >
                             <View style={[styles.indicator, currentIndex === index ? styles.activeIndicator : styles.inactiveIndicator]} />
-                        </Pressable>
+                        </ScalePressable>
                     ))}
                 </View>
             ) : null}
@@ -230,29 +226,29 @@ const styles = StyleSheet.create({
         height: BANNER_HEIGHT,
     },
     pagination: {
-        height: 24,
+        height: 30,
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
-        gap: 7,
+        gap: 4,
     },
     indicatorButton: {
-        width: 32,
-        height: 24,
+        minWidth: 28,
+        height: 30,
         alignItems: 'center',
         justifyContent: 'center',
     },
     indicator: {
-        height: 6,
+        height: 7,
         borderRadius: 999,
     },
     inactiveIndicator: {
-        width: 6,
-        backgroundColor: '#D6D9D7',
+        width: 7,
+        backgroundColor: '#C8CECA',
     },
     activeIndicator: {
-        width: 20,
-        backgroundColor: '#18B852',
+        width: 24,
+        backgroundColor: Colors.limeGreen,
     },
     scrollContent: {
         paddingHorizontal: BANNER_SIDE_PADDING,

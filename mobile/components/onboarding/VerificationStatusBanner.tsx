@@ -1,7 +1,9 @@
+import { Colors as BorderPalette } from '@/constants/Colors';
+import ScalePressable from '@/components/ScalePressable';
 import { useFocusEffect, router } from 'expo-router';
 import { Clock3, ChevronRight } from 'lucide-react-native';
 import React from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useAppTheme } from '@/context/AppThemeContext';
 import { clearPendingVerification, getPendingVerification, type PendingVerification } from '@/lib/verification-pending';
@@ -27,9 +29,9 @@ export default function VerificationStatusBanner() {
   }, []));
 
   if (!pending) return null;
-  return <Pressable accessibilityRole="button" accessibilityHint="Open verification status" style={[styles.banner, { backgroundColor: theme.brandSoft, borderColor: theme.brand }]} onPress={() => router.push({ pathname: '/realx/onboarding', params: { flow: 'verification', step: 'status', requestId: pending.requestId, statusToken: pending.statusToken } } as any)}>
+  return <ScalePressable accessibilityRole="button" accessibilityHint="Open verification status" style={[styles.banner, { backgroundColor: theme.brandSoft, borderColor: BorderPalette.border }]} onPress={() => router.push({ pathname: '/realx/onboarding', params: { flow: 'verification', step: 'status', requestId: pending.requestId, statusToken: pending.statusToken } } as any)}>
     <Clock3 size={22} color={theme.brand} /><View style={styles.copy}><Text style={[styles.title, { color: theme.brandText }]}>{t('onboarding_pending_banner_title')}</Text><Text style={[styles.message, { color: theme.mutedText }]}>{t('onboarding_pending_banner_message')}</Text></View><ChevronRight size={20} color={theme.brand} />
-  </Pressable>;
+  </ScalePressable>;
 }
 
 const styles = StyleSheet.create({ banner: { marginHorizontal: 20, marginTop: 12, borderRadius: 18, borderWidth: 1, minHeight: 72, padding: 14, flexDirection: 'row', alignItems: 'center', gap: 12 }, copy: { flex: 1 }, title: { fontSize: 14, lineHeight: 19, fontWeight: '700' }, message: { fontSize: 12, lineHeight: 17, marginTop: 2 } });

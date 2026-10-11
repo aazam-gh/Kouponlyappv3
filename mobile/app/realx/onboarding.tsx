@@ -1,11 +1,12 @@
-import { isSchoolEmail, SCHOOL_EMAIL_MESSAGE } from '@/lib/school-email';
+import ScalePressable from '@/components/ScalePressable';
+import { canCreateMobileAccount, isSchoolEmail, SCHOOL_EMAIL_MESSAGE } from '@/lib/school-email';
 import * as ImagePicker from 'expo-image-picker';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Image as ExpoImage } from 'expo-image';
 import { router, useLocalSearchParams } from 'expo-router';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-import { Linking, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Linking, StyleSheet, Text, TextInput, View } from 'react-native';
 import { InlineNotice, OnboardingField, OnboardingPrimaryButton, OnboardingScaffold, OnboardingTextButton } from '@/components/onboarding/OnboardingUI';
 import { benefitsRpc, makeMutationId } from '@/lib/benefits';
 import { useAuth } from '@/lib/auth';
@@ -66,7 +67,8 @@ export default function RealXOnboardingScreen() {
   }, [step, status]);
 
   const sendCode = async () => {
-    if (flow !== 'login' && !isSchoolEmail(email)) { setMessage(SCHOOL_EMAIL_MESSAGE); return; }
+    if (flow === 'signup' && !canCreateMobileAccount(email)) { setMessage(SCHOOL_EMAIL_MESSAGE); return; }
+    if (flow === 'verification' && !isSchoolEmail(email)) { setMessage(SCHOOL_EMAIL_MESSAGE); return; }
     setBusy(true); setMessage('');
     try {
       await sendCouponlyEmailCode(email.trim().toLowerCase(), flow);
@@ -93,7 +95,10 @@ export default function RealXOnboardingScreen() {
           const { data: profile } = await getSupabase().from('realx_students').select('id').eq('id', uid).maybeSingle();
           if (profile) { setStep('done'); router.replace('/realx' as any); return; }
         }
-        setStep('profile');
+        setFlow('signup');
+        setStep('email');
+        setCode('');
+        setMessage('Complete your name to finish creating your student profile.');
       } else await finishProfile();
     } catch (error) { setMessage(error instanceof Error ? error.message : 'The code could not be verified.'); }
     finally { verificationInFlight.current = false; setBusy(false); }
@@ -179,6 +184,7 @@ export default function RealXOnboardingScreen() {
   const onSubmit = step === 'email' ? sendCode : step === 'code' ? verifyCode : step === 'document' ? submitId : step === 'status' && (status === 'rejected' || status === 'cancelled') ? () => { setFlow('verification'); setStep('email'); setMessage(''); } : () => router.replace('/realx' as any);
 
   return <OnboardingScaffold
+    transitionKey={`${flow}:${step}`}
     title={heading}
     subtitle={subtitle}
     onBack={onBack}
@@ -205,12 +211,12 @@ export default function RealXOnboardingScreen() {
       <Text style={styles.legal}>{t('onboarding_v2_code_delay')}</Text>
     </> : null}
     {step === 'document' ? <>
-      <TouchableOpacity accessibilityLabel={image ? t('onboarding_upload_replace') : t('onboarding_upload_id_single')} accessibilityRole="button" activeOpacity={0.82} disabled={busy} onPress={() => void pickImage()} style={[styles.uploadZone, { backgroundColor: image ? C.soft : C.card, borderColor: image ? C.lime : C.line }]}>
+      <ScalePressable accessibilityLabel={image ? t('onboarding_upload_replace') : t('onboarding_upload_id_single')} accessibilityRole="button" activeOpacity={0.82} disabled={busy} onPress={() => void pickImage()} style={[styles.uploadZone, { backgroundColor: image ? C.soft : C.card, borderColor: image ? C.lime : C.line }]}>
         {image ? <><ExpoImage source={{ uri: image.uri }} style={styles.previewImage} contentFit="contain" /><View style={[styles.replaceBadge, { backgroundColor: C.ink }]}><Text style={[styles.replaceText, { color: C.onDark }]}>{t('onboarding_upload_replace')}</Text></View></> : <View style={styles.uploadPlaceholder}><Ionicons name="images-outline" size={36} color={C.muted} /><Text style={[styles.uploadLabel, { color: C.ink }]}>{t('onboarding_upload_id_single')}</Text><Text style={[styles.uploadInfo, { color: C.muted }]}>{t('onboarding_upload_id_info')}</Text></View>}
-      </TouchableOpacity>
+      </ScalePressable>
       <View style={styles.qualityList}>{(['corners', 'readable', 'glare'] as const).map(item => <View key={item} style={styles.qualityItem}><Ionicons name="checkmark-circle" size={18} color={C.lime} /><Text style={[styles.qualityText, { color: C.muted }]}>{t(`onboarding_upload_quality_${item}`)}</Text></View>)}</View>
-      <View style={[styles.privacy, { backgroundColor: C.soft }]}><Text style={[styles.privacyText, { color: C.muted }]}>{t('onboarding_upload_privacy_explanation')}</Text><View style={styles.privacyLinks}><TouchableOpacity accessibilityRole="link" onPress={() => router.push('/privacy' as any)}><Text style={[styles.privacyLink, { color: C.lime }]}>{t('privacy_policy')}</Text></TouchableOpacity><TouchableOpacity accessibilityRole="link" onPress={() => router.push('/terms' as any)}><Text style={[styles.privacyLink, { color: C.lime }]}>{t('terms_and_conditions')}</Text></TouchableOpacity></View></View>
-      {message ? <View><Text selectable accessibilityLiveRegion="polite" style={[styles.inlineError, { color: C.danger }]}>{message}</Text>{message === t('onboarding_upload_picker_failed') ? <TouchableOpacity accessibilityRole="button" onPress={() => void Linking.openSettings()} style={styles.settingsButton}><Text style={[styles.privacyLink, { color: C.lime }]}>{t('onboarding_v2_open_settings')}</Text></TouchableOpacity> : null}</View> : null}
+      <View style={[styles.privacy, { backgroundColor: C.soft }]}><Text style={[styles.privacyText, { color: C.muted }]}>{t('onboarding_upload_privacy_explanation')}</Text><View style={styles.privacyLinks}><ScalePressable accessibilityRole="link" onPress={() => router.push('/privacy' as any)}><Text style={[styles.privacyLink, { color: C.lime }]}>{t('privacy_policy')}</Text></ScalePressable><ScalePressable accessibilityRole="link" onPress={() => router.push('/terms' as any)}><Text style={[styles.privacyLink, { color: C.lime }]}>{t('terms_and_conditions')}</Text></ScalePressable></View></View>
+      {message ? <View><Text selectable accessibilityLiveRegion="polite" style={[styles.inlineError, { color: C.danger }]}>{message}</Text>{message === t('onboarding_upload_picker_failed') ? <ScalePressable accessibilityRole="button" onPress={() => void Linking.openSettings()} style={styles.settingsButton}><Text style={[styles.privacyLink, { color: C.lime }]}>{t('onboarding_v2_open_settings')}</Text></ScalePressable> : null}</View> : null}
     </> : null}
     {step === 'status' ? <>
       <InlineNotice tone={status === 'rejected' ? 'error' : status === 'approved' ? 'success' : 'info'}>{status === 'approved' ? 'Your student status is approved.' : status === 'rejected' ? 'The uploaded document could not be verified. Submit a clearer photo to try again.' : status === 'cancelled' ? 'This request was cancelled.' : 'Your request is waiting for review. This page checks for updates automatically.'}</InlineNotice>
@@ -227,9 +233,9 @@ function OtpField({ value, onChangeText, disabled }: { value: string; onChangeTe
   const styles = React.useMemo(() => makeStyles(C), [C]);
   const input = React.useRef<TextInput>(null);
   return <View style={styles.otpWrap}>
-    <TouchableOpacity activeOpacity={1} onPress={() => input.current?.focus()} style={styles.otpCells}>
+    <ScalePressable activeOpacity={1} onPress={() => input.current?.focus()} style={styles.otpCells}>
       {Array.from({ length: 6 }, (_, index) => <View key={index} style={[styles.otpCell, index === value.length && styles.otpCellActive]}><Text style={styles.otpDigit}>{value[index] || ''}</Text></View>)}
-    </TouchableOpacity>
+    </ScalePressable>
     <TextInput ref={input} value={value} onChangeText={text => onChangeText(text.replace(/\D/g, '').slice(0, 6))} keyboardType="number-pad" autoComplete="one-time-code" textContentType="oneTimeCode" maxLength={6} editable={!disabled} autoFocus style={styles.hiddenInput} accessibilityLabel="Six-digit verification code" />
   </View>;
 }
@@ -240,19 +246,19 @@ const makeStyles = (C: ThemeColors) => StyleSheet.create({
   preview: { width: '100%', height: 210, borderRadius: 18, backgroundColor: C.soft },
   uploadZone: { height: 230, borderWidth: 1.5, borderRadius: 20, borderStyle: 'dashed', overflow: 'hidden' },
   uploadPlaceholder: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 9, paddingHorizontal: 24 },
-  uploadLabel: { fontSize: 16, lineHeight: 23, fontFamily: 'Poppins' },
-  uploadInfo: { fontSize: 13, lineHeight: 19, textAlign: 'center', fontFamily: 'Poppins' },
+  uploadLabel: { fontSize: 16, lineHeight: 23, fontFamily: 'Outfit_400Regular' },
+  uploadInfo: { fontSize: 13, lineHeight: 19, textAlign: 'center', fontFamily: 'Outfit_400Regular' },
   previewImage: { width: '100%', height: '100%' },
   replaceBadge: { position: 'absolute', right: 12, bottom: 12, borderRadius: 16, paddingHorizontal: 14, paddingVertical: 8 },
-  replaceText: { fontSize: 13, lineHeight: 19, fontFamily: 'Poppins' },
+  replaceText: { fontSize: 13, lineHeight: 19, fontFamily: 'Outfit_400Regular' },
   qualityList: { gap: 10 },
   qualityItem: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  qualityText: { flex: 1, fontSize: 14, lineHeight: 20, fontFamily: 'Poppins' },
+  qualityText: { flex: 1, fontSize: 14, lineHeight: 20, fontFamily: 'Outfit_400Regular' },
   privacy: { borderRadius: 16, padding: 16, gap: 12 },
-  privacyText: { fontSize: 13, lineHeight: 19, fontFamily: 'Poppins' },
+  privacyText: { fontSize: 13, lineHeight: 19, fontFamily: 'Outfit_400Regular' },
   privacyLinks: { flexDirection: 'row', gap: 20, flexWrap: 'wrap' },
-  privacyLink: { fontSize: 13, lineHeight: 19, fontFamily: 'Poppins', textDecorationLine: 'underline' },
-  inlineError: { fontSize: 13, lineHeight: 19, fontFamily: 'Poppins' },
+  privacyLink: { fontSize: 13, lineHeight: 19, fontFamily: 'Outfit_400Regular', textDecorationLine: 'underline' },
+  inlineError: { fontSize: 13, lineHeight: 19, fontFamily: 'Outfit_400Regular' },
   settingsButton: { alignSelf: 'flex-start', minHeight: 44, justifyContent: 'center' },
   otpWrap: { width: '100%' },
   otpCells: { flexDirection: 'row', justifyContent: 'center', gap: 7 },

@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAppTheme } from '../context/AppThemeContext';
 import { Typography } from '../constants/Typography';
 import AppHeader from '../components/navigation/AppHeader';
+import ProfileSprites from '@/components/profile/ProfileSprites';
 
 export default function TermsScreen() {
     const router = useRouter();
@@ -15,6 +16,7 @@ export default function TermsScreen() {
 
     return (
         <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]} edges={['top']}>
+            <ProfileSprites />
             <AppHeader
                 title={'Terms and Conditions'}
                 onBackPress={handleBack}

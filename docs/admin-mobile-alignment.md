@@ -37,7 +37,7 @@ The mobile screen also imports opportunity highlights. Those depend on published
 
 ## Visual direction
 
-Reuse Poppins and existing UI components. Mobile light colors: white `#FFFFFF`, ink `#0A0F0C`, green `#18B852`, muted surface `#F1F4EF`, secondary text `#5F6861`, border `#E2E8E1`. Use a light sidebar, rounded navigation, quiet dividers and responsive tables. Home content uses a single ordered list so its relationship to the mobile screen is visible.
+Reuse Outfit and existing UI components. Mobile light colors: white `#FFFFFF`, ink `#0A0F0C`, green `#18B852`, muted surface `#F1F4EF`, secondary text `#5F6861`, border `#E2E8E1`. Use a light sidebar, rounded navigation, quiet dividers and responsive tables. Home content uses a single ordered list so its relationship to the mobile screen is visible.
 
 ## Backend and checks
 

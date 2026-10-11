@@ -1,0 +1,20 @@
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const vm = require('node:vm');
+const ts = require('typescript');
+const source = ts.transpileModule(fs.readFileSync(require.resolve('../src/firebase/firestore.ts'), 'utf8'), {compilerOptions:{module:ts.ModuleKind.CommonJS}}).outputText;
+const pending=[];let changed,removed=false;
+const channel={on(_event,_filter,callback){changed=callback;return this;},subscribe(){return this;}};
+const supabase={from:()=>({select:()=>new Promise(resolve=>pending.push(resolve))}),channel:()=>channel,removeChannel:()=>{removed=true;}};
+const context={exports:{},require:()=>({supabase}),console,Math,Date,Promise,crypto:require('node:crypto').webcrypto};
+vm.runInNewContext(source,context);
+const observed=[],errors=[];
+const unsubscribe=context.exports.onSnapshot({kind:'collection',table:'couponly_notifications'},snapshot=>observed.push(snapshot.docs[0].id),error=>errors.push(error));
+const settle=()=>new Promise(resolve=>setImmediate(resolve));
+(async()=>{
+ changed();pending[1]({data:[{id:'newer'}],error:null});await settle();
+ pending[0]({data:[{id:'older'}],error:null});await settle();assert.deepEqual(observed,['newer']);
+ changed();unsubscribe();pending[2]({data:null,error:new Error('late error')});await settle();
+ assert.equal(removed,true);assert.deepEqual(observed,['newer']);assert.deepEqual(errors,[]);
+ console.log('PASS: realtime subscriptions ignore old responses and callbacks after unsubscribe');
+})().catch(error=>{console.error(error);process.exitCode=1;});

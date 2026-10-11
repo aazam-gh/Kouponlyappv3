@@ -242,8 +242,9 @@ export async function getAggregateFromServer(ref: Ref,aggregates: Record<string,
   return {data:()=>result};
 }
 export function onSnapshot(ref: Ref,callback: (snapshot: any)=>void,onError?: (error:Error)=>void) {
-  const refresh=async()=>{try{callback(ref.kind==='document'?await getDoc(ref):await getDocs(ref));}catch(error){onError?.(error as Error);}};
+  let active=true, request=0;
+  const refresh=async()=>{const current=++request;try{const snapshot=ref.kind==='document'?await getDoc(ref):await getDocs(ref);if(active&&current===request)callback(snapshot);}catch(error){if(active&&current===request)onError?.(error as Error);}};
   void refresh();
   const channel=supabase.channel('kouponly-' + ref.table + '-' + Math.random().toString(36).slice(2)).on('postgres_changes',{event:'*',schema:'public',table:ref.table},()=>void refresh()).subscribe();
-  return ()=>{void supabase.removeChannel(channel);};
+  return ()=>{active=false;void supabase.removeChannel(channel);};
 }

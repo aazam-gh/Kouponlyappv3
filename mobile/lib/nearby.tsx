@@ -1,7 +1,9 @@
-import React, { createContext, useCallback, useContext, useMemo, useRef, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import { AppState } from 'react-native';
 import * as Location from 'expo-location';
 import { fetchVendorMapLocations, type VendorMapLocation } from '@/lib/nearby-vendors';
 import { getCurrentPosition } from '@/lib/location';
+import { nearestLocationsByVendor } from '@/lib/vendor-distance';
 
 type NearbyStatus = 'idle' | 'loading' | 'ready' | 'permission' | 'error';
 type LoadOptions = { askForPermission?: boolean; force?: boolean };
@@ -66,6 +68,14 @@ export function NearbyProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const value = useMemo(() => ({ locations, position, status, error, canAskAgain, load }), [locations, position, status, error, canAskAgain, load]);
+
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', nextState => {
+      if (nextState === 'active' && attempted.current) void load({ force: true });
+    });
+    return () => subscription.remove();
+  }, [load]);
+
   return <Context.Provider value={value}>{children}</Context.Provider>;
 }
 
@@ -74,3 +84,18 @@ export const useNearby = () => {
   if (!value) throw new Error('useNearby must be inside NearbyProvider');
   return value;
 };
+
+export function useNearbyDistances() {
+  const { locations, position, status, load } = useNearby();
+
+  useEffect(() => {
+    if (status === 'idle') void load({ askForPermission: true });
+  }, [load, status]);
+
+  const distanceByVendor = useMemo(
+    () => position ? nearestLocationsByVendor(locations, position) : new Map(),
+    [locations, position],
+  );
+
+  return { distanceByVendor, position, status };
+}

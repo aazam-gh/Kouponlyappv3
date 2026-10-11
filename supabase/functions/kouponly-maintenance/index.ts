@@ -138,7 +138,7 @@ Deno.serve(async (request) => {
     ]);
     return json({ success: true, verification, transient, receipts });
   } catch (error) {
-    console.error("coop-maintenance", errorText(error));
+    console.error("kouponly-maintenance", errorText(error));
     return json({ error: errorText(error) }, 500);
   }
 });

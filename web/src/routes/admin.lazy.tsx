@@ -35,6 +35,7 @@ function AdminLayout() {
 
     return (
         <SidebarProvider
+            className="admin-shell"
             style={
                 {
                     "--sidebar-width": "calc(var(--spacing) * 72)",
@@ -43,7 +44,7 @@ function AdminLayout() {
             }
         >
             <AdminSidebar variant="inset" user={sidebarUser} onLogout={handleLogout} />
-            <SidebarInset>
+            <SidebarInset className="min-w-0">
                 <SiteHeader />
                 <Outlet />
             </SidebarInset>

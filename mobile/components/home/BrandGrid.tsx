@@ -1,14 +1,10 @@
+import { Colors as BorderPalette } from '@/constants/Colors';
+import ScalePressable from '@/components/ScalePressable';
 import { useQuery } from '@tanstack/react-query';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { useEffect, useMemo } from 'react';
-import {
-    ActivityIndicator,
-    Pressable,
-    ScrollView,
-    StyleSheet,
-    View,
-} from 'react-native';
+import { ActivityIndicator, ScrollView, StyleSheet, View } from 'react-native';
 import { StateSurface } from '../StateSurface';
 import { triggerSubtleHaptic } from '../../utils/haptics';
 import { useTranslation } from 'react-i18next';
@@ -39,7 +35,7 @@ function BrandRow({
     const { theme } = useAppTheme();
     const { isRTL } = useAppLocale();
     const renderBrand = (brand: BrandItem) => (
-        <Pressable
+        <ScalePressable
             key={brand.id}
             style={styles.brandItem}
             onPress={() => onPressBrand(brand)}
@@ -52,12 +48,12 @@ function BrandRow({
                 source={{ uri: brand.logoUrl }}
                 style={[
                     styles.imageContainer,
-                    { backgroundColor: theme.logoTile, borderColor: theme.logoTileBorder },
+                    { backgroundColor: theme.logoTile, borderColor: BorderPalette.border },
                 ]}
                 contentFit="contain"
                 cachePolicy="memory-disk"
             />
-        </Pressable>
+        </ScalePressable>
     );
 
     return (

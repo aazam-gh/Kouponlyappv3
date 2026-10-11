@@ -1,14 +1,12 @@
+import { Colors as BorderPalette } from '@/constants/Colors';
+import Animated from 'react-native-reanimated';
+import { useMotionPreferences } from '@/lib/theme';
+import ScalePressable from '@/components/ScalePressable';
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { GlassView, isGlassEffectAPIAvailable } from "expo-glass-effect";
 import { useNavigation } from "expo-router";
 import { useEffect, useState } from "react";
-import {
-  Platform,
-  StyleSheet,
-  TextInput,
-  TouchableOpacity,
-  View,
-} from "react-native";
+import { Platform, StyleSheet, TextInput, View } from 'react-native';
 import { Typography } from "../../constants/Typography";
 import { useAppTheme } from "../../context/AppThemeContext";
 import { useAppLocale } from "../../context/LocaleContext";
@@ -44,6 +42,7 @@ export default function SearchBar({
   testID,
 }: Props) {
   const navigation = useNavigation();
+  const { reduceMotion } = useMotionPreferences();
   const { isDark, theme } = useAppTheme();
   const useNativeGlass = !isDark && canUseNativeGlass();
   const showHighlights = !isDark;
@@ -64,6 +63,7 @@ export default function SearchBar({
   }, [navigation, onChangeText]);
 
   useEffect(() => {
+    if (reduceMotion || isActive) { setAnimatedPlaceholder(placeholder); return; }
     let index = 0;
     let direction: "typing" | "deleting" = "typing";
     let frame: ReturnType<typeof setTimeout>;
@@ -99,7 +99,7 @@ export default function SearchBar({
     frame = setTimeout(tick, 55);
 
     return () => clearTimeout(frame);
-  }, [placeholder]);
+  }, [isActive, placeholder, reduceMotion]);
 
   const handleClear = () => {
     if (onClear) {
@@ -111,10 +111,10 @@ export default function SearchBar({
   };
 
   return (
-    <View style={[styles.searchShell, { backgroundColor: theme.inputBackground }, compact && styles.searchShellCompact]}>
+    <Animated.View style={[styles.searchShell, { backgroundColor: theme.inputBackground, borderWidth: 1, borderColor: BorderPalette.border }, compact && styles.searchShellCompact]}>
       {useNativeGlass ? (
         <GlassView
-          style={[styles.searchSurface, compact && styles.searchSurfaceCompact, { backgroundColor: theme.inputBackground, borderColor: theme.inputBorder }]}
+          style={[styles.searchSurface, compact && styles.searchSurfaceCompact, { backgroundColor: theme.inputBackground, borderWidth: 0 }]}
           glassEffectStyle="regular"
           colorScheme={isDark ? "dark" : "light"}
           tintColor={theme.inputBackground}
@@ -138,7 +138,7 @@ export default function SearchBar({
           />
         </GlassView>
       ) : (
-        <View style={[styles.searchSurface, compact && styles.searchSurfaceCompact, { backgroundColor: theme.inputBackground, borderColor: theme.inputBorder }]}>
+        <View style={[styles.searchSurface, compact && styles.searchSurfaceCompact, { backgroundColor: theme.inputBackground, borderWidth: 0 }]}>
           {showHighlights ? <GlassHighlights topColor={theme.inputHighlight} bottomColor={theme.inputShade} /> : null}
           <SearchBarContent
             testID={testID}
@@ -158,7 +158,7 @@ export default function SearchBar({
           />
         </View>
       )}
-    </View>
+    </Animated.View>
   );
 }
 
@@ -236,7 +236,7 @@ function SearchBarContent({
         onBlur={onBlur}
       />
       {(value?.length ?? 0) > 0 ? (
-        <TouchableOpacity
+        <ScalePressable
           onPress={onClear}
           activeOpacity={0.7}
           accessibilityRole="button"
@@ -245,7 +245,7 @@ function SearchBarContent({
           style={styles.clearButton}
         >
           <Ionicons name="close-circle" size={18} color={placeholderColor} />
-        </TouchableOpacity>
+        </ScalePressable>
       ) : null}
     </View>
   );
@@ -257,6 +257,7 @@ const styles = StyleSheet.create({
     marginTop: 12,
     backgroundColor: "#FFFFFF",
     borderRadius: 30,
+    overflow: "hidden",
   },
   searchShellCompact: {
     flex: 1,
@@ -268,7 +269,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 14,
     minHeight: 56,
-    borderWidth: 1,
+    justifyContent: "center",
     overflow: "hidden",
   },
   searchContent: {
@@ -301,9 +302,12 @@ const styles = StyleSheet.create({
   },
   input: {
     flex: 1,
+    height: 24,
     fontSize: 16,
     ...Typography.getTextVariantStyle('body'),
     padding: 0,
+    includeFontPadding: false,
+    textAlignVertical: "center",
   },
   clearButton: {
     marginStart: 8,

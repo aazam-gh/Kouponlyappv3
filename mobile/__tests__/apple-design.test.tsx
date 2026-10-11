@@ -1,7 +1,7 @@
 import React from "react";
 import { fireEvent, render } from "@testing-library/react-native";
 import * as Haptics from "expo-haptics";
-import { Text } from "react-native";
+import { StyleSheet, Text } from "react-native";
 import { AccessiblePressable } from "../components/ui";
 import { contrastRatio, getTheme, layout } from "../lib/theme";
 
@@ -25,7 +25,7 @@ describe("Apple design foundations",()=>{
   it("gives shared controls a 44 point target and haptic feedback",async()=>{
     const onPress=jest.fn();const view=await render(<AccessiblePressable accessibilityLabel="Test action" onPress={onPress}><Text>Go</Text></AccessiblePressable>);
     const button=view.getByRole("button",{name:"Test action"});
-    expect(button.props.style).toEqual(expect.arrayContaining([expect.objectContaining({minWidth:layout.minTarget,minHeight:layout.minTarget})]));
+    expect(StyleSheet.flatten(button.props.style)).toMatchObject({minWidth:layout.minTarget,minHeight:layout.minTarget});
     fireEvent.press(button);expect(onPress).toHaveBeenCalled();expect(Haptics.impactAsync).toHaveBeenCalled();
   });
 });

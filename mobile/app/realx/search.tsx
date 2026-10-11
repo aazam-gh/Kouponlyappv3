@@ -1,14 +1,18 @@
+import Animated from 'react-native-reanimated';
+import { CONTENT_ENTER } from '@/utils/motion';
+import ScalePressable from '@/components/ScalePressable';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { router, useLocalSearchParams } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import React from 'react';
-import { ActivityIndicator, FlatList, Keyboard, StyleSheet, Text, TextInput, TouchableOpacity, View, useWindowDimensions } from 'react-native';
+import { ActivityIndicator, FlatList, Keyboard, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import RestaurantCard from '@/components/category/RestaurantCard';
 import { HeaderIconButton } from '@/components/navigation/AppHeader';
 import { useAppTheme } from '@/context/AppThemeContext';
 import { useCatalogue } from '@/lib/catalogue';
+import { useNearbyDistances } from '@/lib/nearby';
 import { deals, type Deal } from '@/lib/data';
 import { triggerSubtleHaptic } from '@/utils/haptics';
 import { usePostHog } from 'posthog-react-native';
@@ -20,9 +24,8 @@ export default function RealXSearchScreen() {
   const { q } = useLocalSearchParams<{ q?: string }>();
   const { t } = useTranslation();
   const { isDark, theme } = useAppTheme();
-  const { width } = useWindowDimensions();
-  const columns = width >= 840 ? 4 : width >= 600 ? 3 : 2;
   const { status, revision, refresh } = useCatalogue();
+  const { distanceByVendor } = useNearbyDistances();
   const [input, setInput] = React.useState(typeof q === 'string' ? q : '');
   const [committed, setCommitted] = React.useState(typeof q === 'string' ? q.trim().toLocaleLowerCase() : '');
   const inputRef = React.useRef<TextInput>(null);
@@ -46,8 +49,8 @@ export default function RealXSearchScreen() {
   const submit = () => { setCommitted(input.trim().toLocaleLowerCase()); if (input.trim()) posthog.capture('search_submitted'); Keyboard.dismiss(); };
   const tryAnother = () => { triggerSubtleHaptic(); setInput(''); setCommitted(''); requestAnimationFrame(() => inputRef.current?.focus()); };
   const openVendor = (item: Deal) => router.push({ pathname: '/realx/vendor/[id]', params: { id: String(item.vendorId || item.id) } } as any);
-  const renderCard = ({ item, index }: { item: Deal; index: number }) => <View style={[s.cardWrap, { paddingLeft: index % columns === 0 ? 20 : 8, paddingRight: index % columns === columns - 1 ? 20 : 8 }]}>
-    <RestaurantCard id={String(item.vendorId || item.id)} name={item.name} imageUri={item.image} logoUri={item.logo} distance={item.distanceKm > 0 ? item.distance : undefined} xcardEnabled={item.xcard} distanceOnImage overlapLogo onPress={() => openVendor(item)} />
+  const renderCard = ({ item }: { item: Deal }) => <View style={s.cardWrap}>
+    <RestaurantCard id={String(item.vendorId || item.id)} name={item.name} imageUri={item.image} logoUri={item.logo} distance={distanceByVendor.get(String(item.vendorId || item.id))?.label} xcardEnabled={item.xcard} badgeLabel={item.cardLabels?.[0] ?? item.cardLabel} distanceOnImage overlapLogo onPress={() => openVendor(item)} />
   </View>;
   const noMatches = !!committed && results.length === 0;
 
@@ -58,15 +61,14 @@ export default function RealXSearchScreen() {
       <View style={[s.search, { backgroundColor: theme.inputBackground, borderColor: theme.inputBorder }]}>
         <Ionicons name="search" size={18} color={theme.brand} />
         <TextInput testID="vendor-search-input" ref={inputRef} style={[s.input, { color: theme.text, textAlign: 'left', writingDirection: 'ltr' }]} placeholder={t('search_offers_placeholder')} placeholderTextColor={theme.inputPlaceholder} value={input} onChangeText={setInput} onSubmitEditing={submit} returnKeyType="search" autoFocus accessibilityLabel={t('search_offers_placeholder')} />
-        {input.length > 0 ? <TouchableOpacity accessibilityRole="button" accessibilityLabel={t('clear')} onPress={() => { setInput(''); setCommitted(''); }} hitSlop={10}><Ionicons name="close-circle" size={18} color={theme.iconMuted} /></TouchableOpacity> : null}
+        {input.length > 0 ? <ScalePressable accessibilityRole="button" accessibilityLabel={t('clear')} onPress={() => { setInput(''); setCommitted(''); }} hitSlop={10}><Ionicons name="close-circle" size={18} color={theme.iconMuted} /></ScalePressable> : null}
       </View>
     </View>
 
-    {status === 'loading' && !deals.length ? <View style={s.center}><ActivityIndicator size="large" color={theme.brand} /></View> : !committed ? <View style={s.center}><EmptyState icon="search-outline" title={t('search_offers_empty_title')} body={t('search_offers_empty_hint')} color={theme} /></View> : noMatches ? <FlatList
+    <Animated.View key={committed} entering={CONTENT_ENTER} style={{ flex: 1 }}>{status === 'loading' && !deals.length ? <View style={s.center}><ActivityIndicator size="large" color={theme.brand} /></View> : !committed ? <View style={s.center}><EmptyState icon="search-outline" title={t('search_offers_empty_title')} body={t('search_offers_empty_hint')} color={theme} /></View> : noMatches ? <FlatList
       data={recommendations}
-      key={columns}
       keyExtractor={item => String(item.vendorId || item.id)}
-      numColumns={columns}
+      numColumns={1}
       renderItem={renderCard}
       showsVerticalScrollIndicator={false}
       contentContainerStyle={s.listBottom}
@@ -76,15 +78,14 @@ export default function RealXSearchScreen() {
         <View style={[s.emptyIcon, { backgroundColor: theme.brandSoft }]}><Ionicons name="search-outline" size={22} color={theme.brand} /></View>
         <Text style={[s.emptyTitle, { color: theme.text }]}>{t('search_offers_no_results_title')}</Text>
         <Text style={[s.emptyBody, { color: theme.mutedText }]}>{t('search_offers_no_results_hint', { query: committed })}</Text>
-        <TouchableOpacity style={s.tryAnother} onPress={tryAnother}><Ionicons name="refresh-outline" size={16} color={theme.brand} /><Text style={[s.tryAnotherText, { color: theme.brand }]}>{t('search_try_another')}</Text></TouchableOpacity>
+        <ScalePressable style={s.tryAnother} onPress={tryAnother}><Ionicons name="refresh-outline" size={16} color={theme.brand} /><Text style={[s.tryAnotherText, { color: theme.brand }]}>{t('search_try_another')}</Text></ScalePressable>
         {recommendations.length ? <Text style={[s.recommendationsTitle, { color: theme.text, alignSelf: 'flex-start' }]}>{t('search_recommendations_title')}</Text> : null}
       </View>}
       ListEmptyComponent={<View style={s.center}><EmptyState icon="search-outline" title={t('search_offers_no_results_title')} body={t('search_offers_no_results_hint', { query: committed })} color={theme} /></View>}
     /> : status === 'loading' && !results.length ? <View style={s.center}><ActivityIndicator size="large" color={theme.brand} /></View> : results.length ? <FlatList
       data={results}
-      key={columns}
       keyExtractor={item => String(item.vendorId || item.id)}
-      numColumns={columns}
+      numColumns={1}
       renderItem={renderCard}
       showsVerticalScrollIndicator={false}
       contentContainerStyle={s.listBottom}
@@ -92,6 +93,7 @@ export default function RealXSearchScreen() {
       refreshing={status === 'loading'}
       ListHeaderComponent={<View style={s.resultCountRow}><Text style={[s.resultCount, { color: theme.mutedText }]}>{t('search_results_count', { count: results.length })}</Text></View>}
     /> : <View style={s.center}><EmptyState icon="search-outline" title={t('search_offers_empty_title')} body={t('search_offers_empty_hint')} color={theme} /></View>}
+    </Animated.View>
   </SafeAreaView>;
 }
 
@@ -107,5 +109,5 @@ const s = StyleSheet.create({
   emptyTitle: { fontSize: 18, textAlign: 'center', lineHeight: 24, fontWeight: '600' }, emptyBody: { fontSize: 14, textAlign: 'center', lineHeight: 20, maxWidth: 280, marginTop: 6 },
   noResultHeader: { alignItems: 'center', paddingHorizontal: 20, paddingTop: 20 }, tryAnother: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 16, paddingVertical: 6 }, tryAnotherText: { fontSize: 14, fontWeight: '600' },
   recommendationsTitle: { alignSelf: 'flex-start', fontSize: 18, fontWeight: '600', paddingTop: 28, paddingBottom: 16 }, resultCountRow: { width: '100%', alignItems: 'flex-start', paddingHorizontal: 20 }, resultCount: { fontSize: 14, paddingTop: 8, paddingBottom: 16 },
-  cardWrap: { flex: 1, marginBottom: 16 }, listBottom: { paddingBottom: 40 },
+  cardWrap: { flex: 1, paddingHorizontal: 20, marginBottom: 16 }, listBottom: { paddingBottom: 40 },
 });

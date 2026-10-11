@@ -1,9 +1,11 @@
+import { Colors as BorderPalette } from '@/constants/Colors';
+import ScalePressable from '@/components/ScalePressable';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import * as Crypto from 'expo-crypto';
 import { Image } from 'expo-image';
 import { router, useLocalSearchParams } from 'expo-router';
 import React from 'react';
-import { Alert, Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, Linking, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import { StateSurface } from '@/components/StateSurface';
@@ -116,9 +118,9 @@ export default function RealXOpportunityDetailScreen() {
           {location ? <MetaRow icon="location-outline" iconColor={theme.brandText} isRTL={isRTL} text={location} textColor={theme.mutedText} /> : null}
         </View>
         {description ? <Text selectable style={[styles.description, { color: theme.text, textAlign: isRTL ? 'right' : 'left' }]}>{description}</Text> : null}
-        <Pressable onPress={() => void openOpportunity()} disabled={isOpening} style={({ pressed }) => [styles.primaryButton, { backgroundColor: theme.actionSolid, opacity: isOpening || pressed ? 0.72 : 1 }]}>
+        <ScalePressable onPress={() => void openOpportunity()} disabled={isOpening} style={({ pressed }) => [styles.primaryButton, { backgroundColor: theme.actionSolid, opacity: isOpening || pressed ? 0.72 : 1 }]}>
           <Text style={[styles.primaryButtonText, { color: theme.onActionSolid }]}>{isOpening ? t('opening') : t('view_opportunity')}</Text><Ionicons name="open-outline" size={18} color={theme.onActionSolid} />
-        </Pressable>
+        </ScalePressable>
         <Text style={[styles.handoff, { color: theme.subtleText }]}>{t('external_handoff_notice')}</Text>
       </View>
     </ScrollView>
@@ -128,13 +130,13 @@ export default function RealXOpportunityDetailScreen() {
 const styles = StyleSheet.create({
   screen: { flex: 1 }, rowReverse: { flexDirection: 'row-reverse' }, content: { paddingBottom: 44 },
   hero: { width: '100%', aspectRatio: 1.65 }, body: { padding: 20, gap: 14 },
-  kindPill: { alignSelf: 'flex-start', borderRadius: 999, paddingHorizontal: 11, paddingVertical: 6 },
+  kindPill: { alignSelf: 'flex-start', borderRadius: 999, borderWidth: 1, borderColor: BorderPalette.border, paddingHorizontal: 11, paddingVertical: 6 },
   kindText: { fontSize: 11, textTransform: 'uppercase', ...Typography.getTextVariantStyle('bodyStrong') },
   title: { fontSize: 30, lineHeight: 36, ...Typography.getTextVariantStyle('bodyStrong') },
   provider: { fontSize: 15, ...Typography.getTextVariantStyle('bodyStrong') }, metaList: { gap: 10, paddingVertical: 6 },
   metaRow: { flexDirection: 'row', alignItems: 'center', gap: 10 }, metaText: { flex: 1, fontSize: 14, ...Typography.getTextVariantStyle('body') },
   description: { fontSize: 16, lineHeight: 25, ...Typography.getTextVariantStyle('body') },
-  primaryButton: { minHeight: 54, borderRadius: 27, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 9 },
+  primaryButton: { minHeight: 54, borderRadius: 27, borderWidth: 1, borderColor: BorderPalette.border, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 9 },
   primaryButtonText: { fontSize: 15, ...Typography.getTextVariantStyle('bodyStrong') },
   handoff: { fontSize: 12, lineHeight: 17, textAlign: 'center', ...Typography.getTextVariantStyle('body') },
 });

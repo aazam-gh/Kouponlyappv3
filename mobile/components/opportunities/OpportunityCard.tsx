@@ -1,6 +1,8 @@
+import { Colors as BorderPalette } from '@/constants/Colors';
+import ScalePressable from '@/components/ScalePressable';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Image } from 'expo-image';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
 import { Typography } from '../../constants/Typography';
@@ -28,7 +30,7 @@ export function OpportunityCard({
   const deadline = toDate(opportunity.deadline || opportunity.startsAt);
 
   return (
-    <Pressable
+    <ScalePressable
       accessibilityRole="button"
       accessibilityLabel={title}
       accessibilityHint="Opens opportunity details"
@@ -38,7 +40,7 @@ export function OpportunityCard({
         compact && styles.compactCard,
         {
           backgroundColor: theme.surfaceElevated,
-          borderColor: theme.border,
+          borderColor: BorderPalette.border,
           opacity: pressed ? 0.82 : 1,
         },
       ]}
@@ -113,7 +115,7 @@ export function OpportunityCard({
           ) : null}
         </View>
       </View>
-    </Pressable>
+    </ScalePressable>
   );
 }
 

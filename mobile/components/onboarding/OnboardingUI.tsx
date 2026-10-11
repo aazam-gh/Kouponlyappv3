@@ -1,17 +1,9 @@
+import { Colors as BorderPalette } from '@/constants/Colors';
+import { CONTENT_ENTER } from '@/utils/motion';
+import ScalePressable from '@/components/ScalePressable';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { ReactNode, RefObject, useEffect } from 'react';
-import {
-  ActivityIndicator,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TextInputProps,
-  TouchableOpacity,
-  View,
-} from 'react-native';
+import { ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TextInputProps, View } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, {
@@ -28,6 +20,7 @@ import { useAppLocale } from '../../context/LocaleContext';
 import { useTranslation } from 'react-i18next';
 import { OnboardingFlowSectionMotion } from './OnboardingMotion';
 import ResponsiveText from '../ResponsiveText';
+import ProfileSprites from '@/components/profile/ProfileSprites';
 
 type ScaffoldProps = {
   children: ReactNode;
@@ -39,9 +32,10 @@ type ScaffoldProps = {
   headerAction?: { label: string; onPress: () => void; disabled?: boolean };
   progress?: { current: number; total: number };
   footer?: ReactNode;
+  transitionKey?: string;
 };
 
-export function OnboardingScaffold({ children, title, headerTitle, subtitle, onBack, onClose, headerAction, progress, footer }: ScaffoldProps) {
+export function OnboardingScaffold({ children, title, headerTitle, subtitle, onBack, onClose, headerAction, progress, footer, transitionKey }: ScaffoldProps) {
   const { theme, isDark } = useAppTheme();
   const { locale, isRTL } = useAppLocale();
   const { t } = useTranslation();
@@ -49,28 +43,29 @@ export function OnboardingScaffold({ children, title, headerTitle, subtitle, onB
   return (
     <KeyboardAvoidingView style={[styles.screen, { backgroundColor: theme.background }]} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
+        <ProfileSprites />
         <StatusBar style={isDark ? 'light' : 'dark'} hidden={false} animated />
         <OnboardingFlowSectionMotion offset={-6} style={[styles.header, isRTL && styles.rowReverse]}>
           {onBack ? (
-            <TouchableOpacity style={[styles.iconButton, { backgroundColor: theme.cardMuted }]} onPress={onBack} accessibilityRole="button" accessibilityLabel={t('back')}>
+            <ScalePressable style={[styles.iconButton, { backgroundColor: theme.cardMuted }]} onPress={onBack} accessibilityRole="button" accessibilityLabel={t('back')}>
               <Ionicons name={isRTL ? 'arrow-forward' : 'arrow-back'} size={22} color={theme.text} />
-            </TouchableOpacity>
+            </ScalePressable>
           ) : <View style={styles.iconButton} accessible={false} />}
           {headerTitle ? <ResponsiveText accessibilityRole="header" minimumFontScale={0.72} style={[styles.headerTitle, { color: theme.text }, isRTL && styles.textRTL]}>{headerTitle}</ResponsiveText> : null}
           {headerAction ? (
-            <TouchableOpacity
-              style={[styles.headerAction, { borderColor: theme.brand, opacity: headerAction.disabled ? 0.45 : 1 }]}
+            <ScalePressable
+              style={[styles.headerAction, { borderColor: BorderPalette.border, opacity: headerAction.disabled ? 0.45 : 1 }]}
               onPress={headerAction.onPress}
               disabled={headerAction.disabled}
               accessibilityRole="button"
               accessibilityState={{ disabled: Boolean(headerAction.disabled) }}
             >
               <Text style={[styles.headerActionText, { color: theme.brandText }, isRTL && styles.textRTL]}>{headerAction.label}</Text>
-            </TouchableOpacity>
+            </ScalePressable>
           ) : onClose ? (
-            <TouchableOpacity style={[styles.iconButton, { backgroundColor: theme.cardMuted }]} onPress={onClose} accessibilityRole="button" accessibilityLabel={t('close')}>
+            <ScalePressable style={[styles.iconButton, { backgroundColor: theme.cardMuted }]} onPress={onClose} accessibilityRole="button" accessibilityLabel={t('close')}>
               <Ionicons name="close" size={22} color={theme.text} />
-            </TouchableOpacity>
+            </ScalePressable>
           ) : <View style={styles.iconButton} accessible={false} />}
         </OnboardingFlowSectionMotion>
         {progress ? <OnboardingFlowSectionMotion delay={25} offset={-4}><OnboardingProgress {...progress} /></OnboardingFlowSectionMotion> : null}
@@ -84,7 +79,7 @@ export function OnboardingScaffold({ children, title, headerTitle, subtitle, onB
           >
             {title ? <Text accessibilityRole="header" style={[styles.title, Typography.getLocalizedTextVariantStyle('display', locale), { color: theme.text }, isRTL && styles.textRTL]}>{title}</Text> : null}
             {subtitle ? <Text style={[styles.subtitle, { color: theme.mutedText }, isRTL && styles.textRTL]}>{subtitle}</Text> : null}
-            <View style={styles.body}>{children}</View>
+            <Animated.View key={transitionKey} entering={CONTENT_ENTER} style={styles.body}>{children}</Animated.View>
           </ScrollView>
         </OnboardingFlowSectionMotion>
         {footer ? <OnboardingFlowSectionMotion delay={80} offset={8}><View style={[styles.footer, { backgroundColor: theme.background, borderTopColor: theme.border }]}>{footer}</View></OnboardingFlowSectionMotion> : null}
@@ -103,7 +98,7 @@ function OnboardingProgress({ current, total }: { current: number; total: number
 
   useEffect(() => {
     progress.value = withTiming(percent, {
-      duration: 420,
+      duration: 240,
       easing: Easing.out(Easing.cubic),
       reduceMotion: ReduceMotion.System,
     });
@@ -139,7 +134,7 @@ export function OnboardingField({ label, error, inputRef, ...props }: TextInputP
 export function OnboardingPrimaryButton({ label, loadingLabel, loading, disabled, onPress }: { label: string; loadingLabel?: string; loading?: boolean; disabled?: boolean; onPress: () => void }) {
   const { theme } = useAppTheme();
   const inactive = Boolean(disabled || loading);
-  return <TouchableOpacity
+  return <ScalePressable
     accessibilityRole="button"
     accessibilityState={{ disabled: inactive, busy: Boolean(loading) }}
     disabled={inactive}
@@ -149,26 +144,26 @@ export function OnboardingPrimaryButton({ label, loadingLabel, loading, disabled
   >
     {loading ? <ActivityIndicator color={theme.onActionSolid} /> : null}
     <Text style={[styles.primaryLabel, { color: theme.onActionSolid }]}>{loading && loadingLabel ? loadingLabel : label}</Text>
-  </TouchableOpacity>;
+  </ScalePressable>;
 }
 
 export function OnboardingSecondaryButton({ label, disabled, onPress }: { label: string; disabled?: boolean; onPress: () => void }) {
   const { theme } = useAppTheme();
-  return <TouchableOpacity
+  return <ScalePressable
     accessibilityRole="button"
     accessibilityState={{ disabled: Boolean(disabled) }}
     disabled={disabled}
     onPress={onPress}
     activeOpacity={0.86}
-    style={[styles.secondaryButton, { borderColor: theme.brand, opacity: disabled ? 0.45 : 1 }]}
+    style={[styles.secondaryButton, { borderColor: BorderPalette.border, opacity: disabled ? 0.45 : 1 }]}
   >
     <Text style={[styles.secondaryLabel, { color: theme.brandText }]}>{label}</Text>
-  </TouchableOpacity>;
+  </ScalePressable>;
 }
 
 export function OnboardingTextButton({ label, disabled, onPress }: { label: string; disabled?: boolean; onPress: () => void }) {
   const { theme } = useAppTheme();
-  return <TouchableOpacity
+  return <ScalePressable
     accessibilityRole="button"
     accessibilityState={{ disabled: Boolean(disabled) }}
     disabled={disabled}
@@ -177,17 +172,17 @@ export function OnboardingTextButton({ label, disabled, onPress }: { label: stri
     style={[styles.textButton, { opacity: disabled ? 0.45 : 1 }]}
   >
     <Text style={[styles.textButtonLabel, { color: theme.brandText }]}>{label}</Text>
-  </TouchableOpacity>;
+  </ScalePressable>;
 }
 
 export function InlineNotice({ tone = 'info', children, actionLabel, onAction }: { tone?: 'info' | 'error' | 'success' | 'warning'; children: ReactNode; actionLabel?: string; onAction?: () => void }) {
   const { theme } = useAppTheme();
   const color = tone === 'error' ? theme.danger : tone === 'warning' ? theme.warning : tone === 'success' ? theme.brand : theme.info;
   const icon = tone === 'error' ? 'alert-circle-outline' : tone === 'warning' ? 'warning-outline' : tone === 'success' ? 'checkmark-circle-outline' : 'information-circle-outline';
-  return <View accessibilityLiveRegion="polite" style={[styles.notice, { backgroundColor: theme.cardMuted, borderColor: color }]}>
+  return <Animated.View entering={CONTENT_ENTER} accessibilityLiveRegion="polite" style={[styles.notice, { backgroundColor: theme.cardMuted, borderColor: color }]}>
     {tone === 'success' ? null : <Ionicons name={icon} size={21} color={color} />}
-    <View style={styles.noticeCopy}><Text style={[styles.noticeText, { color: theme.text }]}>{children}</Text>{actionLabel && onAction ? <TouchableOpacity onPress={onAction} accessibilityRole="button" style={styles.noticeAction}><Text style={[styles.noticeActionText, { color }]}>{actionLabel}</Text></TouchableOpacity> : null}</View>
-  </View>;
+    <View style={styles.noticeCopy}><Text style={[styles.noticeText, { color: theme.text }]}>{children}</Text>{actionLabel && onAction ? <ScalePressable onPress={onAction} accessibilityRole="button" style={styles.noticeAction}><Text style={[styles.noticeActionText, { color }]}>{actionLabel}</Text></ScalePressable> : null}</View>
+  </Animated.View>;
 }
 
 const styles = StyleSheet.create({

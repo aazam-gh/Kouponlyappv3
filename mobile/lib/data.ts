@@ -1,11 +1,11 @@
 export type Deal = {
   id:number; vendorId?:string; categoryId?:string; subcategoryIds?:string[]; offers?:VendorOffer[]; locations?:VendorLocation[]; galleryImages?:string[]; phoneNumber?:string; openingHours?:unknown; vendorInformation?:{title?:string;message?:string}; name:string; place:string; category:string; distance:string; distanceKm:number; rating:string;
-  offer:string; saving:string; offerValue:number; newest:number; trend:number; image:string; logo?:string;
+  offer:string; saving:string; offerValue:number; newest:number; trend:number; image:string; logo?:string; cardLabel?:string; cardLabels?:string[];
   color?:string; description:string; redemption?:"online"|"inStore"; externalUrl?:string; latitude?:number; longitude?:number; xcard?:boolean;
 };
 
 export const onlineUrlFor = (name:string, explicitUrl?:string) => explicitUrl || `https://www.google.com/search?q=${encodeURIComponent(name)}`;
-export type VendorOffer = {id:string; index:number; title:string; logo?:string; description:string; saving:string; terms?:string; redemptionInstructions?:string; redemption:"online"|"inStore"; discountType?:string; discountValue?:number};
+export type VendorOffer = {id:string; index:number; title:string; logo?:string; description:string; saving:string; cardLabel?:string; cardLabels?:string[]; terms?:string; redemptionInstructions?:string; redemption:"online"|"inStore"; discountType?:string; discountValue?:number};
 export function dealDiscountLabel(deal: Deal): string | undefined {
   const offer = deal.offers?.[0];
   if (offer?.discountType === 'percentage' && Number.isFinite(offer.discountValue) && offer.discountValue! > 0) return `${offer.discountValue}% OFF`;

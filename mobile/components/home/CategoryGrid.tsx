@@ -1,7 +1,9 @@
+import { Colors as BorderPalette } from '@/constants/Colors';
+import ScalePressable from '@/components/ScalePressable';
 import { useQuery } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { ScrollView, StyleSheet, Text, TouchableOpacity, useWindowDimensions, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { Ellipsis } from 'lucide-react-native';
 import { Typography } from '../../constants/Typography';
@@ -47,7 +49,7 @@ export default function CategoryGrid({ categories: propCategories, onCategoryPre
     };
 
     const renderCategory = (item: CategoryItem, itemWidth = columnWidth) => (
-        <TouchableOpacity
+        <ScalePressable
             key={item.id}
             style={[styles.categoryItem, { width: itemWidth }]}
             onPress={() => openCategory(item)}
@@ -55,7 +57,7 @@ export default function CategoryGrid({ categories: propCategories, onCategoryPre
             accessibilityRole="button"
             accessibilityLabel={item.name}
         >
-            <View style={[styles.imageContainer, { width: imageSize, height: imageSize, backgroundColor: theme.surface, borderColor: theme.border }]}>
+            <View style={[styles.imageContainer, { width: imageSize, height: imageSize, backgroundColor: theme.surface, borderColor: BorderPalette.border }]}>
                 {item.image ? (
                     <RemoteImage source={typeof item.image === 'string' ? { uri: item.image } : item.image} style={styles.categoryImage} contentFit="cover" />
                 ) : (
@@ -65,7 +67,7 @@ export default function CategoryGrid({ categories: propCategories, onCategoryPre
             <Text style={[styles.categoryName, { color: theme.text }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.72}>
                 {item.name}
             </Text>
-        </TouchableOpacity>
+        </ScalePressable>
     );
 
     if (!propCategories && isLoading) {
@@ -96,18 +98,18 @@ export default function CategoryGrid({ categories: propCategories, onCategoryPre
             <View style={styles.homeRow}>
                 {visibleCategories.map(item => renderCategory(item))}
                 {hasMore ? (
-                    <TouchableOpacity
+                    <ScalePressable
                         style={[styles.categoryItem, { width: columnWidth }]}
                         onPress={() => setMoreVisible(true)}
                         activeOpacity={0.78}
                         accessibilityRole="button"
                         accessibilityLabel={t('more')}
                     >
-                        <View style={[styles.moreButton, { width: imageSize, height: imageSize, backgroundColor: theme.surface, borderColor: theme.border }]}>
+                        <View style={[styles.moreButton, { width: imageSize, height: imageSize, backgroundColor: 'transparent', borderColor: BorderPalette.border }]}>
                             <Ellipsis size={28} color={theme.text} />
                         </View>
                         <Text style={[styles.categoryName, { color: theme.text }]} numberOfLines={1}>{t('more')}</Text>
-                    </TouchableOpacity>
+                    </ScalePressable>
                 ) : null}
             </View>
         </View>

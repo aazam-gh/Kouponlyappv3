@@ -1,7 +1,8 @@
+import ScalePressable from '@/components/ScalePressable';
 import { Image } from 'expo-image';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { memo, useCallback } from 'react';
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View, type ViewStyle } from 'react-native';
+import { ScrollView, StyleSheet, Text, View, useWindowDimensions, type ViewStyle } from 'react-native';
 import { useAppTheme } from '../../context/AppThemeContext';
 import { Typography } from '../../constants/Typography';
 
@@ -27,10 +28,12 @@ const SubCategoryChip = memo(({
     item,
     isSelected,
     onPress,
+    style,
 }: {
     item: SubCategory;
     isSelected: boolean;
     onPress: (item: SubCategory) => void;
+    style: ViewStyle;
 }) => {
     const { theme } = useAppTheme();
 
@@ -52,12 +55,13 @@ const SubCategoryChip = memo(({
             }
         }
 
-        return null;
+        // Keep the label baseline consistent when a subcategory has no artwork.
+        return <View style={styles.iconPlaceholder} />;
     };
 
     return (
-        <TouchableOpacity
-            style={styles.chip}
+        <ScalePressable
+            style={[styles.chip, style]}
             onPress={() => onPress(item)}
             activeOpacity={1}
             accessibilityRole="button"
@@ -72,7 +76,7 @@ const SubCategoryChip = memo(({
             ]}>
                 {item.name}
             </Text>
-        </TouchableOpacity>
+        </ScalePressable>
     );
 });
 
@@ -87,6 +91,13 @@ function SubCategoryChips({
     onSelect,
     containerStyle,
 }: Props) {
+    const { width } = useWindowDimensions();
+    const horizontalPadding = 28;
+    const minChipWidth = 72;
+    const contentWidth = Math.max(width, subCategories.length * minChipWidth + horizontalPadding * 2);
+    const chipWidth = subCategories.length > 0
+        ? (contentWidth - horizontalPadding * 2) / subCategories.length
+        : 0;
 
     const handleSelect = useCallback((item: SubCategory) => {
         onSelect?.(item);
@@ -97,7 +108,7 @@ function SubCategoryChips({
             <ScrollView
                 horizontal
                 showsHorizontalScrollIndicator={false}
-                contentContainerStyle={styles.scrollContent}
+                contentContainerStyle={[styles.scrollContent, { width: contentWidth }]}
                 decelerationRate="fast"
             >
                 {subCategories.map((subCategory) => (
@@ -106,6 +117,7 @@ function SubCategoryChips({
                         item={subCategory}
                         isSelected={selectedId === subCategory.id}
                         onPress={handleSelect}
+                        style={{ width: chipWidth }}
                     />
                 ))}
             </ScrollView>
@@ -116,11 +128,11 @@ function SubCategoryChips({
 const styles = StyleSheet.create({
     container: {
         paddingVertical: 16,
-        height: 125, // Fixed height to prevent layout jumps
+        minHeight: 125,
     },
     scrollContent: {
         paddingHorizontal: 28,
-        gap: 16, // Using gap for consistent spacing between chips
+        justifyContent: 'space-between',
     },
     chip: {
         alignItems: 'center',
@@ -131,6 +143,11 @@ const styles = StyleSheet.create({
         marginBottom: 8,
     },
     vectorIcon: { width: ICON_SIZE, height: ICON_SIZE, marginBottom: 8, textAlign: 'center', textAlignVertical: 'center' },
+    iconPlaceholder: {
+        width: ICON_SIZE,
+        height: ICON_SIZE,
+        marginBottom: 8,
+    },
     chipText: {
         fontSize: 12,
         ...Typography.getTextVariantStyle('body'),

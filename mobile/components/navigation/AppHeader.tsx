@@ -1,7 +1,8 @@
+import ScalePressable from '@/components/ScalePressable';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import type { ReactNode } from 'react';
 import type { StyleProp, TextStyle, ViewStyle } from 'react-native';
-import { StyleSheet, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
 import { Typography, type TextVariant } from '../../constants/Typography';
@@ -45,7 +46,7 @@ export function HeaderIconButton({
   const { theme } = useAppTheme();
 
   return (
-    <TouchableOpacity
+    <ScalePressable
       accessibilityLabel={accessibilityLabel}
       accessibilityRole="button"
       accessibilityState={{ selected }}
@@ -65,7 +66,7 @@ export function HeaderIconButton({
       ]}
     >
       <Ionicons name={icon} size={21} color={color ?? (selected ? theme.brand : theme.icon)} />
-    </TouchableOpacity>
+    </ScalePressable>
   );
 }
 

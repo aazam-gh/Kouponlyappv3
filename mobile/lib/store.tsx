@@ -20,14 +20,6 @@ const PREVIOUS_KEY = "kouponly.prototype.state.v2";
 const LEGACY_KEY = "kouponly.prototype.state.v1";
 export const initialState: KouponlyState = { version:3, saved:[], savedOffers:[], used:[], offerUsage:{}, interests:[], redemptions:{}, redeemedRewards:[], points:0 };
 
-const unique=<T,>(...values:(T[]|undefined)[])=>[...new Set(values.flatMap(value=>value??[]))];
-export function mergeCloudState(local:KouponlyState,cloud:Partial<KouponlyState>):KouponlyState{return {
-  ...local,...cloud,version:3,
-  saved:unique(local.saved,cloud.saved),savedOffers:unique(local.savedOffers,cloud.savedOffers),used:unique(local.used,cloud.used),
-  offerUsage:{...local.offerUsage,...cloud.offerUsage},interests:unique(local.interests,cloud.interests),
-  redemptions:cloud.redemptions??{},redeemedRewards:unique(local.redeemedRewards,cloud.redeemedRewards),
-  points:typeof cloud.points==="number"?cloud.points:local.points,
-};}
 export function replaceWithCloudState(cloud:Partial<KouponlyState>):KouponlyState{return {...initialState,...cloud,version:3,saved:cloud.saved??[],savedOffers:cloud.savedOffers??[],used:cloud.used??[],offerUsage:cloud.offerUsage??{},interests:cloud.interests??[],redemptions:cloud.redemptions??{},redeemedRewards:cloud.redeemedRewards??[],points:cloud.points??0};}
 
 export function migrateState(value: unknown): KouponlyState {
@@ -91,18 +83,38 @@ const StoreContext = createContext<StoreValue | null>(null);
 export function StoreProvider({children}:{children:React.ReactNode}) {
   const {user}=useAuth();
   const [state,dispatch] = useReducer(reducer,initialState);
-  const [hydrated,setHydrated] = useState(false);
+  const [hydratedAccount,setHydratedAccount] = useState<string>();
+  const hydrated=hydratedAccount===(user?.id??"guest");
   const [toast,setToast] = useState("");
   const [cloudStatus,setCloudStatus]=useState<SyncStatus>("guest");const activeUser=useRef<string|null>(null);const queueRef=useRef<PendingMutation[]>([]);
   const userKey=(id:string)=>`kouponly.user.${id}.state.v3`;const queueKey=(id:string)=>`kouponly.user.${id}.pending.v1`;
   const persistQueue=useCallback(async(id:string)=>AsyncStorage.setItem(queueKey(id),JSON.stringify(queueRef.current)),[]);
-  const flushQueue=useCallback(async()=>{const id=activeUser.current;if(!id||!queueRef.current.length)return;setCloudStatus("syncing");const remaining:PendingMutation[]=[];for(const item of queueRef.current){try{await applyMutation(item)}catch{remaining.push({...item,attempts:item.attempts+1})}}queueRef.current=remaining;await persistQueue(id);setCloudStatus(remaining.length?"offline":"synced")},[persistQueue]);
-  const enqueue=useCallback((kind:PendingMutation['kind'],entityId:string,operation:PendingMutation['operation'],payload:Record<string,unknown>={})=>{const id=activeUser.current;if(!id)return;queueRef.current.push({id:makeMutationId(),userId:id,kind,entityId,operation,payload,createdAt:Date.now(),attempts:0});void persistQueue(id).then(flushQueue)},[persistQueue,flushQueue]);
-  const refreshCloud=useCallback(async()=>{const id=activeUser.current;if(!id)return;try{const cloud=await fetchCloudState();if(id!==activeUser.current)return;if(cloud){const next=replaceWithCloudState(cloud);dispatch({type:"hydrate",state:next});await AsyncStorage.setItem(userKey(id),JSON.stringify(next));}setCloudStatus("synced");await flushQueue();}catch{if(id===activeUser.current)setCloudStatus("offline")}},[flushQueue]);
-  useEffect(()=>{let active=true;(async()=>{setHydrated(false);const id=user?.id??null;activeUser.current=id;try{if(!id){const current=await AsyncStorage.getItem(KEY);const old=current?null:await AsyncStorage.getItem(OLD_CURRENT_KEY);const previous=current||old?null:await AsyncStorage.getItem(PREVIOUS_KEY);const legacy=current||old||previous?null:await AsyncStorage.getItem(LEGACY_KEY);dispatch({type:"hydrate",state:(current||old||previous||legacy)?migrateState(JSON.parse((current??old??previous??legacy)!)):initialState});queueRef.current=[];setCloudStatus("guest");}
-    else{setCloudStatus("loading-cloud");const [cached,pending]=await Promise.all([AsyncStorage.getItem(userKey(id)),AsyncStorage.getItem(queueKey(id))]);if(cached)dispatch({type:"hydrate",state:migrateState(JSON.parse(cached))});queueRef.current=pending?JSON.parse(pending):[];await refreshCloud();}}
-    catch{if(id)setCloudStatus("offline");}finally{if(active)setHydrated(true)}})();return()=>{active=false}},[user?.id,refreshCloud]);
-  useEffect(()=>{if(!hydrated)return;const key=user?.id?userKey(user.id):KEY;AsyncStorage.setItem(key,JSON.stringify(state)).catch(()=>{})},[state,hydrated,user?.id]);
+  const flushing=useRef<{id:string;promise:Promise<void>}|null>(null);
+  const flushQueue=useCallback(async()=>{
+    const id=activeUser.current;if(!id||!queueRef.current.length)return;
+    if(flushing.current?.id===id)return flushing.current.promise;
+    const run=async()=>{
+      setCloudStatus("syncing");
+      const attempted=new Set<string>();
+      let item:PendingMutation|undefined;
+      while((item=queueRef.current.find(entry=>!attempted.has(entry.id)))){
+        attempted.add(item.id);
+        if(activeUser.current!==id)return;
+        try{await applyMutation(item);if(activeUser.current!==id)return;queueRef.current=queueRef.current.filter(entry=>entry.id!==item!.id);}
+        catch{if(activeUser.current!==id)return;item.attempts++;await persistQueue(id);break;}
+        await persistQueue(id);
+      }
+      if(activeUser.current===id)setCloudStatus(queueRef.current.length?"offline":"synced");
+    };
+    const promise=run();flushing.current={id,promise};
+    try{await promise;}finally{if(flushing.current?.promise===promise)flushing.current=null;}
+  },[persistQueue]);
+  const enqueue=useCallback((kind:PendingMutation['kind'],entityId:string,operation:PendingMutation['operation'],payload:Record<string,unknown>={})=>{const id=activeUser.current;if(!id)return;queueRef.current.push({id:makeMutationId(),userId:id,kind,entityId,operation,payload,createdAt:Date.now(),attempts:0});void persistQueue(id).then(flushQueue).catch(()=>{if(activeUser.current===id)setCloudStatus("offline")})},[persistQueue,flushQueue]);
+  const refreshCloud=useCallback(async()=>{const id=activeUser.current;if(!id)return;try{await flushQueue();if(id!==activeUser.current||queueRef.current.length)return;const cloud=await fetchCloudState();if(id!==activeUser.current||queueRef.current.length)return;if(cloud){const next=replaceWithCloudState(cloud);dispatch({type:"hydrate",state:next});await AsyncStorage.setItem(userKey(id),JSON.stringify(next));}setCloudStatus("synced");await flushQueue();}catch{if(id===activeUser.current)setCloudStatus("offline")}},[flushQueue]);
+  useEffect(()=>{let active=true;(async()=>{setHydratedAccount(undefined);const id=user?.id??null;activeUser.current=id;queueRef.current=[];dispatch({type:"hydrate",state:initialState});try{if(!id){const current=await AsyncStorage.getItem(KEY);const old=current?null:await AsyncStorage.getItem(OLD_CURRENT_KEY);const previous=current||old?null:await AsyncStorage.getItem(PREVIOUS_KEY);const legacy=current||old||previous?null:await AsyncStorage.getItem(LEGACY_KEY);if(!active)return;dispatch({type:"hydrate",state:(current||old||previous||legacy)?migrateState(JSON.parse((current??old??previous??legacy)!)):initialState});queueRef.current=[];setCloudStatus("guest");}
+    else{setCloudStatus("loading-cloud");const [cached,pending]=await Promise.all([AsyncStorage.getItem(userKey(id)),AsyncStorage.getItem(queueKey(id))]);if(!active)return;if(cached)dispatch({type:"hydrate",state:migrateState(JSON.parse(cached))});queueRef.current=pending?JSON.parse(pending):[];await refreshCloud();}}
+    catch{if(active&&id)setCloudStatus("offline");}finally{if(active)setHydratedAccount(id??"guest")}})();return()=>{active=false}},[user?.id,refreshCloud]);
+  useEffect(()=>{if(!hydrated||activeUser.current!==(user?.id??null))return;const key=user?.id?userKey(user.id):KEY;AsyncStorage.setItem(key,JSON.stringify(state)).catch(()=>{})},[state,hydrated,user?.id]);
   useEffect(()=>{
     if(!user)return;
     let timer:ReturnType<typeof setTimeout>|undefined;
@@ -113,7 +125,9 @@ export function StoreProvider({children}:{children:React.ReactNode}) {
     const appState=AppState.addEventListener("change",next=>{if(next==="active")void refreshCloud()});
     return()=>{if(timer)clearTimeout(timer);subscription.unsubscribe();appState.remove()};
   },[user?.id,refreshCloud,flushQueue]);
-  const notify = useCallback((message:string)=>{ setToast(message); setTimeout(()=>setToast(""),2200); },[]);
+  const toastTimer=useRef<ReturnType<typeof setTimeout>|undefined>(undefined);
+  useEffect(()=>()=>{if(toastTimer.current)clearTimeout(toastTimer.current);activeUser.current=null;},[]);
+  const notify = useCallback((message:string)=>{if(toastTimer.current)clearTimeout(toastTimer.current);setToast(message);toastTimer.current=setTimeout(()=>setToast(""),2200);},[]);
   const value = useMemo<StoreValue>(()=>({
     state,hydrated,toast,notify,cloudStatus,
     toggleSaved:id=>{const removing=state.saved.includes(id);dispatch({type:"toggleSaved",id});if(user)enqueue('save-deal',String(id),removing?'delete':'upsert')},
@@ -121,14 +135,13 @@ export function StoreProvider({children}:{children:React.ReactNode}) {
     toggleInterest:id=>{const removing=state.interests.includes(id);dispatch({type:"toggleInterest",id});if(user)enqueue('interest',id,removing?'delete':'upsert')},
     startRedemption:(id,mode)=>dispatch({type:"startRedemption",session:{id,mode,status:"warning"}}),
     updateRedemption:(id,patch)=>dispatch({type:"updateRedemption",id,patch}),
-    confirmRedemption:async id=>{const session=state.redemptions[id];if(!user||!session||session.status!=="warning")return false;try{const result=await validateRedemption(id,session.mode);dispatch({type:"updateRedemption",id,patch:{status:result.status,code:result.code??undefined,expiresAt:result.expiresAt??undefined,completedAt:session.mode==="inStore"?result.consumedAt:undefined,consumedAt:result.consumedAt}});return true}catch(error){setCloudStatus("error");notify(error instanceof Error?error.message:"Redemption could not be confirmed");return false}},
-    completeRedemption:async id=>{const session=state.redemptions[id];if(!user||!session||session.status!=="code")return false;try{const result=await completeRedemptionCloud(id);dispatch({type:"updateRedemption",id,patch:{status:result.status,completedAt:result.completedAt}});return true}catch(error){setCloudStatus("error");notify(error instanceof Error?error.message:"Redemption could not be completed");return false}},
-    redeemReward:async(id,points)=>{if(state.points<points||state.redeemedRewards.includes(id))return false;if(!user){dispatch({type:"redeemReward",id,points});return true}try{const result=await redeemRewardCloud(id);dispatch({type:"syncReward",id,points:result.points});return true}catch(error){setCloudStatus("error");notify(error instanceof Error?error.message:"Reward could not be redeemed");return false}},
+    confirmRedemption:async id=>{const session=state.redemptions[id];if(!user||!session||session.status!=="warning")return false;try{const result=await validateRedemption(id,session.mode);if(activeUser.current!==user.id)return false;dispatch({type:"updateRedemption",id,patch:{status:result.status,code:result.code??undefined,expiresAt:result.expiresAt??undefined,completedAt:session.mode==="inStore"?result.consumedAt:undefined,consumedAt:result.consumedAt}});return true}catch(error){if(activeUser.current!==user?.id)return false;setCloudStatus("error");notify(error instanceof Error?error.message:"Redemption could not be confirmed");return false}},
+    completeRedemption:async id=>{const session=state.redemptions[id];if(!user||!session||session.status!=="code")return false;try{const result=await completeRedemptionCloud(id);if(activeUser.current!==user.id)return false;dispatch({type:"updateRedemption",id,patch:{status:result.status,completedAt:result.completedAt}});return true}catch(error){if(activeUser.current!==user?.id)return false;setCloudStatus("error");notify(error instanceof Error?error.message:"Redemption could not be completed");return false}},
+    redeemReward:async(id,points)=>{if(state.points<points||state.redeemedRewards.includes(id))return false;if(!user){dispatch({type:"redeemReward",id,points});return true}try{const result=await redeemRewardCloud(id);if(activeUser.current!==user.id)return false;dispatch({type:"syncReward",id,points:result.points});return true}catch(error){if(activeUser.current!==user?.id)return false;setCloudStatus("error");notify(error instanceof Error?error.message:"Reward could not be redeemed");return false}},
     retrySync:refreshCloud,
   }),[state,hydrated,toast,notify,cloudStatus,user,enqueue,flushQueue,refreshCloud]);
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>;
 }
 export const useStore = () => { const value=useContext(StoreContext); if(!value) throw new Error("useStore must be inside StoreProvider"); return value; };
 
-export const makeCode = (id:string) => `KPN-${id.replace(/\D/g,"").padStart(2,"0")}-${(Math.abs([...id].reduce((n,c)=>n+c.charCodeAt(0),0))*97).toString().slice(-4).padStart(4,"0")}`;
 export const remainingSeconds = (expiresAt:number|undefined, now=Date.now()) => expiresAt ? Math.max(0,Math.ceil((expiresAt-now)/1000)) : 0;

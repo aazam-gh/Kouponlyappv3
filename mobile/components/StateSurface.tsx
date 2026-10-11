@@ -1,5 +1,9 @@
+import { Colors as BorderPalette } from '@/constants/Colors';
+import Animated from 'react-native-reanimated';
+import { CONTENT_ENTER } from '@/utils/motion';
+import ScalePressable from '@/components/ScalePressable';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
 import { Typography } from '../constants/Typography';
@@ -49,37 +53,37 @@ export function StateSurface({ kind, title, message, onRetry, compact = false, c
 
   if (kind === 'loading') {
     return (
-      <View style={[styles.container, compact && styles.compact]} accessibilityRole="progressbar" accessibilityLiveRegion="polite" accessibilityLabel={t(detail.titleKey)}>
+      <Animated.View key={kind} entering={CONTENT_ENTER} style={[styles.container, compact && styles.compact]} accessibilityRole="progressbar" accessibilityLiveRegion="polite" accessibilityLabel={t(detail.titleKey)}>
         <ActivityIndicator size={compact ? 'small' : 'large'} color={colors.primary} />
         {!compact && <Text allowFontScaling style={[styles.message, { color: colors.mutedText }, isRTL && styles.rtl]}>{message || t(detail.messageKey)}</Text>}
-      </View>
+      </Animated.View>
     );
   }
 
   return (
-    <View style={[styles.container, compact && styles.compact]} accessibilityLiveRegion="polite">
+    <Animated.View key={kind} entering={CONTENT_ENTER} style={[styles.container, compact && styles.compact]} accessibilityLiveRegion="polite">
       <View style={[styles.icon, { backgroundColor: colors.surface }]}>
         <Ionicons name={detail.icon} size={compact ? 23 : 30} color={kind === 'error' ? colors.danger : colors.primary} />
       </View>
       <Text accessibilityRole="header" allowFontScaling selectable style={[styles.title, { color: colors.text }, isRTL && styles.rtl]}>{title || t(detail.titleKey)}</Text>
       <Text allowFontScaling selectable style={[styles.message, { color: colors.mutedText }, isRTL && styles.rtl]}>{message || t(detail.messageKey)}</Text>
       {onRetry && (
-        <Pressable onPress={onRetry} style={[styles.retry, { backgroundColor: colors.primary }]} accessibilityRole="button" accessibilityLabel={t('retry')}>
+        <ScalePressable onPress={onRetry} style={[styles.retry, { backgroundColor: colors.primary }]} accessibilityRole="button" accessibilityLabel={t('retry')}>
           <Ionicons name="refresh-outline" size={17} color={colors.onPrimary} />
           <Text allowFontScaling style={[styles.retryText, { color: colors.onPrimary }]}>{t('retry')}</Text>
-        </Pressable>
+        </ScalePressable>
       )}
-    </View>
+    </Animated.View>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, minHeight: 180, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 28, paddingVertical: 32, gap: 10 },
   compact: { flex: 0, minHeight: 96, paddingVertical: 20 },
-  icon: { width: 58, height: 58, borderRadius: 29, alignItems: 'center', justifyContent: 'center', marginBottom: 4 },
+  icon: { width: 58, height: 58, borderRadius: 29, borderWidth: 1, borderColor: BorderPalette.border, alignItems: 'center', justifyContent: 'center', marginBottom: 4 },
   title: { ...Typography.getTextVariantStyle('bodyStrong'), fontSize: 17, textAlign: 'center' },
   message: { ...Typography.getTextVariantStyle('body'), fontSize: 14, lineHeight: 21, textAlign: 'center', maxWidth: 320 },
   rtl: { writingDirection: 'rtl' },
-  retry: { flexDirection: 'row', gap: 7, alignItems: 'center', borderRadius: 999, paddingHorizontal: 18, paddingVertical: 11, marginTop: 6 },
+  retry: { flexDirection: 'row', gap: 7, alignItems: 'center', borderRadius: 999, borderWidth: 1, borderColor: BorderPalette.border, paddingHorizontal: 18, paddingVertical: 11, marginTop: 6 },
   retryText: { ...Typography.getTextVariantStyle('bodyStrong'), fontSize: 14 },
 });

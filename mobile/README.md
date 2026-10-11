@@ -11,7 +11,7 @@ npm run ios
 npm run android
 ```
 
-The app uses native Liquid Glass for navigation surfaces when the iOS 26 API is available. Older iOS versions and Android use a translucent blur fallback. Prototype activity is persisted locally with AsyncStorage.
+The app uses native Liquid Glass for navigation surfaces when the iOS 26 API is available. Older iOS versions and Android use a translucent blur fallback. Supabase owns signed-in account data and coupon receipts. AsyncStorage holds account-specific caches, offline save queues, and guest activity.
 
 ## Verify
 

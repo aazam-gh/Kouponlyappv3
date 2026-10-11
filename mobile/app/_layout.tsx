@@ -1,10 +1,15 @@
 import '@/src/localization/i18n';
 import { useFonts } from "expo-font";
+import {
+  Outfit_400Regular,
+  Outfit_600SemiBold,
+  Outfit_700Bold,
+} from "@expo-google-fonts/outfit";
 import { router, Stack, useSegments } from "expo-router";
 import * as Notifications from "expo-notifications";
 import React from "react";
 import { StatusBar } from "expo-status-bar";
-import { ActivityIndicator, View } from "react-native";
+import { ActivityIndicator, LogBox, View } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { Toast } from "@/components/ui";
 import { StoreProvider } from "@/lib/store";
@@ -22,6 +27,10 @@ import { QueryClientProvider } from '@tanstack/react-query';
 import { queryClient } from '@/utils/queryClient';
 import { AnalyticsProvider } from '@/lib/analytics';
 import { usePostHog } from 'posthog-react-native';
+import { ReduceMotion, ReducedMotionConfig } from 'react-native-reanimated';
+
+// The app deliberately applies the student's reduced-motion preference globally.
+LogBox.ignoreLogs(['[Reanimated] Reduced motion setting is overwritten with mode']);
 
 function AppNavigation(){
   const theme=useAppTheme();
@@ -58,13 +67,14 @@ function AppNavigation(){
     const subscription=Notifications.addNotificationResponseReceivedListener(openNotification);
     return ()=>subscription.remove();
   },[]);
-  return <><StatusBar style={theme.dark?"light":"dark"}/><Stack screenOptions={{headerShown:false,contentStyle:{backgroundColor:theme.colors.paper},animation:theme.motion.reduceMotion?"none":"slide_from_right"}}><Stack.Screen name="wakti" options={{presentation:'modal',animation:'slide_from_bottom'}} /></Stack><Toast/></>;
+  return <><ReducedMotionConfig mode={theme.motion.reduceMotion ? ReduceMotion.Always : ReduceMotion.System}/><StatusBar style={theme.dark?"light":"dark"}/><Stack screenOptions={{headerShown:false,contentStyle:{backgroundColor:theme.colors.paper},animation:theme.motion.reduceMotion?"fade":"default"}}><Stack.Screen name="wakti" options={{presentation:'modal',animation:theme.motion.reduceMotion?'fade':'slide_from_bottom',animationMatchesGesture:true}} /></Stack><Toast/></>;
 }
 
 export default function RootLayout(){
   const [loaded]=useFonts({
-    Poppins: require('@expo-google-fonts/poppins/400Regular/Poppins_400Regular.ttf'),
-    PoppinsBold: require('@expo-google-fonts/poppins/700Bold/Poppins_700Bold.ttf'),
+    Outfit_400Regular,
+    Outfit_600SemiBold,
+    Outfit_700Bold,
   });
   if(!loaded)return <View style={{flex:1,backgroundColor:"#FAFAFA",alignItems:"center",justifyContent:"center"}}><ActivityIndicator color="#0A0A0A"/></View>;
   return <AnalyticsProvider><SafeAreaProvider><QueryClientProvider client={queryClient}><AppThemeProvider><LocaleProvider><ThemeProvider><AuthProvider><ProfileProvider><BenefitsProvider><CatalogueProvider><NearbyProvider><StoreProvider><AppNavigation/></StoreProvider></NearbyProvider></CatalogueProvider></BenefitsProvider></ProfileProvider></AuthProvider></ThemeProvider></LocaleProvider></AppThemeProvider></QueryClientProvider></SafeAreaProvider></AnalyticsProvider>;

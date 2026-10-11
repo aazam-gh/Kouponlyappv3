@@ -61,7 +61,7 @@ const refreshVendorMap = async(service:any,vendorId:string)=>{
 };
 const encodeCursor=(value:unknown)=>{const bytes=new TextEncoder().encode(JSON.stringify(value));let binary="";for(const byte of bytes)binary+=String.fromCharCode(byte);return btoa(binary).replaceAll("+","-").replaceAll("/","_").replace(/=+$/g,"");};
 const decodeCursor=(value:string)=>{const normalized=value.replaceAll("-","+").replaceAll("_","/");const binary=atob(normalized+"=".repeat((4-normalized.length%4)%4));const bytes=Uint8Array.from(binary,(char)=>char.charCodeAt(0));return JSON.parse(new TextDecoder().decode(bytes));};
-const fail = (message: string, status = 400) => { throw Object.assign(new Error(message), { status }); };
+function fail(message: string, status = 400): never { throw Object.assign(new Error(message), { status }); }
 const adminRole = async (client: any, uid: string) => {
   const {data,error}=await client.from("couponly_user_roles").select("role").eq("user_id",uid).maybeSingle();
   if(error)throw error;

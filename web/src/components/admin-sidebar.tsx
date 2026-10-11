@@ -52,7 +52,7 @@ export function AdminSidebar({
 }: AdminSidebarProps) {
   return (
     <Sidebar collapsible="offcanvas" className="border-none" {...props}>
-      <SidebarHeader className="pt-6 px-4">
+      <SidebarHeader className="border-b border-sidebar-border/70 px-4 pb-5 pt-6">
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton
@@ -66,12 +66,12 @@ export function AdminSidebar({
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
-        <p className="px-2 text-xs text-muted-foreground">Free Rajagiri MVP</p>
+        <p className="px-2 pt-1 text-xs text-muted-foreground">Free Rajagiri MVP</p>
       </SidebarHeader>
-      <SidebarContent className="px-2 mt-4">
+      <SidebarContent className="mt-3 px-2">
         <NavMain items={data.navMain} />
       </SidebarContent>
-      <SidebarFooter className="p-4 mb-4">
+      <SidebarFooter className="mb-2 border-t border-sidebar-border/70 p-4 pt-3">
         <NavUser user={user || data.user} onLogout={onLogout} />
       </SidebarFooter>
     </Sidebar>

@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from "react";
 import { AccessibilityInfo, Platform, Pressable, Text, TextInput } from "react-native";
+import { useReducedMotion } from 'react-native-reanimated';
 
 export type ThemeMode = "light" | "dark";
 export type ThemePreference = ThemeMode | "system";
@@ -44,7 +45,7 @@ export interface Theme {
 const light: ThemeColors = {
   ink: "#0A0F0C", inkOnAccent: "#0A0F0C", blackSoft: "#202020", lime: "#18B852",
   paper: "#FFFFFF", elevated: "#FFFFFF", card: "#FFFFFF", muted: "#5F6861",
-  line: "#E2E8E1", soft: "#F1F4EF", success: "#08784F", danger: "#B42318",
+  line: "rgba(0, 0, 0, 0.5)", soft: "#F1F4EF", success: "#08784F", danger: "#B42318",
   onDark: "#FFFFFF", onDarkMuted: "#D0D0D4", backdrop: "rgba(0,0,0,0.52)",
   glass: "rgba(255,255,255,0.48)", glassSolid: "#F7F8F6", input: "#FFFFFF",
 };
@@ -73,7 +74,8 @@ const ThemeContext = createContext<Theme>(fallback);
 let activeThemeColors: ThemeColors = light;
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const preference: ThemePreference = "light";
-  const [reduceMotion, setReduceMotion] = useState(false);
+  const initialReduceMotion = useReducedMotion();
+  const [reduceMotion, setReduceMotion] = useState(initialReduceMotion);
   const [reduceTransparency, setReduceTransparency] = useState(false);
   const [highContrast, setHighContrast] = useState(false);
   const [boldText, setBoldText] = useState(false);
@@ -137,6 +139,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 }
 
 export function useAppTheme() { return useContext(ThemeContext); }
+export function useMotionPreferences() { return useContext(ThemeContext).motion; }
 export function getTheme(mode: ThemeMode, highContrast = false): ThemeColors {
   const colors = mode === "dark" ? dark : light;
   return highContrast ? withContrast(colors, mode) : colors;
@@ -165,16 +168,16 @@ export const C: ThemeColors = new Proxy({ ...light }, {
 }) as ThemeColors;
 
 // Ensure legacy screen copy follows appearance even before every Text node adopts AppText.
-(Text as any).defaultProps = { ...(Text as any).defaultProps, allowFontScaling: true, maxFontSizeMultiplier: 2.4, style: [{ color: C.ink, fontFamily: "Poppins" }, (Text as any).defaultProps?.style] };
-(TextInput as any).defaultProps = { ...(TextInput as any).defaultProps, allowFontScaling: true, maxFontSizeMultiplier: 2.4, style: [{ color: C.ink, fontFamily: "Poppins" }, (TextInput as any).defaultProps?.style] };
+(Text as any).defaultProps = { ...(Text as any).defaultProps, allowFontScaling: true, maxFontSizeMultiplier: 2.4, style: [{ color: C.ink, fontFamily: "Outfit_400Regular" }, (Text as any).defaultProps?.style] };
+(TextInput as any).defaultProps = { ...(TextInput as any).defaultProps, allowFontScaling: true, maxFontSizeMultiplier: 2.4, style: [{ color: C.ink, fontFamily: "Outfit_400Regular" }, (TextInput as any).defaultProps?.style] };
 (Pressable as any).defaultProps = { ...(Pressable as any).defaultProps, accessibilityRole: "button", hitSlop: 4 };
 
 export const F = {
-  heading: "PoppinsBold",
-  headingSemi: "PoppinsBold",
-  body: "Poppins",
-  bodySemi: "PoppinsBold",
-  bodyBold: "PoppinsBold",
+  heading: "Outfit_700Bold",
+  headingSemi: "Outfit_700Bold",
+  body: "Outfit_400Regular",
+  bodySemi: "Outfit_700Bold",
+  bodyBold: "Outfit_700Bold",
 } as const;
 
 export type TypographyVariant = "largeTitle" | "title" | "headline" | "body" | "callout" | "caption" | "eyebrow";

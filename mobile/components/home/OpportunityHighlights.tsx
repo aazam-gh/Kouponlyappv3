@@ -1,6 +1,7 @@
+import ScalePressable from '@/components/ScalePressable';
 import { useQuery } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
 import { Typography } from '../../constants/Typography';
@@ -47,12 +48,12 @@ export function OpportunityHighlights() {
             {t('opportunities_for_you')}
           </Text>
         </View>
-        <TouchableOpacity
+        <ScalePressable
           onPress={() => router.push('/(tabs)/explore')}
           activeOpacity={0.7}
         >
           <Text style={[styles.seeAll, { color: theme.brandText }]}>{t('see_all')}</Text>
-        </TouchableOpacity>
+        </ScalePressable>
       </View>
       <ScrollView
         horizontal

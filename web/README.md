@@ -16,14 +16,14 @@ This is Kouponly's web administration dashboard. It lives alongside the Kouponly
 
 ## Connect a Supabase project
 
-1. Apply every SQL file in `../supabase/migrations/` in timestamp order to the Supabase project configured in `web/.env.local`. The latest migration renames the legacy API objects to the `couponly_*` names used by current code. Confirm the result before continuing:
+1. Apply every SQL file in `../supabase/migrations/` in timestamp order to the Supabase project configured in `web/.env.local`. The database uses `couponly_*` base tables and retains `realx_*` views for existing clients. Confirm the result before continuing:
 
    ```sql
    select to_regclass('public.couponly_user_roles');
    ```
 
    The result should be `public.couponly_user_roles`. If it is `NULL`, the migrations have not completed.
-2. Deploy `kouponly-admin-action`, `couponly-mobile-action`, and `couponly-maintenance` from `../supabase/functions/`.
+2. Deploy `kouponly-admin-action`, `kouponly-mobile-action`, `kouponly-maintenance`, and `kouponly-delete-account` from `../supabase/functions/`.
 3. Configure Edge Function secrets `OTP_HMAC_SECRET`, `RESEND_API_KEY`, and `RESEND_FROM_EMAIL`.
 4. Create the first admin in Supabase Auth, then add that user's role from the SQL editor:
 
@@ -37,8 +37,10 @@ This is Kouponly's web administration dashboard. It lives alongside the Kouponly
 
 5. Use the same Supabase project URL and public key in `mobile/.env.local` as `EXPO_PUBLIC_SUPABASE_URL` and `EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY`.
 
-6. To run the scheduled cleanup and Expo receipt reconciliation, enable `pg_cron`, `pg_net`, and Vault in the Supabase project, then add Vault secrets named `couponly_project_url` and `couponly_service_role_key`. The migration schedules daily cleanup at 23:00 UTC and receipt checks every 15 minutes when those extensions and Vault are available. Otherwise, call `couponly-maintenance` from a trusted scheduler with `dailyMaintenance` or `processNotificationReceipts` and a service-role bearer token.
+6. To run the scheduled cleanup and Expo receipt reconciliation, enable `pg_cron`, `pg_net`, and Vault in the Supabase project, then add Vault secrets named `couponly_project_url` and `couponly_service_role_key`. The migration schedules daily cleanup at 23:00 UTC and receipt checks every 15 minutes when those extensions and Vault are available. Otherwise, call `kouponly-maintenance` from a trusted scheduler with `dailyMaintenance` or `processNotificationReceipts` and a service-role bearer token.
 
 Only public Supabase keys belong in either app. The service role key belongs in Edge Function secrets and Vault; never put it in a Vite or Expo environment file.
 
-The installed Supabase CLI in this workspace is older than some fields in the existing `supabase/config.toml`; its local status command currently rejects those fields. Use the SQL editor for the migration or update the CLI/config pairing before using local Supabase commands. The hosted project has not been migrated and the Edge Functions have not been deployed by this change. Firebase records are not imported automatically; map legacy Auth users to Supabase UUIDs before importing foreign-keyed data.
+Use a Supabase CLI version compatible with `supabase/config.toml`. Verify the linked project before running `supabase db push`; a dry run shows pending migrations. Firebase records are not imported automatically; map legacy Auth users to Supabase UUIDs before importing foreign-keyed data.
+
+Run `npm run check`, `npm run build`, `node scripts/check-vendor-bridge.cjs`, `node scripts/check-image-lifecycle.cjs`, and `node scripts/check-subscription-lifecycle.cjs` to verify admin changes.

@@ -1,0 +1,41 @@
+-- Cover foreign-key lookups during joins and account/vendor deletion.
+set lock_timeout = '5s';
+create index if not exists "couponly_admin_audit_log_actor_id_idx" on public."couponly_admin_audit_log" ("actor_id");
+create index if not exists "couponly_featured_brands_vendor_id_idx" on public."couponly_featured_brands" ("vendor_id");
+create index if not exists "couponly_notification_deliveries_token_id_idx" on public."couponly_notification_deliveries" ("token_id");
+create index if not exists "couponly_notifications_recipient_id_idx" on public."couponly_notifications" ("recipient_id");
+create index if not exists "couponly_notifications_sent_by_idx" on public."couponly_notifications" ("sent_by");
+create index if not exists "couponly_onboarding_analytics_student_id_idx" on public."couponly_onboarding_analytics" ("student_id");
+create index if not exists "couponly_opportunities_category_id_idx" on public."couponly_opportunities" ("category_id");
+create index if not exists "couponly_opportunity_action_requests_opportunity_id_idx" on public."couponly_opportunity_action_requests" ("opportunity_id");
+create index if not exists "couponly_opportunity_analytics_opportunity_id_idx" on public."couponly_opportunity_analytics" ("opportunity_id");
+create index if not exists "couponly_opportunity_analytics_student_id_idx" on public."couponly_opportunity_analytics" ("student_id");
+create index if not exists "couponly_push_tokens_user_id_idx" on public."couponly_push_tokens" ("user_id");
+create index if not exists "couponly_students_university_id_idx" on public."couponly_students" ("university_id");
+create index if not exists "couponly_transactions_creator_uid_idx" on public."couponly_transactions" ("creator_uid");
+create index if not exists "couponly_transactions_offer_id_idx" on public."couponly_transactions" ("offer_id");
+create index if not exists "couponly_trending_offer_banners_offer_id_idx" on public."couponly_trending_offer_banners" ("offer_id");
+create index if not exists "couponly_user_roles_vendor_idx" on public."couponly_user_roles" ("vendor_id");
+create index if not exists "couponly_vendor_memberships_vendor_id_idx" on public."couponly_vendor_memberships" ("vendor_id");
+create index if not exists "couponly_verification_requests_reviewed_by_idx" on public."couponly_verification_requests" ("reviewed_by");
+create index if not exists "couponly_verification_requests_student_id_idx" on public."couponly_verification_requests" ("student_id");
+create index if not exists "kouponly_billing_events_user_id_idx" on public."kouponly_billing_events" ("user_id");
+create index if not exists "kouponly_coupon_rounds_period_id_user_id_idx" on public."kouponly_coupon_rounds" ("period_id", "user_id");
+create index if not exists "kouponly_coupon_rounds_reward_grant_id_period_id_user_id_idx" on public."kouponly_coupon_rounds" ("reward_grant_id", "period_id", "user_id");
+create index if not exists "kouponly_coupon_rounds_user_id_idx" on public."kouponly_coupon_rounds" ("user_id");
+create index if not exists "kouponly_redemption_round_idx" on public."redemptions" ("round_id", "period_id", "user_id");
+create index if not exists "kouponly_reward_grants_period_id_user_id_idx" on public."kouponly_reward_grants" ("period_id", "user_id");
+create index if not exists "kouponly_reward_grants_user_id_idx" on public."kouponly_reward_grants" ("user_id");
+create index if not exists "kouponly_subscription_periods_subscription_id_user_id_idx" on public."kouponly_subscription_periods" ("subscription_id", "user_id");
+create index if not exists "kouponly_subscriptions_plan_id_idx" on public."kouponly_subscriptions" ("plan_id");
+create index if not exists "kouponly_subscriptions_user_id_idx" on public."kouponly_subscriptions" ("user_id");
+create index if not exists "kouponly_voucher_claims_period_id_user_id_idx" on public."kouponly_voucher_claims" ("period_id", "user_id");
+create index if not exists "kouponly_voucher_claims_user_id_idx" on public."kouponly_voucher_claims" ("user_id");
+create index if not exists "kouponly_vouchers_created_by_idx" on public."kouponly_vouchers" ("created_by");
+create index if not exists "referral_uses_inviter_user_id_idx" on public."referral_uses" ("inviter_user_id");
+create index if not exists "referral_uses_reward_grant_id_idx" on public."referral_uses" ("reward_grant_id");
+
+-- Trigger-only functions are invoked by PostgreSQL, never through the REST API.
+revoke execute on function public.handle_new_user() from public, anon, authenticated;
+revoke execute on function public.couponly_guard_student_account_state() from public, anon, authenticated;
+reset lock_timeout;

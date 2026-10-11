@@ -1,3 +1,5 @@
+import { Colors as BorderPalette } from '@/constants/Colors';
+import { useMotionPreferences } from '@/lib/theme';
 import { useQuery } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
@@ -10,6 +12,7 @@ import { logger } from '../../utils/logger';
 import { useAppTheme } from '../../context/AppThemeContext';
 import { useAppLocale } from '../../context/LocaleContext';
 import { homeQueryOptions } from '../../utils/homeQueries';
+import { useNearbyDistances } from '@/lib/nearby';
 import HomeSectionHeading from './HomeSectionHeading';
 import {
     HOME_CAROUSEL_GAP,
@@ -28,7 +31,9 @@ const OFFER_AUTO_SCROLL_MS = 4000;
 export default function TrendingOffers({ onVendorPress }: TrendingOffersProps) {
     const { t } = useTranslation();
     const { theme } = useAppTheme();
+    const { reduceMotion } = useMotionPreferences();
     const { isRTL } = useAppLocale();
+    const { distanceByVendor } = useNearbyDistances();
     const {
         data: vendors = [],
         error,
@@ -52,7 +57,7 @@ export default function TrendingOffers({ onVendorPress }: TrendingOffersProps) {
     }, [error]);
 
     useEffect(() => {
-        if (displayedVendors.length <= 1) {
+        if (reduceMotion || displayedVendors.length <= 1) {
             return;
         }
 
@@ -67,7 +72,7 @@ export default function TrendingOffers({ onVendorPress }: TrendingOffersProps) {
         }, OFFER_AUTO_SCROLL_MS);
 
         return () => clearInterval(interval);
-    }, [displayedVendors.length]);
+    }, [displayedVendors.length, reduceMotion]);
 
     useEffect(() => {
         if (!scrollViewRef.current || displayedVendors.length === 0) {
@@ -79,9 +84,9 @@ export default function TrendingOffers({ onVendorPress }: TrendingOffersProps) {
 
         scrollViewRef.current.scrollTo({
             x: safeIndex * offerScrollInterval,
-            animated: true,
+            animated: !reduceMotion,
         });
-    }, [currentIndex, displayedVendors.length, offerScrollInterval]);
+    }, [currentIndex, displayedVendors.length, offerScrollInterval, reduceMotion]);
 
     const handleScrollEnd = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
         if (displayedVendors.length <= 1) {
@@ -156,10 +161,12 @@ export default function TrendingOffers({ onVendorPress }: TrendingOffersProps) {
                             name={name}
                             imageUri={vendor.bannerImage || vendor.coverImage}
                             logoUri={vendor.vendorProfilePicture || vendor.profilePicture}
-                            distance={vendor.distance}
+                            distance={distanceByVendor.get(String(vendor.vendorId || vendor.id))?.label}
                             xcardEnabled={vendor.xcard}
                             distanceOnImage
                             overlapLogo
+                            badgeLabel={vendor.cardLabels?.[0] ?? vendor.cardLabel}
+                            borderColor={BorderPalette.border}
                             imageHeight={89.2}
                             logoBottom={-35.6}
                             titleCaseName
@@ -169,7 +176,7 @@ export default function TrendingOffers({ onVendorPress }: TrendingOffersProps) {
                             style={{
                                 width: offerCardWidth,
                                 borderWidth: 1,
-                                borderColor: theme.border,
+                                borderColor: BorderPalette.border,
                                 borderRadius: 20,
                                 overflow: 'hidden',
                             }}

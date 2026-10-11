@@ -67,7 +67,7 @@ function makeVendorLogo(name: string): File {
         Chicking: '#e31837', Cinepolis: '#003da5', Nykaa: '#fc2779', Decathlon: '#0072ce', Westside: '#302c2b',
     } as Record<string, string>)[name] || '#17894f'
     const fontSize = name.length > 13 ? 28 : name.length > 9 ? 34 : 40
-    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512"><rect width="512" height="512" rx="72" fill="${color}"/><circle cx="256" cy="190" r="91" fill="#fff"/><text x="256" y="217" text-anchor="middle" font-family="Arial,sans-serif" font-size="76" font-weight="700" fill="${color}">${initials}</text><text x="256" y="353" text-anchor="middle" font-family="Arial,sans-serif" font-size="${fontSize}" font-weight="700" fill="#fff">${safeName}</text><text x="256" y="407" text-anchor="middle" font-family="Arial,sans-serif" font-size="17" letter-spacing="5" fill="#ffffffcc">KOUPONLY OFFER</text></svg>`
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512"><rect width="512" height="512" rx="72" fill="${color}"/><circle cx="256" cy="190" r="91" fill="#fff"/><text x="256" y="217" text-anchor="middle" font-family="Outfit,sans-serif" font-size="76" font-weight="700" fill="${color}">${initials}</text><text x="256" y="353" text-anchor="middle" font-family="Outfit,sans-serif" font-size="${fontSize}" font-weight="700" fill="#fff">${safeName}</text><text x="256" y="407" text-anchor="middle" font-family="Outfit,sans-serif" font-size="17" letter-spacing="5" fill="#ffffffcc">KOUPONLY OFFER</text></svg>`
     return new File([svg], `${name.toLowerCase().replace(/[^a-z0-9]+/g, '-')}-offer-logo.svg`, { type: 'image/svg+xml' })
 }
 
@@ -104,7 +104,8 @@ export function OffersSettings({ vendorId }: OffersSettingsProps) {
         if (editingIndex !== null) {
             const offers = vendor?.offers || []
             if (offers[editingIndex]) {
-                setFormData({ ...offers[editingIndex] })
+                const offer = offers[editingIndex]
+                setFormData({ ...offer, cardLabels: offer.cardLabels ?? (offer.cardLabel ? [offer.cardLabel] : []) })
             }
         }
     }, [editingIndex])
@@ -129,6 +130,7 @@ export function OffersSettings({ vendorId }: OffersSettingsProps) {
                 ...(data.discountType !== 'buy1get1' && { discountValue: data.discountValue || 0 }),
                 currency: data.currency || 'INR',
                 savingLabel: data.savingLabel?.trim(),
+                cardLabels: (data.cardLabels ?? (data.cardLabel ? [data.cardLabel] : [])).map(label => label.trim()).filter(Boolean).slice(0, 3),
                 offerValue: data.offerValue ?? data.discountValue ?? 0,
                 startsAt: data.startsAt || undefined,
                 endsAt: data.endsAt || undefined,
@@ -364,6 +366,29 @@ export function OffersSettings({ vendorId }: OffersSettingsProps) {
                             )}
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="space-y-3 md:col-span-2">
+                                <div>
+                                    <Label>Vendor card labels (up to 3)</Label>
+                                    <p className="mt-1 text-xs text-slate-500">Shown stacked on the Home screen’s All Vendors cards. The first label also appears in New Deals, Trending, search, and category listings.</p>
+                                </div>
+                                {[0, 1, 2].map(index => (
+                                    <div key={index} className="space-y-2">
+                                        <Label htmlFor={`cardLabel-${index}`}>Label {index + 1}</Label>
+                                        <Input
+                                            id={`cardLabel-${index}`}
+                                            value={formData.cardLabels?.[index] || ''}
+                                            onChange={e => setFormData(prev => {
+                                                const cardLabels = [...(prev.cardLabels ?? [])]
+                                                cardLabels[index] = e.target.value
+                                                return { ...prev, cardLabels }
+                                            })}
+                                            placeholder={index === 0 ? 'e.g. Student Combos' : 'Optional'}
+                                            maxLength={32}
+                                            className="bg-slate-50 h-11"
+                                        />
+                                    </div>
+                                ))}
+                            </div>
                             <div className="space-y-2">
                                 <Label htmlFor="savingLabel">Mobile offer label</Label>
                                 <Input id="savingLabel" value={formData.savingLabel || ''} onChange={e => setFormData(prev => ({ ...prev, savingLabel: e.target.value }))} placeholder="Save up to ₹480" className="bg-slate-50 h-11" />

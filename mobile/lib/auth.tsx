@@ -1,6 +1,6 @@
-import { isSchoolEmail, SCHOOL_EMAIL_MESSAGE } from './school-email';
+import { canCreateMobileAccount, isSchoolEmail, SCHOOL_EMAIL_MESSAGE } from './school-email';
 import * as Linking from 'expo-linking';
-import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import type { Session, User } from '@supabase/supabase-js';
 import type { EmailOtpType } from '@supabase/supabase-js';
 import { getSupabase, supabase, supabaseConfigured } from '@/lib/supabase';
@@ -91,6 +91,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(supabaseConfigured);
   const [recoveryMode, setRecoveryMode] = useState(false);
   const [studentStatus, setStudentStatus] = useState<'none' | 'checking' | 'student' | 'admin' | 'incomplete' | 'error'>('none');
+  const [accessOwner,setAccessOwner]=useState<string>();
+  const sessionOwner=useRef<string|undefined>(undefined);sessionOwner.current=session?.user.id;
+  const accessRequest=useRef(0);
 
   useEffect(() => {
     if (!supabase) {
@@ -98,8 +101,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return;
     }
     let active = true;
+    let authChanged=false;
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, nextSession) => {
       if (!active) return;
+      authChanged=true;
       setSession(nextSession);
       if (event === 'PASSWORD_RECOVERY') setRecoveryMode(true);
       if (event === 'SIGNED_OUT') setRecoveryMode(false);
@@ -117,7 +122,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           Linking.getInitialURL(),
         ]);
         if (!active) return;
-        setSession(data.session);
+        if(!authChanged)setSession(data.session);
         if (initialUrl) await handleAuthUrl(initialUrl, setRecoveryMode);
       } catch {
         // Keep the app usable in guest mode when Auth is temporarily unreachable.
@@ -137,24 +142,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const { data: { user: currentUser }, error: authErrorValue } = await getSupabase().auth.getUser();
     if (authErrorValue) throw authErrorValue;
     const uid = currentUser?.id;
-    if (!uid) return;
+    if (!uid || uid!==sessionOwner.current) return;
+    const request=++accessRequest.current;
     setStudentStatus('checking');
     try {
-      setStudentStatus(await accountAccess(uid));
+      const status=await accountAccess(uid);
+      if(uid===sessionOwner.current&&request===accessRequest.current){setAccessOwner(uid);setStudentStatus(status);}
     } catch (error) {
-      setStudentStatus('error');
+      if(uid===sessionOwner.current&&request===accessRequest.current)setStudentStatus('error');
       throw error;
     }
   }, []);
 
   useEffect(() => {
+    const request=++accessRequest.current;
     const uid = session?.user.id;
     if (!uid) { setStudentStatus('none'); return; }
     let active = true;
     setStudentStatus('checking');
     void accountAccess(uid)
-      .then(status => { if (active) setStudentStatus(status); })
-      .catch(() => { if (active) setStudentStatus('error'); });
+      .then(status => { if (active&&request===accessRequest.current){setAccessOwner(uid);setStudentStatus(status);} })
+      .catch(() => { if (active&&request===accessRequest.current)setStudentStatus('error'); });
     return () => { active = false; };
   }, [session?.user.id]);
 
@@ -166,7 +174,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const signUp = useCallback(async (name: string, email: string, password: string, referralCode?: string): Promise<AuthResult> => {
-    if (!isSchoolEmail(email)) return { error: SCHOOL_EMAIL_MESSAGE };
+    if (!canCreateMobileAccount(email)) return { error: SCHOOL_EMAIL_MESSAGE };
     try {
       const { data, error } = await getSupabase().auth.signUp({
         email: email.trim(),
@@ -221,7 +229,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } catch (error) { return { error: authError(error) }; }
   }, []);
 
-  const studentUser = (studentStatus === 'student' || studentStatus === 'admin') ? session?.user ?? null : null;
+  const studentUser = accessOwner===session?.user.id && (studentStatus === 'student' || studentStatus === 'admin') ? session?.user ?? null : null;
   const value = useMemo<AuthValue>(() => ({
     session,
     user: studentUser,

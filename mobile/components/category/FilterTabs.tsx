@@ -1,6 +1,9 @@
+import { Colors as BorderPalette } from '@/constants/Colors';
+import { useMotionPreferences } from '@/lib/theme';
+import ScalePressable from '@/components/ScalePressable';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { type ComponentProps, useEffect, useMemo } from 'react';
-import { StyleSheet, Text, TouchableOpacity, useWindowDimensions, View } from 'react-native';
+import { StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import Animated, { useSharedValue, useAnimatedStyle, withTiming, Easing } from 'react-native-reanimated';
 import { useTranslation } from 'react-i18next';
 import { Typography } from '../../constants/Typography';
@@ -22,6 +25,7 @@ interface FilterTabsProps {
 
 export default function FilterTabs({ selectedFilter, onFilterChange, filters }: FilterTabsProps) {
     const { t } = useTranslation();
+    const { reduceMotion } = useMotionPreferences();
     const { isDark, theme } = useAppTheme();
     const { isRTL } = useAppLocale();
     const { width } = useWindowDimensions();
@@ -45,14 +49,14 @@ export default function FilterTabs({ selectedFilter, onFilterChange, filters }: 
 
         if (hasSelection) {
             translateX.value = withTiming(index * tabWidth, {
-                duration: 250,
-                easing: Easing.bezier(0.25, 0.1, 0.25, 1),
+                duration: reduceMotion ? 0 : 180,
+                easing: Easing.bezier(0.77, 0, 0.175, 1),
             });
             opacity.value = withTiming(1, { duration: 150 });
         } else {
             opacity.value = withTiming(0, { duration: 150 });
         }
-    }, [selectedFilter, currentFilters, tabWidth, translateX, opacity]);
+    }, [selectedFilter, currentFilters, tabWidth, translateX, opacity, reduceMotion]);
 
     const sliderStyle = useAnimatedStyle(() => ({
         transform: [{ translateX: translateX.value }],
@@ -68,7 +72,7 @@ export default function FilterTabs({ selectedFilter, onFilterChange, filters }: 
                 styles.container,
                 {
                     backgroundColor: isDark ? theme.cardMuted : theme.surface,
-                    borderColor: isDark ? theme.borderStrong : theme.border,
+                    borderColor: BorderPalette.border,
                 },
             ]}>
                 <Animated.View
@@ -77,7 +81,7 @@ export default function FilterTabs({ selectedFilter, onFilterChange, filters }: 
                         {
                             width: tabWidth,
                             backgroundColor: Colors.limeGreen,
-                            borderColor: isDark ? 'rgba(255,255,255,0.14)' : 'rgba(0,0,0,0.05)',
+                            borderColor: BorderPalette.border,
                         },
                         sliderStyle,
                     ]}
@@ -87,7 +91,7 @@ export default function FilterTabs({ selectedFilter, onFilterChange, filters }: 
                     const isSelected = selectedFilter === filter.id;
 
                     return (
-                        <TouchableOpacity
+                        <ScalePressable
                             key={filter.id}
                             style={[styles.filterButton, { width: tabWidth }]}
                             onPress={() => onFilterChange(filter.id)}
@@ -101,7 +105,7 @@ export default function FilterTabs({ selectedFilter, onFilterChange, filters }: 
                             <Text style={[styles.filterText, { color: isSelected ? selectedColor : inactiveColor, marginTop: isRTL ? -2 : 0 }]}>
                                 {filter.label}
                             </Text>
-                        </TouchableOpacity>
+                        </ScalePressable>
                     );
                 })}
             </View>

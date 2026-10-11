@@ -1,9 +1,12 @@
+import { Colors as BorderPalette } from '@/constants/Colors';
+import { useMotionPreferences } from '@/lib/theme';
+import ScalePressable from '@/components/ScalePressable';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Image } from 'expo-image';
 import { StatusBar } from 'expo-status-bar';
 import type { ComponentProps } from 'react';
 import { useEffect, useState } from 'react';
-import { StyleSheet, Text, TouchableOpacity, useWindowDimensions, View } from 'react-native';
+import { StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import Animated, {
   Easing,
   interpolateColor,
@@ -11,7 +14,6 @@ import Animated, {
   type SharedValue,
   useAnimatedReaction,
   useAnimatedStyle,
-  useReducedMotion,
   useSharedValue,
   withDelay,
   withSequence,
@@ -78,7 +80,7 @@ export default function RewardSuccessScreen({
 }: RewardSuccessScreenProps) {
   const { theme } = useAppTheme();
   const safeArea = useSafeAreaInsets();
-  const prefersReducedMotion = useReducedMotion();
+  const { reduceMotion: prefersReducedMotion } = useMotionPreferences();
   const { width: screenWidth, height: screenHeight } = useWindowDimensions();
   const [animatedDiscountPercent, setAnimatedDiscountPercent] = useState(0);
 
@@ -92,8 +94,8 @@ export default function RewardSuccessScreen({
   const rowProgress = useSharedValue(0);
 
   const shouldAnimateBadgeCount = animateBadgeCountUp && typeof badgeFinalPercent === 'number' && badgeFinalPercent > 0;
-  const discountBadgeAnimationDelay = 420;
-  const discountBadgeAnimationDuration = 720;
+  const discountBadgeAnimationDelay = 80;
+  const discountBadgeAnimationDuration = 240;
 
   useEffect(() => {
     if (prefersReducedMotion) {
@@ -110,8 +112,8 @@ export default function RewardSuccessScreen({
     }
 
     heroProgress.value = withTiming(1, { duration: 260, easing: Easing.out(Easing.cubic) });
-    mascotProgress.value = withDelay(140, withSpring(1, { damping: 12, stiffness: 190, mass: 0.8 }));
-    discountProgress.value = withDelay(420, withSpring(1, { damping: 14, stiffness: 180, mass: 0.9 }));
+    mascotProgress.value = withDelay(40, withTiming(1, { duration: 220, easing: Easing.bezier(0.23, 1, 0.32, 1) }));
+    discountProgress.value = withDelay(80, withTiming(1, { duration: 220, easing: Easing.bezier(0.23, 1, 0.32, 1) }));
 
     if (shouldAnimateBadgeCount) {
       discountCounterProgress.value = 0;
@@ -119,7 +121,7 @@ export default function RewardSuccessScreen({
       discountScaleProgress.value = withDelay(
         discountBadgeAnimationDelay + discountBadgeAnimationDuration + 20,
         withSequence(
-          withTiming(1.08, { duration: 100, easing: Easing.out(Easing.quad) }),
+          withTiming(1.02, { duration: 100, easing: Easing.out(Easing.quad) }),
           withSpring(1, { damping: 14, stiffness: 240, mass: 0.8 })
         )
       );
@@ -145,12 +147,12 @@ export default function RewardSuccessScreen({
       setAnimatedDiscountPercent(badgeFinalPercent ?? 0);
     }
 
-    receiptProgress.value = withDelay(520, withTiming(1, { duration: 320, easing: Easing.out(Easing.quad) }));
+    receiptProgress.value = withDelay(120, withTiming(1, { duration: 240, easing: Easing.out(Easing.quad) }));
     rowProgress.value = 0;
     rowProgress.value = withDelay(
-      740,
+      160,
       withTiming(rows.length, {
-        duration: Math.max(rows.length, 1) * 170,
+        duration: 180,
         easing: Easing.out(Easing.cubic),
       })
     );
@@ -170,9 +172,9 @@ export default function RewardSuccessScreen({
   ]);
 
   useAnimatedReaction(
-    () => discountCounterProgress.value,
-    (value) => {
-      if (!shouldAnimateBadgeCount) {
+    () => Math.round(discountCounterProgress.value),
+    (value, previous) => {
+      if (!shouldAnimateBadgeCount || value === previous) {
         return;
       }
       runOnJS(setAnimatedDiscountPercent)(Math.round(value));
@@ -192,7 +194,7 @@ export default function RewardSuccessScreen({
     opacity: mascotProgress.value,
     transform: [
       { translateY: (1 - mascotProgress.value) * 8 },
-      { scale: 0.6 + mascotProgress.value * 0.4 },
+      { scale: 0.96 + mascotProgress.value * 0.04 },
     ],
   }));
 
@@ -209,7 +211,7 @@ export default function RewardSuccessScreen({
 
   const receiptStyle = useAnimatedStyle(() => ({
     opacity: receiptProgress.value,
-    transform: [{ translateY: (1 - receiptProgress.value) * 20 }],
+    transform: [{ translateY: (1 - receiptProgress.value) * 8 }],
   }));
 
   const successTopOffset = safeArea.top + 12;
@@ -221,7 +223,7 @@ export default function RewardSuccessScreen({
     <SafeAreaView style={[styles.container, { backgroundColor: theme.brand }]}>
       <StatusBar style="dark" />
 
-      <TouchableOpacity
+      <ScalePressable
         style={[
           styles.headerButton,
           { backgroundColor: theme.logoTile, top: successTopOffset },
@@ -233,7 +235,7 @@ export default function RewardSuccessScreen({
         }}
       >
         <Ionicons name="close" size={22} color={theme.logoTileText} />
-      </TouchableOpacity>
+      </ScalePressable>
 
       <Animated.View
         style={[
@@ -271,7 +273,7 @@ export default function RewardSuccessScreen({
         </View>
 
         <Animated.View style={[styles.receiptContainer, receiptStyle]}>
-          <View style={[styles.receiptCard, { backgroundColor: '#FFFFFF', borderColor: '#E6EDE6' }]}>
+          <View style={[styles.receiptCard, { backgroundColor: '#FFFFFF', borderColor: BorderPalette.border }]}>
             <View pointerEvents="none" style={styles.receiptPerforation}>
               {receiptPerforationDots.map((dot) => (
                 <View key={dot} style={styles.receiptPerforationDot} />
@@ -313,7 +315,7 @@ export default function RewardSuccessScreen({
             ) : null}
 
             <View style={styles.primaryButtonWrap}>
-              <TouchableOpacity
+              <ScalePressable
                 accessibilityRole="button"
                 onPress={() => {
                   triggerSubtleHaptic();
@@ -323,7 +325,7 @@ export default function RewardSuccessScreen({
               >
                 <Ionicons name="checkmark" size={18} color="#0A0F0C" style={isRTL ? styles.primaryButtonIconRTL : styles.primaryButtonIcon} />
                 <Text style={styles.primaryButtonText}>{primaryActionLabel}</Text>
-              </TouchableOpacity>
+              </ScalePressable>
             </View>
           </View>
         </Animated.View>

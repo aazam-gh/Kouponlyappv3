@@ -1,12 +1,11 @@
-import { initialState, makeCode, mergeCloudState, migrateState, reducer, remainingSeconds, replaceWithCloudState } from "../lib/store";
-describe("prototype persistence and redemption",()=>{
+import { initialState, migrateState, reducer, remainingSeconds, replaceWithCloudState } from "../lib/store";
+describe("persistence and redemption",()=>{
   it("migrates original state",()=>{const value=migrateState({saved:[1,2],used:[3]});expect(value.version).toBe(3);expect(value.saved).toEqual([1,2]);expect(value.savedOffers).toEqual([]);expect(value.points).toBe(0)});
   it("toggles saved state",()=>{const value=reducer(initialState,{type:"toggleSaved",id:1});expect(value.saved).toContain(1);expect(reducer(value,{type:"toggleSaved",id:1}).saved).not.toContain(1)});
   it("consumes an in-store offer when the user confirms redemption",()=>{const value=reducer(initialState,{type:"startRedemption",session:{id:"deal-4-0",mode:"inStore",status:"warning"}});const confirmed=reducer(value,{type:"updateRedemption",id:"deal-4-0",patch:{status:"success",consumedAt:Date.now()}});expect(confirmed.used).toContain(4);expect(confirmed.offerUsage["4-0"]).toBe(1)});
   it("consumes an online offer at confirmation, before checkout completion",()=>{const started=reducer(initialState,{type:"startRedemption",session:{id:"deal-2-1",mode:"online",status:"warning"}});const confirmed=reducer(started,{type:"updateRedemption",id:"deal-2-1",patch:{status:"code",code:"KPN-02-1234",expiresAt:Date.now()+600000,consumedAt:Date.now()}});expect(confirmed.used).toContain(2);expect(confirmed.offerUsage["2-1"]).toBe(1);const completed=reducer(confirmed,{type:"updateRedemption",id:"deal-2-1",patch:{status:"success"}});expect(completed.offerUsage["2-1"]).toBe(1);expect(completed.redemptions["deal-2-1"].code).toBe("KPN-02-1234")});
   it("persists individual saved offers",()=>{const saved=reducer(initialState,{type:"toggleSavedOffer",id:"2-0"});expect(saved.savedOffers).toContain("2-0")});
-  it("generates codes and handles expiry",()=>{expect(makeCode("deal-2")).toMatch(/^KPN-02-\d{4}$/);expect(remainingSeconds(5000,0)).toBe(5);expect(remainingSeconds(Date.now()-1)).toBe(0)});
+  it("handles expiry",()=>{expect(remainingSeconds(5000,0)).toBe(5);expect(remainingSeconds(Date.now()-1)).toBe(0)});
   it("deducts reward points once",()=>{const value=reducer({...initialState,points:680},{type:"redeemReward",id:"coffee",points:200});expect(value.points).toBe(480);expect(reducer(value,{type:"redeemReward",id:"coffee",points:200})).toEqual(value)});
-  it("merges cloud state without removing locally saved data",()=>{const value=mergeCloudState({...initialState,saved:[2]},{saved:[4],savedOffers:["4-0"],points:420});expect(value.saved).toEqual(expect.arrayContaining([2,4]));expect(value.savedOffers).toContain("4-0");expect(value.points).toBe(420)});
   it("replaces guest data when an authenticated cloud account loads",()=>{const value=replaceWithCloudState({saved:[4],points:420});expect(value.saved).toEqual([4]);expect(value.saved).not.toContain(2);expect(value.points).toBe(420);expect(value.savedOffers).toEqual([])});
 });

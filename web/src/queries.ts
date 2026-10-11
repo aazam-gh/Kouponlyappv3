@@ -13,6 +13,8 @@ export interface EmbeddedOffer {
     discountValue?: number
     currency?: string
     savingLabel?: string
+    cardLabel?: string
+    cardLabels?: string[]
     offerValue?: number
     startsAt?: string
     endsAt?: string

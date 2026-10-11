@@ -1,6 +1,7 @@
+import ScalePressable from '@/components/ScalePressable';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
-import { KeyboardAvoidingView, Platform, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, ScrollView, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AppHeader from '../components/navigation/AppHeader';
 import { Typography } from '../constants/Typography';
@@ -35,13 +36,13 @@ export default function EnterCodeScreen() {
       <AppHeader title="Enter a code" onBackPress={() => router.canGoBack() ? router.back() : router.replace('/realx/profile' as any)} />
       <View style={{ padding: 24, gap: 16 }}>
         <Text style={{ color: theme.mutedText, lineHeight: 23 }}>Enter a friend’s five-character invite code. This refreshes their coupons for this month, up to three times total. Each account can use one friend’s code.</Text>
-        <TextInput accessibilityLabel="Friend’s invite code" value={code} editable={!busy} onChangeText={text => { setCode(text.toUpperCase()); setError(''); setSuccess(''); }} placeholder="Friend’s invite code" placeholderTextColor={theme.subtleText} autoCapitalize="characters" autoCorrect={false} maxLength={5} returnKeyType="done" onSubmitEditing={() => void submit()} style={{ minHeight: 56, borderWidth: 1, borderColor: theme.border, borderRadius: 16, padding: 16, color: theme.text, fontFamily: 'Poppins' }} />
+        <TextInput accessibilityLabel="Friend’s invite code" value={code} editable={!busy} onChangeText={text => { setCode(text.toUpperCase()); setError(''); setSuccess(''); }} placeholder="Friend’s invite code" placeholderTextColor={theme.subtleText} autoCapitalize="characters" autoCorrect={false} maxLength={5} returnKeyType="done" onSubmitEditing={() => void submit()} style={{ minHeight: 56, borderWidth: 1, borderColor: theme.border, borderRadius: 16, padding: 16, color: theme.text, fontFamily: 'Outfit_400Regular' }} />
         {error ? <Text selectable accessibilityRole="alert" style={{ color: theme.danger }}>{error}</Text> : null}
         {success ? <Text selectable accessibilityLiveRegion="polite" style={{ color: theme.brandText }}>{success}</Text> : null}
-        <TouchableOpacity accessibilityRole="button" disabled={busy || !code.trim()} onPress={() => void submit()} style={{ minHeight: 54, borderRadius: 27, alignItems: 'center', justifyContent: 'center', backgroundColor: theme.actionSolid, opacity: busy || !code.trim() ? 0.45 : 1 }}>
+        <ScalePressable accessibilityRole="button" disabled={busy || !code.trim()} onPress={() => void submit()} style={{ minHeight: 54, borderRadius: 27, alignItems: 'center', justifyContent: 'center', backgroundColor: theme.actionSolid, opacity: busy || !code.trim() ? 0.45 : 1 }}>
           <Text style={{ color: theme.buttonText, ...Typography.getTextVariantStyle('bodyStrong') }}>{busy ? 'Applying code…' : user ? 'Apply code' : 'Sign in to apply code'}</Text>
-        </TouchableOpacity>
-        {success ? <TouchableOpacity accessibilityRole="button" onPress={() => router.canGoBack() ? router.back() : router.replace('/realx/profile' as any)} style={{ minHeight: 44, alignItems: 'center', justifyContent: 'center' }}><Text style={{ color: theme.text }}>Done</Text></TouchableOpacity> : null}
+        </ScalePressable>
+        {success ? <ScalePressable accessibilityRole="button" onPress={() => router.canGoBack() ? router.back() : router.replace('/realx/profile' as any)} style={{ minHeight: 44, alignItems: 'center', justifyContent: 'center' }}><Text style={{ color: theme.text }}>Done</Text></ScalePressable> : null}
       </View>
     </ScrollView>
   </KeyboardAvoidingView>;

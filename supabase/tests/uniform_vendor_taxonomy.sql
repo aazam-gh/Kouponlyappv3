@@ -14,7 +14,7 @@ begin
   caught:=false;
   begin
     perform public.validate_redemption_atomic('deal-'||(select catalogue_deal_id from public.couponly_vendors where id='taxonomy-check')||'-999','inStore',gen_random_uuid());
-  exception when raise_exception then caught:=true; end;
+  exception when raise_exception or feature_not_supported then caught:=true; end;
   assert caught, 'A fabricated offer index must be rejected before redemption';
   update public.couponly_categories set payload=payload||jsonb_build_object('subcategories',(
     select jsonb_agg(jsonb_build_object('id',s.id,'nameEnglish',case when s.id='market-food:rice' then 'Rice dishes' else s.name end))

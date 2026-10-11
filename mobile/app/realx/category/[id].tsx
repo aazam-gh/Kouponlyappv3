@@ -10,6 +10,7 @@ import { CatalogueNotice, useCatalogue } from '@/lib/catalogue';
 import { categories, deals, type Deal } from '@/lib/data';
 import { useAppTheme } from '@/context/AppThemeContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useNearbyDistances } from '@/lib/nearby';
 
 export default function RealXCategoryScreen() {
   const { id, name, englishName } = useLocalSearchParams<{ id: string; name?: string; englishName?: string }>();
@@ -18,6 +19,7 @@ export default function RealXCategoryScreen() {
   const { width } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const { status, revision, refresh } = useCatalogue();
+  const { distanceByVendor } = useNearbyDistances();
   const [filter, setFilter] = React.useState('all');
   const [subcategory, setSubcategory] = React.useState('all');
   const [input, setInput] = React.useState('');
@@ -38,10 +40,12 @@ export default function RealXCategoryScreen() {
       const text = `${deal.name} ${deal.category} ${deal.offer} ${deal.description} ${deal.place}`.toLocaleLowerCase();
       return terms.every(term => text.includes(term));
     });
-    if (filter === 'nearest') return matching.sort((a, b) => (a.distanceKm || Infinity) - (b.distanceKm || Infinity));
+    if (filter === 'nearest') return matching.sort((a, b) =>
+      (distanceByVendor.get(String(a.vendorId || a.id))?.distanceKm ?? Infinity)
+      - (distanceByVendor.get(String(b.vendorId || b.id))?.distanceKm ?? Infinity));
     if (filter === 'top') return matching.sort((a, b) => b.trend - a.trend);
     return matching;
-  }, [category?.id, filter, query, revision, subcategory]);
+  }, [category?.id, distanceByVendor, filter, query, revision, subcategory]);
   const cardWidth = width - 40;
   const submitSearch = () => { setQuery(input.trim()); setSubcategory('all'); Keyboard.dismiss(); };
 
@@ -68,8 +72,9 @@ export default function RealXCategoryScreen() {
         logoUri={item.logo}
         imageHeight={Math.round(cardWidth * 0.38)}
         logoBottom={-35.6}
-        distance={item.distanceKm > 0 ? item.distance : undefined}
+        distance={distanceByVendor.get(String(item.vendorId || item.id))?.label}
         xcardEnabled={item.xcard}
+        badgeLabel={item.cardLabels?.[0] ?? item.cardLabel}
         distanceOnImage
         overlapLogo
         titleCaseName

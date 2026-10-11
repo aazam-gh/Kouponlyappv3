@@ -1,3 +1,4 @@
+import { useMotionPreferences } from '@/lib/theme';
 import { Image } from 'expo-image';
 import { Modal, StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
@@ -6,7 +7,6 @@ import Animated, {
   Easing,
   cancelAnimation,
   useAnimatedStyle,
-  useReducedMotion,
   useSharedValue,
   withRepeat,
   withSequence,
@@ -33,7 +33,7 @@ export default function TransactionLoadingOverlay({
   label,
 }: TransactionLoadingOverlayProps) {
   const { t } = useTranslation();
-  const reduceMotion = useReducedMotion();
+  const { reduceMotion } = useMotionPreferences();
   const resolvedLabel = label || t('transaction_processing');
   const circleScale = useSharedValue(1);
   const contentOpacity = useSharedValue(0);
@@ -51,7 +51,7 @@ export default function TransactionLoadingOverlay({
     }
 
     contentOpacity.value = withTiming(1, { duration: 120 });
-    contentScale.value = withTiming(1, {
+    contentScale.value = reduceMotion ? 1 : withTiming(1, {
       duration: 160,
       easing: Easing.out(Easing.cubic),
     });
@@ -83,7 +83,7 @@ export default function TransactionLoadingOverlay({
 
   const contentStyle = useAnimatedStyle(() => ({
     opacity: contentOpacity.value,
-    transform: [{ scale: contentScale.value }],
+    transform: [{ scale: reduceMotion ? 1 : contentScale.value }],
   }));
 
   return (
@@ -109,7 +109,7 @@ export default function TransactionLoadingOverlay({
               source={transactionLoaderSource}
               style={styles.loader}
               contentFit="contain"
-              autoplay
+              autoplay={!reduceMotion}
               cachePolicy="memory-disk"
             />
           </View>

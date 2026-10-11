@@ -1,9 +1,11 @@
+import { Colors as BorderPalette } from '@/constants/Colors';
+import ScalePressable from '@/components/ScalePressable';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useIsFocused, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Alert, Linking, Platform, ScrollView, StatusBar as NativeStatusBar, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, Linking, Platform, ScrollView, StatusBar as NativeStatusBar, StyleSheet, Text, View } from 'react-native';
 
 import { Typography } from '../../constants/Typography';
 import AppText from '../../components/AppText';
@@ -17,6 +19,7 @@ import { useProfile } from '../../lib/profile';
 import { getSupabase } from '../../lib/supabase';
 import { useAppLocale } from '../../context/LocaleContext';
 import { useTabBarScrollVisibility } from '../../components/TabBarScrollVisibility';
+import ProfileSprites from '@/components/profile/ProfileSprites';
 
 export default function ProfileScreen() {
   const router = useRouter();
@@ -40,10 +43,10 @@ export default function ProfileScreen() {
   } : null;
   useEffect(() => {
     let active = true;
-    if (user) void getSupabase().from('realx_students').select('savings').eq('id', user.id).maybeSingle()
-      .then(({ data }) => { if (active) setSavings(Number(data?.savings) || 0); });
+    if (user) void getSupabase().rpc('kouponly_my_savings')
+      .then(({ data, error }) => { if (active && !error) setSavings(Number(data) || 0); });
     return () => { active = false; };
-  }, [user?.id]);
+  }, [user?.id, isFocused]);
   const tabBarScrollVisibility = useTabBarScrollVisibility();
   const savedAmount = userData?.savings ?? 0;
   const savingsAmount = Number.isInteger(savedAmount) ? savedAmount.toFixed(0) : savedAmount.toFixed(2);
@@ -77,6 +80,7 @@ export default function ProfileScreen() {
   if (isGuest) {
     return (
       <View style={[styles.container, { backgroundColor: theme.background }]}>
+        <ProfileSprites />
         {isFocused ? <StatusBar style={isDark ? 'light' : 'dark'} animated /> : null}
         <ScrollView
           contentInsetAdjustmentBehavior="automatic"
@@ -106,20 +110,20 @@ export default function ProfileScreen() {
                 {t('guest_profile_body')}
               </Text>
               <View style={[styles.guestProfileActions, isRTL && styles.guestProfileActionsRTL]}>
-                <TouchableOpacity
+                <ScalePressable
                   style={[styles.guestPrimaryAction, { backgroundColor: theme.actionSolid }]}
                   onPress={() => { void endGuestSession().finally(() => router.push({ pathname: '/realx/onboarding', params: { flow: 'login' } } as any)); }}
                   activeOpacity={0.85}
                 >
                   <Text style={[styles.guestPrimaryActionText, { color: theme.onActionSolid }]}>{t('onboarding_login_action')}</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.guestSecondaryAction, { borderColor: theme.border }]}
+                </ScalePressable>
+                <ScalePressable
+                  style={[styles.guestSecondaryAction, { borderColor: BorderPalette.border }]}
                   onPress={() => { void endGuestSession().finally(() => router.push('/realx/welcome' as any)); }}
                   activeOpacity={0.85}
                 >
                   <Text style={[styles.guestSecondaryActionText, { color: theme.text }]}>{t('onboarding_sign_up')}</Text>
-                </TouchableOpacity>
+                </ScalePressable>
               </View>
             </View>
           </View>
@@ -151,6 +155,7 @@ export default function ProfileScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
+      <ProfileSprites />
       {isFocused ? <StatusBar style={isDark ? 'light' : 'dark'} animated /> : null}
       <ScrollView
         contentInsetAdjustmentBehavior="automatic"
@@ -158,9 +163,9 @@ export default function ProfileScreen() {
         contentContainerStyle={[styles.scrollContent, { paddingTop: 14 + androidTopInset }]}
         {...tabBarScrollVisibility}
       >
-        <View style={[styles.savingsCard, { backgroundColor: theme.surfaceElevated }]}>
+        <View style={styles.savingsCard}>
           <View style={[styles.profileSavingsRow, isRTL && styles.profileSavingsRowRTL]}>
-              <View style={[styles.savingsDetails, { borderColor: theme.border }, isRTL && styles.savingsDetailsRTL]}>
+              <View style={[styles.savingsDetails, { borderColor: BorderPalette.border }, isRTL && styles.savingsDetailsRTL]}>
                 <View style={[styles.savingsInline, isRTL && styles.savingsInlineRTL]}>
                   <ResponsiveText style={[styles.savingsValueText, { color: theme.brandText }]} minimumFontScale={0.7}>
                     {formattedSavingsAmount}
@@ -170,7 +175,7 @@ export default function ProfileScreen() {
                   </ResponsiveText>
                 </View>
             </View>
-            <TouchableOpacity
+            <ScalePressable
               style={styles.profileAvatarButton}
               onPress={() => router.push('/profile-details')}
               activeOpacity={0.8}
@@ -184,14 +189,20 @@ export default function ProfileScreen() {
                 photoURL={userData?.photoURL || avatarUrl}
                 role={userData?.role}
                 seed={user?.id}
-                size={60}
+                size={56}
               />
-            </TouchableOpacity>
+            </ScalePressable>
           </View>
         </View>
 
         <InviteCodePill />
         <View style={styles.menuContainer}>
+          <MenuItem
+            icon="person-outline"
+            label={t('profile')}
+            onPress={() => router.push('/profile-details')}
+            isRTL={isRTL}
+          />
           {isAdmin ? <MenuItem icon="settings-outline" label="MVP activity" onPress={() => router.push('/subscription/admin' as any)} isRTL={isRTL} /> : null}
           <MenuItem
             icon="bookmark-outline"
@@ -223,8 +234,8 @@ export default function ProfileScreen() {
             onPress={() => router.push('/privacy')}
             isRTL={isRTL}
           />
-          <TouchableOpacity
-            style={[styles.logoutPill, { backgroundColor: isDark ? 'rgba(255,107,95,0.12)' : '#FFF1F0', borderColor: theme.danger }]}
+          <ScalePressable
+            style={[styles.logoutPill, { backgroundColor: isDark ? 'rgba(255,107,95,0.12)' : '#FFF1F0', borderColor: BorderPalette.border }]}
             onPress={handleLogout}
             activeOpacity={0.7}
           >
@@ -232,7 +243,7 @@ export default function ProfileScreen() {
               <Ionicons name="log-out-outline" size={20} color={theme.danger} />
               <AppText style={[styles.logoutText, { color: theme.danger, textAlign: isRTL ? 'right' : 'left' }]}>{t('log_out').toUpperCase()}</AppText>
             </View>
-          </TouchableOpacity>
+          </ScalePressable>
         </View>
       </ScrollView>
     </View>
@@ -259,10 +270,11 @@ function MenuItem({
   const { theme } = useAppTheme();
 
   return (
-    <TouchableOpacity
+    <ScalePressable
+      pressedScale={1}
       style={[
         styles.menuItem,
-        { backgroundColor: bgColor || theme.cardMuted },
+        { backgroundColor: bgColor || theme.cardMuted, borderColor: BorderPalette.border },
       ]}
       activeOpacity={0.7}
       onPress={onPress}
@@ -280,7 +292,7 @@ function MenuItem({
           {label}
         </Text>
       </View>
-    </TouchableOpacity>
+    </ScalePressable>
   );
 }
 
@@ -295,11 +307,15 @@ const styles = StyleSheet.create({
   },
   topPill: {
     borderRadius: 30,
+    borderWidth: 1,
+    borderColor: BorderPalette.border,
     padding: 16,
     marginBottom: 16,
   },
   bottomPill: {
     borderRadius: 30,
+    borderWidth: 1,
+    borderColor: BorderPalette.border,
     paddingVertical: 24,
     paddingHorizontal: 8,
     marginBottom: 16,
@@ -320,9 +336,8 @@ const styles = StyleSheet.create({
   savingsDetails: {
     flex: 1,
     minWidth: 0,
-    minHeight: 0,
-    borderWidth: 2,
-    borderRadius: 20,
+    borderWidth: 1,
+    borderRadius: 30,
     paddingHorizontal: 12,
     paddingVertical: 8,
     height: 60,
@@ -334,12 +349,21 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   profileAvatarButton: {
+    width: 60,
+    height: 60,
     borderRadius: 30,
+    borderWidth: 1,
+    borderColor: BorderPalette.border,
+    padding: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   badge: {
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderRadius: 30,
+    borderWidth: 1,
+    borderColor: BorderPalette.border,
   },
   badgeText: {
     color: '#FFFFFF',
@@ -374,6 +398,8 @@ const styles = StyleSheet.create({
     flex: 1,
     minHeight: 46,
     borderRadius: 23,
+    borderWidth: 1,
+    borderColor: BorderPalette.border,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -394,8 +420,6 @@ const styles = StyleSheet.create({
     ...Typography.getTextVariantStyle('bodyStrong'),
   },
   savingsCard: {
-    borderRadius: 32,
-    padding: 0,
     marginBottom: 16,
   },
   savingsInline: {
@@ -423,6 +447,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 20,
     borderRadius: 24,
+    borderWidth: 1,
   },
   menuItemLeft: {
     flexDirection: 'row',
