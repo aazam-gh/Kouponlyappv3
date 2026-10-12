@@ -1,13 +1,11 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { useState } from 'react'
 import { httpsCallable } from 'firebase/functions'
-import { collection, getDocs, query, orderBy, limit } from 'firebase/firestore'
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query'
 import { Send, Loader2, Bell, ImageIcon } from 'lucide-react'
 import { toast } from 'sonner'
-import { format } from 'date-fns'
 import iconUrl from '@/assets/icon.png'
-import { functions, db } from '@/firebase/config'
+import { functions } from '@/firebase/config'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
@@ -43,20 +41,15 @@ function NotificationsPage() {
         topic: 'all-users',
     })
 
-    // Fetch notification history
-    const { data: notifications, isLoading } = useQuery({
+    const { data: notificationState, isLoading, error: historyError } = useQuery({
         queryKey: ['notifications'],
         queryFn: async () => {
-            const q = query(collection(db, 'notifications'), orderBy('sentAt', 'desc'), limit(10))
-            const snapshot = await getDocs(q)
-            return snapshot.docs.map((doc) => ({
-                id: doc.id,
-                ...doc.data(),
-            })) as NotificationRecord[]
+            const status = httpsCallable<unknown, { campaigns: NotificationRecord[]; registeredDevices: number }>(functions, 'notificationStatus')
+            return (await status({})).data
         },
-        staleTime: 1000 * 60 * 2,
         refetchInterval: 30_000,
     })
+    const notifications = notificationState?.campaigns
 
     // Send notification mutation
     const sendMutation = useMutation({
@@ -66,12 +59,20 @@ function NotificationsPage() {
             return result.data as {
                 success: boolean
                 campaignId: string
-                status: 'queued'
+                status: string
+                sentCount: number
+                failedCount: number
+                errors: string[]
             }
         },
-        onSuccess: () => {
+        onSuccess: (result) => {
             queryClient.invalidateQueries({ queryKey: ['notifications'] })
-            toast.success('Notification queued for delivery')
+            if (!result.success) {
+                toast.error('Push failed: ' + (result.errors?.join('; ') || 'No devices accepted the notification'))
+                return
+            }
+            toast.success(`Accepted for ${result.sentCount} device(s). Delivery confirmation is pending.`)
+            if (result.failedCount) toast.warning(`${result.failedCount} device(s) failed: ${result.errors.join('; ')}`)
             setForm({ title: '', body: '', imageUrl: defaultNotificationImageUrl, topic: 'all-users' })
         },
         onError: (error) => {
@@ -108,14 +109,16 @@ function NotificationsPage() {
                     <CardHeader>
                         <CardTitle>Compose Notification</CardTitle>
                         <CardDescription>
-                            Queue a push notification to all student app users. Maximum 2 per Qatar day.
+                            Send a push notification to registered student devices. Maximum 2 per Qatar day.
                         </CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-4">
+                        <p className="text-sm text-muted-foreground">{notificationState?.registeredDevices ?? '…'} registered device(s). Students must sign in and allow notifications.</p>
                         <div className="space-y-2">
                             <Label htmlFor="title">Title</Label>
                             <Input
                                 id="title"
+                                maxLength={100}
                                 placeholder="Notification title"
                                 value={form.title}
                                 onChange={(e) => setForm({ ...form, title: e.target.value })}
@@ -127,6 +130,7 @@ function NotificationsPage() {
                             <Label htmlFor="body">Body</Label>
                             <Textarea
                                 id="body"
+                                maxLength={500}
                                 placeholder="Notification message"
                                 value={form.body}
                                 onChange={(e) => setForm({ ...form, body: e.target.value })}
@@ -164,7 +168,7 @@ function NotificationsPage() {
                             ) : (
                                 <>
                                     <Send className="h-4 w-4" />
-                                    Queue Notification
+                                    Send Notification
                                 </>
                             )}
                         </Button>
@@ -222,8 +226,9 @@ function NotificationsPage() {
                                     <TableHead className="font-bold">Body</TableHead>
                                     <TableHead className="font-bold">Topic</TableHead>
                                     <TableHead className="font-bold">Status</TableHead>
-                                    <TableHead className="font-bold">Delivered</TableHead>
-                                    <TableHead className="font-bold">Queued At</TableHead>
+                                    <TableHead className="font-bold">Accepted / Devices</TableHead>
+                                    <TableHead className="font-bold">Confirmed / Failed</TableHead>
+                                    <TableHead className="font-bold">Sent At</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
@@ -236,6 +241,8 @@ function NotificationsPage() {
                                             </div>
                                         </TableCell>
                                     </TableRow>
+                                ) : historyError ? (
+                                    <TableRow><TableCell colSpan={7}>Could not load delivery status: {historyError.message}</TableCell></TableRow>
                                 ) : !notifications || notifications.length === 0 ? (
                                     <TableRow>
                                         <TableCell colSpan={7} className="text-center py-10 text-muted-foreground">
@@ -251,27 +258,23 @@ function NotificationsPage() {
                                             </TableCell>
                                             <TableCell>
                                                 <span className="inline-flex items-center rounded-full bg-primary/10 px-2 py-1 text-xs font-medium text-primary">
-                                                    {notification.topic || 'all-users'}
+                                                    {notification.data?.topic || 'all-users'}
                                                 </span>
                                             </TableCell>
                                             <TableCell className="capitalize">
-                                                {notification.status || 'sent'}
+                                                {notification.status || 'queued'}
                                             </TableCell>
                                             <TableCell className="text-muted-foreground">
-                                                {notification.sentCount ?? 0}
-                                                {notification.totalRegistered !== undefined
-                                                    ? ` / ${notification.totalRegistered}`
+                                                {notification.sent_count ?? 0}
+                                                {notification.total_registered !== undefined
+                                                    ? ` / ${notification.total_registered}`
                                                     : ''}
                                             </TableCell>
-                                            <TableCell className="text-muted-foreground">
-                                                {(notification.queuedAt || notification.sentAt)?.seconds
-                                                    ? format(
-                                                        new Date((notification.queuedAt || notification.sentAt)!.seconds * 1000),
-                                                        'MMM d, yyyy h:mm a',
-                                                    )
-                                                    : '—'
-                                                }
+                                            <TableCell>
+                                                {notification.receipt_success_count ?? 0} / {(notification.failed_count ?? 0) + (notification.receipt_failure_count ?? 0)}
+                                                {notification.data?.errors?.length ? <p className="text-xs text-destructive">{notification.data.errors.join('; ')}</p> : null}
                                             </TableCell>
+                                            <TableCell>{notification.sent_at ? new Date(notification.sent_at).toLocaleString('en-GB', {timeZone: 'Asia/Qatar'}) : '—'}</TableCell>
                                         </TableRow>
                                     ))
                                 )}

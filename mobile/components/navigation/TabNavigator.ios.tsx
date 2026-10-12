@@ -15,6 +15,7 @@ function NativeTabContent() {
   const screens = [
     { name: 'index', title: t('home'), icon: 'house' },
     { name: 'explore', title: t('explore'), icon: 'safari.fill' },
+    { name: 'saved', title: t('saved'), icon: 'bookmark.fill' },
     { name: 'profile', title: t('profile'), icon: 'person.fill' },
   ];
 

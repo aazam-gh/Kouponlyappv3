@@ -2,15 +2,12 @@ export interface NotificationRecord {
     id: string
     title: string
     body: string
-    imageUrl?: string | null
-    topic: string
-    sentBy: string
-    queuedAt?: { seconds: number; nanoseconds: number }
-    sentAt?: { seconds: number; nanoseconds: number }
-    status?: 'queued' | 'processing' | 'sent' | 'failed'
-    messageId?: string
-    sentCount?: number
-    failedCount?: number
-    invalidTokenCount?: number
-    totalRegistered?: number
+    data?: { topic?: string; imageUrl?: string | null; errors?: string[] }
+    sent_at: string
+    status: 'queued' | 'processing' | 'sent' | 'partial' | 'failed'
+    sent_count: number
+    failed_count: number
+    total_registered: number
+    receipt_success_count: number
+    receipt_failure_count: number
 }

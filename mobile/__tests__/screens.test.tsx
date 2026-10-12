@@ -6,12 +6,13 @@ import { queryClient } from '../utils/queryClient';
 import { TabBarVisibilityProvider } from '../components/TabBarScrollVisibility';
 import { cleanup, fireEvent, render, waitFor } from '@testing-library/react-native';
 import { Alert } from 'react-native';
+import { act } from '@testing-library/react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { StoreProvider } from '../lib/store';
 import VendorSearchScreen from '../app/realx/search';
 import HomeScreen from '../app/(tabs)/index';
-import SavedScreen from '../app/saved';
+import SavedScreen from '../components/screens/saved-screen';
 import WorkScreen from '../app/work';
 import { router } from 'expo-router';
 import { loadFixture, clearFixture } from '../test/catalogue-fixture';
@@ -38,10 +39,22 @@ describe('mobile showcase states', () => {
     await fireEvent(view.getByTestId('home-search'),'submitEditing');
     expect(router.push).toHaveBeenCalledWith({pathname:'/realx/search',params:{q:'lunch'}});
   });
+  it('returns Home to the top when its tab is pressed', async () => {
+    const listeners = new Map<string, () => void>();
+    const navigation = jest.spyOn(require('expo-router'), 'useNavigation').mockReturnValue({ addListener: (event: string, callback: () => void) => { listeners.set(event, callback); return () => {}; } } as any);
+    try {
+      const view = await wrapper(<HomeScreen />);
+      await fireEvent.changeText(view.getByTestId('home-search'), 'Rice');
+      await act(async () => listeners.get('tabPress')?.());
+      expect(listeners.has('tabPress')).toBe(true);
+      expect(view.getByTestId('home-search').props.value).toBe('');
+    } finally { navigation.mockRestore(); }
+  });
   it('uses the source image-card search results and popular recommendations', async () => {
     const view = await wrapper(<VendorSearchScreen />);
     const input = view.getByTestId('vendor-search-input');
     await fireEvent.changeText(input, 'Rice');
+    expect(view.getByLabelText('Test Kitchen')).toBeTruthy();
     await fireEvent(input, 'submitEditing');
     expect(view.getByLabelText('Test Kitchen')).toBeTruthy();
     await fireEvent.changeText(input, 'no matching partner');
@@ -63,12 +76,11 @@ describe('mobile showcase states', () => {
     await fireEvent.press(view.getByText('Verification in Progress'));
     expect(router.push).toHaveBeenCalledWith({ pathname: '/realx/onboarding', params: { flow: 'verification', step: 'status', requestId: 'request-1', statusToken: 'status-token' } });
   });
-  it('uses the source guest auth prompt for saved offers', async () => {
-    const alert = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
-    await wrapper(<SavedScreen />);
-    await waitFor(() => expect(router.replace).toHaveBeenCalledWith('/realx/profile'));
-    expect(alert).toHaveBeenCalledWith('Create an account to continue', 'Log in or sign up to view saved offers.', expect.any(Array));
-    alert.mockRestore();
+  it('keeps guest users in Saved with a sign-in option and recommendations', async () => {
+    const view = await wrapper(<SavedScreen />);
+    await waitFor(() => expect(view.getByText('Sign in to sync saved vendors across devices.')).toBeTruthy());
+    expect(view.getByText('Recommended for you')).toBeTruthy();
+    expect(view.getByText('Last redeemed vendors')).toBeTruthy();
   });
   it('routes the legacy work link to the source Explore map', async () => {
     await wrapper(<WorkScreen />);

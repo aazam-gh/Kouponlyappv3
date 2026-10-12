@@ -10,8 +10,6 @@ import { Alert, Linking, Platform, ScrollView, StatusBar as NativeStatusBar, Sty
 import { Typography } from '../../constants/Typography';
 import AppText from '../../components/AppText';
 import ResponsiveText from '../../components/ResponsiveText';
-import InviteCodePill from '../../components/InviteCodePill';
-import { useBenefits } from '../../lib/benefits';
 import UserAvatar from '../../components/UserAvatar';
 import { useAppTheme } from '../../context/AppThemeContext';
 import { useAuth } from '../../lib/auth';
@@ -31,7 +29,6 @@ export default function ProfileScreen() {
   const isGuest = !user;
   const endGuestSession = signOut;
   const { profile, avatarUrl } = useProfile();
-  const { isAdmin } = useBenefits();
   const [savings, setSavings] = useState(0);
   const userData = user ? {
     firstName: profile.full_name.split(' ')[0],
@@ -195,7 +192,6 @@ export default function ProfileScreen() {
           </View>
         </View>
 
-        <InviteCodePill />
         <View style={styles.menuContainer}>
           <MenuItem
             icon="person-outline"
@@ -203,10 +199,13 @@ export default function ProfileScreen() {
             onPress={() => router.push('/profile-details')}
             isRTL={isRTL}
           />
-          {isAdmin ? <MenuItem icon="settings-outline" label="MVP activity" onPress={() => router.push('/subscription/admin' as any)} isRTL={isRTL} /> : null}
+          <MenuItem icon="gift-outline" label="Referrals · Invite friends" onPress={() => router.push('/invite-code')} isRTL={isRTL} />
+          <MenuItem icon="people-outline" label="Friends and activity" onPress={() => router.push('/friends' as any)} isRTL={isRTL} />
+          <MenuItem icon="restaurant-outline" label="Request a restaurant" onPress={() => router.push({ pathname: '/student-request', params: { kind: 'restaurant' } } as any)} isRTL={isRTL} />
+          <MenuItem icon="school-outline" label="Suggest a school domain" onPress={() => router.push({ pathname: '/student-request', params: { kind: 'school' } } as any)} isRTL={isRTL} />
           <MenuItem
             icon="bookmark-outline"
-            label={t('saved_offers')}
+            label={'Saved Vendors'}
             onPress={() => router.push('/realx/saved' as any)}
             isRTL={isRTL}
           />
@@ -276,6 +275,8 @@ function MenuItem({
         styles.menuItem,
         { backgroundColor: bgColor || theme.cardMuted, borderColor: BorderPalette.border },
       ]}
+      accessibilityRole="button"
+      accessibilityLabel={label}
       activeOpacity={0.7}
       onPress={onPress}
       disabled={disabled}

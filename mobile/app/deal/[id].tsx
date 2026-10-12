@@ -5,7 +5,7 @@ import Animated, { Easing, FadeInDown, FadeOutUp, LinearTransition, ReduceMotion
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import React, { useMemo, useState } from 'react';
-import { AppState, Image, Linking, Modal, Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import { AppState, Image, Linking, Share, Modal, Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import { AccessiblePressable, Empty, Screen, safeGoBack } from '@/components/ui';
@@ -20,6 +20,7 @@ import { usePostHog } from 'posthog-react-native';
 import { useAuth } from '@/lib/auth';
 import { useAppLocale } from '@/context/LocaleContext';
 import { StatusBar } from 'expo-status-bar';
+import { safeWebUrl } from '@/lib/vendor-links';
 import { Colors } from '@/constants/Colors';
 import ProfileSprites from '@/components/profile/ProfileSprites';
 
@@ -55,10 +56,27 @@ export default function DealDetail({ dealId }: { dealId?: string } = {}) {
   const resolvedId = vendorLookup?.id === id ? vendorLookup.resolvedId : undefined;
   const lookupFailed = vendorLookup?.id === id && vendorLookup.failed;
   const deal = dealById(id) ?? (resolvedId ? dealById(resolvedId) : undefined);
-  const { state, notify } = useStore();
+  const { state, notify, toggleSaved } = useStore();
   const { user } = useAuth();
   const { benefits } = useBenefits();
-  const [savedOfferIds, setSavedOfferIds] = useState<string[]>([]);
+  const [savedVendor, setSavedVendor] = useState(false);
+  const [savingVendor, setSavingVendor] = useState(false);
+  const vendorId = String(deal?.vendorId || deal?.id || '');
+  React.useEffect(() => {
+    let active = true;
+    setSavedVendor(false);
+    if (user && vendorId) void (async () => {
+      try {
+        const { data, error } = await getSupabase().from('realx_student_saved_items').select('id').eq('student_id', user.id).eq('item_type', 'vendor').eq('item_id', vendorId).maybeSingle();
+        if (!active) return;
+        if (error) notify(error.message);
+        else setSavedVendor(!!data);
+      } catch (error) {
+        if (active) notify(error instanceof Error ? error.message : 'Unable to load saved vendor.');
+      }
+    })();
+    return () => { active = false; };
+  }, [user?.id, vendorId]);
   const [expandedOfferId, setExpandedOfferId] = useState<string | null>(null);
   const [closingOfferId, setClosingOfferId] = useState<string | null>(null);
   const [offerDetailsHeights, setOfferDetailsHeights] = useState<Record<string, number>>({});
@@ -93,18 +111,35 @@ export default function DealDetail({ dealId }: { dealId?: string } = {}) {
     return () => clearInterval(timer);
   }, [deal?.id, headerImages.length, reduceMotion, width]));
 
-  React.useEffect(() => {
-    let active = true;
-    if (!user || !deal?.vendorId) { setSavedOfferIds([]); return () => { active = false; }; }
-    void getSupabase().from('realx_student_saved_items').select('item_id').eq('student_id', user.id).eq('item_type', 'offer')
-      .then(({ data, error }) => { if (active && !error) setSavedOfferIds((data || []).map(row => row.item_id)); });
-    return () => { active = false; };
-  }, [user?.id, deal?.vendorId]);
   if (!deal) return <Screen>{status==='loading' || (id && !/^\d+$/.test(id) && !resolvedId && !lookupFailed) ? <CatalogueNotice/> : status==='cloud' ? <Empty icon="?" title="Offer not found" body="This offer may no longer be available." /> : <CatalogueNotice/>}</Screen>;
-  const saved = state.saved.includes(deal.id);
+  const saved = user ? savedVendor : state.saved.includes(deal.id);
+  const toggleVendorSave = async () => {
+    if (!user) {
+      toggleSaved(deal.id);
+      return;
+    }
+    if (savingVendor) return;
+    setSavingVendor(true);
+    try {
+      const result = savedVendor
+        ? await getSupabase().from('realx_student_saved_items').delete().eq('student_id', user.id).eq('item_type', 'vendor').eq('item_id', vendorId)
+        : await getSupabase().from('realx_student_saved_items').upsert({ student_id: user.id, item_type: 'vendor', item_id: vendorId, payload: { name: deal.name, source: 'vendor-detail' } }, { onConflict: 'student_id,item_type,item_id' });
+      if (result.error) { notify(result.error.message); return; }
+      setSavedVendor(!savedVendor);
+      notify(savedVendor ? 'Vendor removed from saved' : 'Vendor saved');
+    } catch (error) {
+      notify(error instanceof Error ? error.message : 'Unable to save vendor. Please try again.');
+    } finally {
+      setSavingVendor(false);
+    }
+  };
   const selectedOffer = deal.offers?.find(offer => offer.index === selectedIndex) ?? deal.offers?.[0];
   const offerKey = `${deal.id}-${selectedOffer?.index ?? 0}`;
   const branch = deal.locations?.[0];
+  const website = safeWebUrl(deal.externalUrl);
+  const instagram = safeWebUrl(deal.instagramUrl, true);
+  const openLink = async (url: string) => { try { await Linking.openURL(url); } catch { notify('Unable to open this link. Please try again.'); } };
+  const share = async () => { try { await Share.share({ message: `${deal.name} on Kouponly\nkouponly://realx/vendor/${encodeURIComponent(String(deal.vendorId || deal.id))}` }); } catch { notify('Unable to share this vendor. Please try again.'); } };
   const phone = branch?.phoneNumber || deal.phoneNumber;
   const hours = branch?.openingHours || deal.openingHours;
   const openLocation = (location = branch) => {
@@ -129,15 +164,17 @@ export default function DealDetail({ dealId }: { dealId?: string } = {}) {
             <Image testID={index === 0 ? 'offer-image' : undefined} accessible={false} source={{ uri }} style={s.image} />
           </View>)}
         </ScrollView>
-        <View style={[s.topbar, { top: insets.top + 64 }]}>
-          <AccessiblePressable accessibilityLabel="Go back" onPress={() => safeGoBack()} style={s.imageAction}><Ionicons name={isRTL ? 'arrow-forward' : 'arrow-back'} size={24} color={C.ink} /></AccessiblePressable>
+        <AccessiblePressable accessibilityLabel="Go back" onPress={() => safeGoBack()} style={[s.imageAction, { position: 'absolute', left: 16, top: insets.top + 10 }]}><Ionicons name={isRTL ? 'arrow-forward' : 'arrow-back'} size={24} color={C.ink} /></AccessiblePressable>
+        <View style={[s.topbar, { top: insets.top + 10 }]}>
+          <AccessiblePressable accessibilityLabel="Share vendor" onPress={() => void share()} style={s.imageAction}><Ionicons name="share-outline" size={22} color={C.ink} /></AccessiblePressable>
         </View>
         {headerImages.length > 1 ? <View pointerEvents="none" style={s.imageCounter}><Ionicons name="images-outline" size={14} color={C.ink}/><Text style={s.galleryCount}>{activeGalleryIndex + 1} / {headerImages.length}</Text></View> : null}
       </View>
       <View style={s.content}>
         <View style={s.vendorNameRow}>
-          <Text accessibilityRole="header" style={s.title}>{deal.name.toUpperCase()}</Text>
-          {deal.logo ? <View style={s.logoWrap}><Image source={{uri:deal.logo}} resizeMode="contain" style={s.logo}/></View> : null}
+          {deal.logo ? <View style={s.logoWrap}><Image accessibilityLabel={`${deal.name} logo`} source={{uri:deal.logo}} resizeMode="cover" style={s.logo}/></View> : null}
+          <Text accessibilityRole="header" style={s.title}>{deal.name}</Text>
+          <AccessiblePressable accessibilityLabel={saved ? "Remove saved vendor" : "Save vendor"} accessibilityState={{ selected: saved }} disabled={savingVendor} onPress={() => void toggleVendorSave()} style={{ width: 44, height: 44, alignItems: "center", justifyContent: "center", opacity: savingVendor ? 0.6 : 1 }}><Ionicons name={saved ? "bookmark" : "bookmark-outline"} size={24} color={C.ink}/></AccessiblePressable>
         </View>
         <View style={[s.actionMetaRow, isRTL && s.rowReverse]}>
           <View style={s.categoryPill}><Text numberOfLines={1} style={s.metaPillText}>{deal.category}</Text></View>
@@ -145,20 +182,13 @@ export default function DealDetail({ dealId }: { dealId?: string } = {}) {
           {distanceByVendor.get(String(deal.vendorId || deal.id))?.label ? <View style={s.distancePill}><Ionicons name="navigate-outline" size={14} color={C.ink}/><Text numberOfLines={1} style={s.metaPillText}>{distanceByVendor.get(String(deal.vendorId || deal.id))?.label}</Text></View> : null}
           {phone ? <AccessiblePressable accessibilityLabel={`Call ${phone}`} onPress={()=>void Linking.openURL(`tel:${phone.replace(/[^\d+]/g,'')}`)} style={s.callPill}><Ionicons name="call-outline" size={17} color={C.ink}/><Text style={s.callPillText}>Call</Text></AccessiblePressable> : null}
         </View>
+        <View style={[s.actionMetaRow, { flexWrap: 'wrap' }]}>
+          {website ? <AccessiblePressable accessibilityLabel="Vendor website" onPress={() => void openLink(website)} style={s.callPill}><Ionicons name="globe-outline" size={18} color={C.ink}/><Text style={s.callPillText}>Website</Text></AccessiblePressable> : null}
+          {instagram ? <AccessiblePressable accessibilityLabel="Vendor Instagram" onPress={() => void openLink(instagram)} style={s.callPill}><Ionicons name="logo-instagram" size={18} color={C.ink}/><Text style={s.callPillText}>Instagram</Text></AccessiblePressable> : null}
+        </View>
         <Text accessibilityRole="header" style={s.promosHeading}>Available Promos</Text>
         <View style={s.offersList}>{(deal.offers?.length ? deal.offers : [{id:offerKey,index:0,title:deal.offer,description:deal.description,saving:deal.saving,redemption:deal.redemption??'inStore'}]).map(offer=>{
-          const isSaved=savedOfferIds.includes(offer.id), count=deal.vendorId && benefits?.usedVendorIds.includes(deal.vendorId) ? 1 : 0;
-          const toggleOfferSave = async () => {
-            if (!user) { notify('Sign in to save offers'); return; }
-            const removing = savedOfferIds.includes(offer.id);
-            const result = removing
-              ? await getSupabase().from('realx_student_saved_items').delete().eq('student_id', user.id).eq('item_type', 'offer').eq('item_id', offer.id)
-              : await getSupabase().from('realx_student_saved_items').upsert({ student_id: user.id, item_type: 'offer', item_id: offer.id, payload: { vendorId: deal.vendorId, title: offer.title } }, { onConflict: 'student_id,item_type,item_id' });
-            if (result.error) { notify(result.error.message); return; }
-            setSavedOfferIds(ids => removing ? ids.filter(id => id !== offer.id) : [...ids, offer.id]);
-            posthog.capture(removing ? 'offer_unsaved' : 'offer_saved', { offer_id: offer.id, category: deal.category });
-            notify(removing ? 'Offer removed from saved' : 'Offer saved');
-          };
+          const count=deal.vendorId && benefits?.usedVendorIds.includes(deal.vendorId) ? 1 : 0;
           const expanded = expandedOfferId === offer.id;
           const closing = closingOfferId === offer.id;
           const showDetails = expanded && !closing;
@@ -172,7 +202,7 @@ export default function DealDetail({ dealId }: { dealId?: string } = {}) {
                   setClosingOfferId(null);
                   setExpandedOfferId(offer.id);
                 }} style={[s.offerTitleRow, isRTL && s.rowReverse]}>
-                  <Text style={[s.offerTitle, isRTL && s.textRtl]}>{offer.title.toUpperCase()}</Text>
+                  <Text style={[s.offerTitle, isRTL && s.textRtl]}>{offer.title}</Text>
                   <OfferDisclosureArrow expanded={showDetails} reduceMotion={reduceMotion} color={C.ink}/>
                 </ScalePressable>
                 <View style={[s.offerTags, isRTL && s.rowReverse]}>
@@ -186,14 +216,16 @@ export default function DealDetail({ dealId }: { dealId?: string } = {}) {
             {expanded || closing ? <View style={closing && offerDetailsHeights[offer.id] ? { height: offerDetailsHeights[offer.id] } : undefined}>
               {showDetails ? <Animated.View onLayout={event => { const height = event?.nativeEvent?.layout?.height; if (height) setOfferDetailsHeights(heights => ({ ...heights, [offer.id]: height })); }} entering={FadeInDown.duration(220).easing(Easing.bezier(0.22, 1, 0.36, 1)).reduceMotion(ReduceMotion.System)} exiting={FadeOutUp.duration(OFFER_DETAILS_EXIT_MS).easing(Easing.bezier(0.4, 0, 1, 1)).reduceMotion(ReduceMotion.System)} style={s.offerDetails}><Text style={s.offerDetailsTitle}>Offer details</Text>{offer.description ? <Text selectable style={s.offerDetailsText}>{offer.description}</Text> : null}{offer.terms ? <><Text style={s.offerDetailsTitle}>Terms and exclusions</Text><Text selectable style={s.offerDetailsText}>{offer.terms}</Text></> : null}{offer.redemptionInstructions ? <><Text style={s.offerDetailsTitle}>How to redeem</Text><Text selectable style={s.offerDetailsText}>{offer.redemptionInstructions}</Text></> : null}</Animated.View> : null}
             </View> : null}
+            <Text style={s.offerDetailsText}>Coupon limit: 1 per vendor per month. Referral refreshes start a new round.{benefits?.subscription ? ` ${count ? 0 : 1} remaining.` : user ? ' Availability appears when your membership loads.' : ' Sign in to view availability.'}{benefits?.subscription ? ` · Resets ${new Date(benefits.subscription.endsAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}` : ''}</Text>
             <View style={[s.offerActionsRow, isRTL && s.rowReverse]}>
-              <AccessiblePressable accessibilityLabel={isSaved?'Remove saved offer':'Save this offer'} accessibilityState={{selected:isSaved}} onPress={()=>void toggleOfferSave()} style={[s.offerSaveButton,isSaved&&{backgroundColor:C.lime}]}><Ionicons name={isSaved?'bookmark':'bookmark-outline'} size={20} color={isSaved?C.inkOnAccent:C.lime}/></AccessiblePressable>
+
               <AccessiblePressable testID={`redeem-offer-${offer.index}`} disabled={count>0} onPress={()=>router.push({pathname:'/redeem/[id]',params:{id:String(deal.id),vendorId:deal.vendorId,offerIndex:String(offer.index)}} as any)} style={[s.redeem,count>0&&s.disabled]}><Ionicons name="flash" size={18} color={C.inkOnAccent}/><Text style={s.redeemText}>{count?'Used up':'Redeem offer'}</Text></AccessiblePressable>
             </View>
           </Animated.View>;
         })}</View>
         {deal.vendorInformation?.message ? <View style={s.vendorInfo}><View style={s.infoHeading}><Ionicons name="information-circle-outline" size={22} color={C.lime}/><Text style={s.infoTitle}>{deal.vendorInformation.title || 'Information'}</Text></View><Text style={[s.hours, isRTL && s.textRtl]}>{deal.vendorInformation.message}</Text></View>:null}
         {formattedHours ? <View style={s.infoCard}><View style={s.infoHeading}><Ionicons name="time-outline" size={20} color={C.lime}/><Text style={s.infoTitle}>Opening hours</Text></View><Text style={[s.hours, isRTL && s.textRtl]}>{formattedHours}</Text></View>:null}
+        {deal.description ? <View style={s.infoCard}><Text accessibilityRole="header" style={s.infoTitle}>About {deal.name}</Text><Text selectable style={s.offerDetailsText}>{deal.description}</Text></View> : null}
       </View>
     </Screen>
     <Modal visible={locationsOpen && Boolean(deal.locations?.length)} transparent animationType={reduceMotion ? "fade" : "slide"} onRequestClose={()=>setLocationsOpen(false)}><Pressable style={s.modalOverlay} onPress={()=>setLocationsOpen(false)}><Pressable style={[s.branchSheet,{paddingBottom:Math.max(insets.bottom,20)}]} onPress={event=>event.stopPropagation()}><View style={s.handle}/><View style={s.branchHeader}><Text style={s.sectionTitle}>Branches</Text><AccessiblePressable accessibilityLabel="Close branches" onPress={()=>setLocationsOpen(false)} style={s.imageAction}><Ionicons name="close-circle" size={25} color={C.ink}/></AccessiblePressable></View><ScrollView showsVerticalScrollIndicator={false}>{deal.locations?.map((location,index)=><AccessiblePressable key={location.id} accessibilityLabel={`Directions to ${location.name || location.address}`} onPress={()=>{setLocationsOpen(false);openLocation(location)}} pressedScale={1} style={[s.branchRow, isRTL && s.rowReverse]}><View style={s.branchIcon}><Ionicons name="location-outline" size={19} color={C.lime}/></View><View style={{flex:1}}><Text style={[s.locationText, isRTL && s.textRtl]}>{location.name || `Branch ${index+1}`}</Text>{location.address ? <Text style={[s.branchAddress, isRTL && s.textRtl]}>{location.address}</Text>:null}{location.phoneNumber ? <Text style={[s.branchAddress, isRTL && s.textRtl]}>{location.phoneNumber}</Text>:null}</View><Ionicons name="navigate-outline" size={17} color={C.lime}/></AccessiblePressable>)}</ScrollView></Pressable></Pressable></Modal>
@@ -240,17 +272,17 @@ const styles = (C: ThemeColors) => StyleSheet.create({
   screen: { paddingHorizontal: 0, paddingTop: 0 },
   imageWrap: { height: 250, marginBottom: 12 },
   image: { width: '100%', height: '100%', borderBottomLeftRadius: 24, borderBottomRightRadius: 24 },
-  topbar: { position: 'absolute', left: 16, right: 16, flexDirection: 'row', justifyContent: 'space-between' },
+  topbar: { position: 'absolute', left: 16, right: 16, flexDirection: 'row', justifyContent: 'flex-end' },
   imageAction: { width: 40, height: 40, borderRadius: 20, backgroundColor: C.paper, borderWidth: StyleSheet.hairlineWidth, borderColor: C.line },
-  logoWrap: { width: 72, height: 72, flexShrink: 0, borderRadius: 16, backgroundColor: C.card, borderWidth: 1, borderColor: C.line, alignItems: 'center', justifyContent: 'center' },
+  logoWrap: { width: 88, height: 88, flexShrink: 0, borderRadius: 16, backgroundColor: C.card, borderWidth: 1, borderColor: C.line, overflow: 'hidden', alignItems: 'center', justifyContent: 'center' },
   logo: { width: '100%', height: '100%', borderRadius: 16 },
   rowReverse: { flexDirection: 'row-reverse' },
   textRtl: { textAlign: 'right', writingDirection: 'rtl' },
   content: { paddingHorizontal: 20, paddingBottom: 28 },
   vendorNameRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  title: { flex: 1, fontFamily: F.heading, fontSize: 26, letterSpacing: .5, textTransform:'uppercase', color: C.ink },
-  actionMetaRow:{flexDirection:'row',alignItems:'center',gap:8,marginTop:16}, categoryPill:{flex:1,minWidth:0,minHeight:40,alignItems:'center',justifyContent:'center',paddingHorizontal:8,borderRadius:22,borderWidth:1,borderColor:BorderPalette.border,backgroundColor:C.soft}, metaPillText:{fontFamily:F.bodySemi,fontSize:13,color:C.ink,textAlign:'center'}, locatePill:{flex:1,minWidth:0,minHeight:40,flexDirection:'row',alignItems:'center',justifyContent:'center',gap:5,paddingHorizontal:6,borderRadius:22,borderWidth:1,borderColor:BorderPalette.border,backgroundColor:'#B7F52B'}, locatePillText:{fontFamily:F.bodyBold,fontSize:13,color:C.inkOnAccent}, distancePill:{flex:1,minWidth:0,minHeight:40,flexDirection:'row',alignItems:'center',justifyContent:'center',gap:5,paddingHorizontal:6,borderRadius:22,borderWidth:1,borderColor:BorderPalette.border,backgroundColor:C.soft}, callPill:{flex:1,minWidth:0,minHeight:40,flexDirection:'row',alignItems:'center',justifyContent:'center',gap:5,paddingHorizontal:6,borderRadius:22,borderWidth:1,borderColor:BorderPalette.border,backgroundColor:C.soft}, callPillText:{fontFamily:F.bodySemi,fontSize:13,color:C.ink},
-  promosHeading:{fontFamily:F.headingSemi,fontSize:23,color:C.ink,marginTop:28,marginBottom:14},
+  title: { flex: 1, fontFamily: F.heading, fontSize: 26, letterSpacing: -.4, color: C.ink },
+  actionMetaRow:{flexDirection:'row',alignItems:'center',gap:8,marginTop:16}, categoryPill:{flex:1,minWidth:0,minHeight:40,alignItems:'center',justifyContent:'center',paddingHorizontal:8,borderRadius:22,borderWidth:1,borderColor:BorderPalette.border,backgroundColor:C.soft}, metaPillText:{fontFamily:F.bodySemi,fontSize:13,color:C.ink,textAlign:'center'}, locatePill:{flex:1,minWidth:0,minHeight:40,flexDirection:'row',alignItems:'center',justifyContent:'center',gap:5,paddingHorizontal:6,borderRadius:22,borderWidth:1,borderColor:BorderPalette.border,backgroundColor:Colors.brandGreen}, locatePillText:{fontFamily:F.bodyBold,fontSize:13,color:C.inkOnAccent}, distancePill:{flex:1,minWidth:0,minHeight:40,flexDirection:'row',alignItems:'center',justifyContent:'center',gap:5,paddingHorizontal:6,borderRadius:22,borderWidth:1,borderColor:BorderPalette.border,backgroundColor:C.soft}, callPill:{flex:1,minWidth:0,minHeight:40,flexDirection:'row',alignItems:'center',justifyContent:'center',gap:5,paddingHorizontal:6,borderRadius:22,borderWidth:1,borderColor:BorderPalette.border,backgroundColor:C.soft}, callPillText:{fontFamily:F.bodySemi,fontSize:13,color:C.ink},
+  promosHeading:{fontFamily:F.headingSemi,fontSize:23,color:C.ink,marginTop:0,marginBottom:14},
   offerTagText:{fontFamily:F.body,fontSize:12,color:C.muted},
   sectionTitle: { fontFamily: F.headingSemi, fontSize: 21, color: C.ink },
   infoTitle:{flex:1,fontFamily:F.bodyBold,fontSize:16,color:C.ink},
@@ -263,12 +295,12 @@ const styles = (C: ThemeColors) => StyleSheet.create({
   locationText: { flex:1, fontFamily:F.body, fontSize:13, color:C.ink },
   modalOverlay:{ flex:1, justifyContent:'flex-end', backgroundColor:'rgba(0,0,0,.42)' }, branchSheet:{ maxHeight:'80%', borderTopLeftRadius:32, borderTopRightRadius:32, borderWidth:1, borderColor:BorderPalette.border, paddingHorizontal:24, backgroundColor:C.paper }, handle:{ width:40, height:5, borderRadius:3, backgroundColor:C.line, alignSelf:'center', marginTop:12, marginBottom:12 }, branchHeader:{ minHeight:52, flexDirection:'row', alignItems:'center', justifyContent:'space-between', marginBottom:8 }, branchRow:{ minHeight:76, flexDirection:'row', alignItems:'center', gap:12, padding:12, marginBottom:8, borderRadius:18, borderWidth:1, borderColor:BorderPalette.border, backgroundColor:C.soft }, branchIcon:{ width:42,height:42,borderRadius:14,alignItems:'center',justifyContent:'center',backgroundColor:C.card }, branchAddress:{ fontFamily:F.body,fontSize:12,lineHeight:17,color:C.muted,marginTop:3 },
   offerCard: { borderRadius:24,borderWidth:1,borderColor:C.line,backgroundColor:C.card,padding:16,gap:18,overflow:'hidden' },
-  offerSaveButton: { width: 48, height: 48, borderRadius: 24,backgroundColor:C.soft,borderWidth:1,borderColor:C.line,alignItems: 'center', justifyContent: 'center' },
+  offerSaveButton: { paddingHorizontal: 16, flexDirection: 'row', gap: 6, height: 56, borderRadius: 24,backgroundColor:C.soft,borderWidth:1,borderColor:C.line,alignItems: 'center', justifyContent: 'center' },
   offerSummary:{flexDirection:'row',alignItems:'flex-start'}, offerCopy:{flex:1,minWidth:0,gap:10},
   offerTitleRow:{flexDirection:'row',alignItems:'flex-start',gap:12}, offerTitle:{flex:1,fontFamily:F.headingSemi,fontSize:19,lineHeight:26,letterSpacing:-.3,color:C.ink}, offerTags:{flexDirection:'row',flexWrap:'wrap',justifyContent:'space-between',rowGap:8}, offerTag:{minHeight:24,flexDirection:'row',alignItems:'center',gap:5},
   offerDetails:{gap:8,paddingTop:16,borderTopWidth:StyleSheet.hairlineWidth,borderTopColor:C.line}, offerDetailsTitle:{fontFamily:F.bodySemi,fontSize:13,color:C.ink}, offerDetailsText:{fontFamily:F.body,fontSize:14,lineHeight:21,color:C.muted},
   offerActionsRow: { flexDirection: 'row', gap:10, alignItems:'center' },
-  redeem: { flex: 1, height: 56, borderRadius: 30, borderWidth: 1, borderColor: BorderPalette.border, backgroundColor: Colors.limeGreen, flexDirection: 'row', gap: 8, alignItems: 'center', justifyContent: 'center' },
+  redeem: { flex: 1, height: 56, borderRadius: 30, borderWidth: 1, borderColor: BorderPalette.border, backgroundColor: Colors.brandGreen, flexDirection: 'row', gap: 8, alignItems: 'center', justifyContent: 'center' },
   disabled: { opacity: .45 },
   unavailable: { flex: 1, fontFamily: F.body, fontSize: 12, lineHeight: 17, color: C.muted, alignSelf: 'center' },
   redeemText: { fontFamily: F.bodyBold, fontSize: 17, color: C.inkOnAccent },

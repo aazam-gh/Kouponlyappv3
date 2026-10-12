@@ -1,4 +1,5 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { processNotificationReceipts } from "../_shared/push.ts";
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
@@ -68,58 +69,6 @@ async function cleanTransientRows(service: any) {
   return { otpChallenges: results[0].count || 0, rateLimits: results[1].count || 0, opportunityActions: results[2].count || 0 };
 }
 
-async function processReceipts(service: any) {
-  const { data: rows, error } = await service.from("couponly_notification_deliveries")
-    .select("id,campaign_id,token_id,receipt_id").eq("status", "pending")
-    .order("created_at", { ascending: true }).limit(300);
-  if (error) throw error;
-  if (!rows?.length) return { checked: 0, pending: 0, errors: 0, invalidTokens: 0 };
-  const response = await fetch("https://exp.host/--/api/v2/push/getReceipts", {
-    method: "POST",
-    headers: { "Content-Type": "application/json", Accept: "application/json" },
-    body: JSON.stringify({ ids: rows.map((row: any) => row.receipt_id) }),
-  });
-  if (!response.ok) throw new Error(`Expo receipt request failed (${response.status})`);
-  const result = await response.json();
-  const campaignCounts = new Map<string, { success: number; failure: number; invalid: number }>();
-  const invalidTokenIds: string[] = [];
-  let checked = 0, pending = 0, errors = 0;
-  for (const row of rows) {
-    const receipt = result.data?.[row.receipt_id];
-    if (!receipt) { pending++; continue; }
-    checked++;
-    const failed = receipt.status === "error";
-    if (failed) errors++;
-    const invalid = failed && ["DeviceNotRegistered", "InvalidCredentials"].includes(receipt.details?.error || "");
-    if (invalid && row.token_id) invalidTokenIds.push(row.token_id);
-    const counts = campaignCounts.get(row.campaign_id) || { success: 0, failure: 0, invalid: 0 };
-    if (failed) counts.failure++; else counts.success++;
-    if (invalid) counts.invalid++;
-    campaignCounts.set(row.campaign_id, counts);
-    const { error: updateError } = await service.from("couponly_notification_deliveries")
-      .update({ status: failed ? "error" : "ok", details: receipt, updated_at: new Date().toISOString() }).eq("id", row.id);
-    if (updateError) throw updateError;
-  }
-  if (invalidTokenIds.length) {
-    const { error: tokenError } = await service.from("couponly_push_tokens").delete().in("id", invalidTokenIds);
-    if (tokenError) throw tokenError;
-  }
-  for (const [campaignId, counts] of campaignCounts) {
-    const { data: campaign, error: campaignError } = await service.from("couponly_notifications")
-      .select("receipt_success_count,receipt_failure_count,invalid_token_count").eq("id", campaignId).maybeSingle();
-    if (campaignError) throw campaignError;
-    if (!campaign) continue;
-    const { error: countError } = await service.from("couponly_notifications").update({
-      receipt_success_count: Number(campaign.receipt_success_count || 0) + counts.success,
-      receipt_failure_count: Number(campaign.receipt_failure_count || 0) + counts.failure,
-      invalid_token_count: Number(campaign.invalid_token_count || 0) + counts.invalid,
-      updated_at: new Date().toISOString(),
-    }).eq("id", campaignId);
-    if (countError) throw countError;
-  }
-  return { checked, pending, errors, invalidTokens: invalidTokenIds.length };
-}
-
 Deno.serve(async (request) => {
   if (request.method === "OPTIONS") return new Response("ok", { headers: cors });
   if (request.method !== "POST") return json({ error: "Method not allowed" }, 405);
@@ -127,14 +76,14 @@ Deno.serve(async (request) => {
   const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
   const bearer = (request.headers.get("Authorization") || "").replace(/^Bearer\s+/i, "");
   if (!url || !serviceKey) return json({ error: "Supabase server configuration is incomplete" }, 500);
-  if (!bearer || bearer !== serviceKey) return json({ error: "Service access required" }, 401);
+  if (!bearer || (bearer !== serviceKey && bearer !== Deno.env.get("KOUPONLY_RECEIPT_WORKER_KEY"))) return json({ error: "Service access required" }, 401);
   const service = createClient(url, serviceKey, { auth: { persistSession: false, autoRefreshToken: false } });
   try {
     const { action } = await request.json();
-    if (action === "processNotificationReceipts") return json(await processReceipts(service));
+    if (action === "processNotificationReceipts") return json(await processNotificationReceipts(service));
     if (action !== "dailyMaintenance") return json({ error: "Unknown maintenance action" }, 400);
     const [verification, transient, receipts] = await Promise.all([
-      cleanExpiredVerificationRequests(service), cleanTransientRows(service), processReceipts(service),
+      cleanExpiredVerificationRequests(service), cleanTransientRows(service), processNotificationReceipts(service),
     ]);
     return json({ success: true, verification, transient, receipts });
   } catch (error) {

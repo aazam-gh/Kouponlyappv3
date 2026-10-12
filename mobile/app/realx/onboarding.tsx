@@ -194,6 +194,7 @@ export default function RealXOnboardingScreen() {
   >
     {step === 'email' ? <>
       <OnboardingField label={flow === 'login' ? t('onboarding_login_email_placeholder') : t('onboarding_email_placeholder')} value={email} onChangeText={setEmail} keyboardType="email-address" autoCapitalize="none" autoCorrect={false} autoComplete="email" editable={!busy && !user} style={{ writingDirection: 'ltr', textAlign: 'left' }} />
+      {flow !== 'login' ? <OnboardingTextButton label="School email domain not available? Suggest your institute" disabled={busy} onPress={() => router.push({ pathname: '/student-request', params: { kind: 'school', email } } as any)} /> : null}
       {flow !== 'login' ? <Text style={styles.legal}>{SCHOOL_EMAIL_MESSAGE}</Text> : null}
       {flow === 'signup' ? <>
         <OnboardingField label={t('first_name_placeholder')} value={firstName} onChangeText={setFirstName} autoComplete="given-name" autoCapitalize="words" editable={!busy} />

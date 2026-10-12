@@ -255,6 +255,8 @@ PODS:
   - ExpoRouter (55.0.18):
     - ExpoModulesCore
     - RNScreens
+  - ExpoSplashScreen (55.0.25):
+    - ExpoModulesCore
   - ExpoSymbols (55.0.9):
     - ExpoModulesCore
   - EXStructuredHeaders (55.0.2)
@@ -2591,6 +2593,7 @@ DEPENDENCIES:
   - "ExpoModulesJSI (from `../node_modules/.pnpm/expo-modules-core@55.0.26_react-native-worklets@0.7.4_@babel+core@7.29.7_supports-color_da3d9e99a75c23048ab5d839ee221f61/node_modules/expo-modules-core`)"
   - "ExpoNotifications (from `../node_modules/.pnpm/expo-notifications@55.0.27_expo@55.0.31_react-native@0.83.10_@babel+core@7.29.7_support_08f7a96ee3878df20a5456f4764a3813/node_modules/expo-notifications/ios`)"
   - "ExpoRouter (from `../node_modules/.pnpm/expo-router@55.0.18_ef9ddaca41e9aeba87adf89602919192/node_modules/expo-router/ios`)"
+  - "ExpoSplashScreen (from `../node_modules/.pnpm/expo-splash-screen@55.0.25_expo@55.0.31_supports-color@8.1.1_typescript@5.9.3/node_modules/expo-splash-screen/ios`)"
   - "ExpoSymbols (from `../node_modules/.pnpm/expo-symbols@55.0.9_expo-font@55.0.8_expo@55.0.31_react-native@0.83.10_@babel+core@7.29_6b036b37ce8552f7a66ea5177a0281e5/node_modules/expo-symbols/ios`)"
   - "EXStructuredHeaders (from `../node_modules/.pnpm/expo-structured-headers@55.0.2/node_modules/expo-structured-headers/ios`)"
   - "EXUpdates (from `../node_modules/.pnpm/expo-updates@55.0.33_expo@55.0.31_react-native@0.83.10_@babel+core@7.29.7_supports-colo_1f625f34036c06b4d41567bdd1f5d2ac/node_modules/expo-updates/ios`)"
@@ -2754,6 +2757,8 @@ EXTERNAL SOURCES:
     :path: "../node_modules/.pnpm/expo-notifications@55.0.27_expo@55.0.31_react-native@0.83.10_@babel+core@7.29.7_support_08f7a96ee3878df20a5456f4764a3813/node_modules/expo-notifications/ios"
   ExpoRouter:
     :path: "../node_modules/.pnpm/expo-router@55.0.18_ef9ddaca41e9aeba87adf89602919192/node_modules/expo-router/ios"
+  ExpoSplashScreen:
+    :path: "../node_modules/.pnpm/expo-splash-screen@55.0.25_expo@55.0.31_supports-color@8.1.1_typescript@5.9.3/node_modules/expo-splash-screen/ios"
   ExpoSymbols:
     :path: "../node_modules/.pnpm/expo-symbols@55.0.9_expo-font@55.0.8_expo@55.0.31_react-native@0.83.10_@babel+core@7.29_6b036b37ce8552f7a66ea5177a0281e5/node_modules/expo-symbols/ios"
   EXStructuredHeaders:
@@ -2962,6 +2967,7 @@ SPEC CHECKSUMS:
   ExpoModulesJSI: 1bf2fab061d2c9635ff63b6fcc26747a68af9f12
   ExpoNotifications: 6d4f3cf4eda7a7bab49f11aacc1687ed5a0f17a2
   ExpoRouter: d606824355c288ac18492641c326b571a16762de
+  ExpoSplashScreen: b7c56a0ae848fb5e34c6217255a5ac211ffa261a
   ExpoSymbols: 896159288ad708e1a32dc12c92fe5f90bff01126
   EXStructuredHeaders: 93ad4f31a2eec124428675e28aca11de243ee1e4
   EXUpdates: 1f4f11aaf7f2252b15f14fe577ebacd0454f770d

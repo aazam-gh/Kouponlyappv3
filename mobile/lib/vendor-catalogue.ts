@@ -119,6 +119,8 @@ export function projectVendorCatalogue(
       description: stringValue(vendor.description, stringValue(payload.shortDescription, description)),
       redemption,
       externalUrl,
+      instagramUrl: stringValue(payload.instagramUrl, stringValue(payload.instagram, '')) || undefined,
+      keywords: [...(Array.isArray(payload.searchTokens) ? payload.searchTokens : []), ...subcategoryNames].filter(Boolean).join(' '),
       xcard: payload.xcard === true,
     };
     // Old deal metadata may identify its original subcategory (Dining/Cafes) as category.

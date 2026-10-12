@@ -1,7 +1,8 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { router } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
+import * as Notifications from 'expo-notifications';
 import React from 'react';
-import { FlatList, RefreshControl, StyleSheet, Text, View } from 'react-native';
+import { AppState, FlatList, RefreshControl, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import AppHeader from '@/components/navigation/AppHeader';
@@ -56,7 +57,12 @@ export default function NotificationsRoute() {
     }
   }, [user?.id, t]);
 
-  React.useEffect(() => { void load(); }, [load]);
+  useFocusEffect(React.useCallback(() => { void load(); }, [load]));
+  React.useEffect(() => {
+    const received = Notifications.addNotificationReceivedListener(() => { void load(); });
+    const resumed = AppState.addEventListener('change', state => { if (state === 'active') void load(); });
+    return () => { received.remove(); resumed.remove(); };
+  }, [load]);
 
   const renderItem = ({ item }: { item: NotificationRow }) => {
     const date = new Date(item.created_at).toLocaleString('en-QA', {

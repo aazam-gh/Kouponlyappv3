@@ -3,8 +3,8 @@
  */
 
 const primaryRed = '#E60000';
-const limeGreen = '#B7F52B';
-const brandGreen = '#18B852';
+// Dominant green sampled from the Kouponly logo.
+const brandGreen = '#18B952';
 const brandGreenLight = '#E8FAF0';
 const softenedBlackBorder = 'rgba(0, 0, 0, 0.5)';
 
@@ -75,7 +75,7 @@ const dark = {
   primary: primaryRed,
   brand: brandGreen,
   brandText: '#F4F8F3',
-  brandSoft: 'rgba(24, 184, 82, 0.18)',
+  brandSoft: 'rgba(24, 185, 82, 0.18)',
   actionSolid: brandGreen,
   onActionSolid: '#080808',
   buttonText: '#080808',
@@ -104,7 +104,6 @@ export const Colors = {
   border: softenedBlackBorder,
   light,
   dark,
-  limeGreen,
   brandGreen,
   brandGreenLight,
   themes: {

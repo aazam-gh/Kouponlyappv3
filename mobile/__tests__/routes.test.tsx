@@ -88,7 +88,7 @@ describe("reachable route coverage", () => {
     await fireEvent.press(view.getByLabelText("Open Test Kitchen Waterfront"));
     expect(view.getByText("Test Kitchen")).toBeTruthy();
     expect(view.getByText("Waterfront · Waterfront road")).toBeTruthy();
-    expect(view.getByText(/\d+\.\d km/)).toBeTruthy();
+    await waitFor(() => expect(view.getByText(/\d+\.\d+ km/)).toBeTruthy());
     expect(view.getByText("Directions")).toBeTruthy();
     expect(view.getByLabelText("Save partner")).toBeTruthy();
     expect(StyleSheet.flatten(view.getByTestId('map-vendor-callout').props.style).bottom).toBe(64 + 34 + 12);
@@ -100,15 +100,15 @@ describe("reachable route coverage", () => {
   it("covers real deal details, save, and redemption entry", async () => {
     params.mockReturnValue({ id: "101" });
     const view = await wrap(<DealScreen />);
-    expect(view.getByText("TEST KITCHEN")).toBeTruthy();
-    expect(view.getByText("RICE LUNCH DISCOUNT")).toBeTruthy();
+    expect(view.getByText("Test Kitchen")).toBeTruthy();
+    expect(view.getByText("Rice lunch discount")).toBeTruthy();
     expect(view.getByTestId("redeem-offer-1")).toBeTruthy();
   });
 
   it('shows all vendor offers and branches in deal details',async()=>{
     params.mockReturnValue({id:'101',offer:'2'});
     const view=await wrap(<DealScreen/>);
-    expect(view.getAllByText('SWEETS DISCOUNT').length).toBeGreaterThan(0);
+    expect(view.getAllByText('Sweets discount').length).toBeGreaterThan(0);
     expect(view.getAllByText('Lunch saving')).toHaveLength(1);
     await fireEvent.press(view.getByLabelText('Show details for Sweets discount'));
     expect(view.getByText('Dessert details')).toBeTruthy();
@@ -132,6 +132,6 @@ describe("reachable route coverage", () => {
     params.mockReturnValue({id:'vendor-1'});
     const view=await wrap(<VendorRoute/>);
     expect(view.getByTestId('deal-detail')).toBeTruthy();
-    expect(view.getByText('TEST KITCHEN')).toBeTruthy();
+    expect(view.getByText('Test Kitchen')).toBeTruthy();
   });
 });

@@ -49,10 +49,10 @@ export function OpportunityHighlights() {
           </Text>
         </View>
         <ScalePressable
-          onPress={() => router.push('/(tabs)/explore')}
+          onPress={() => router.push('/realx/opportunities')}
           activeOpacity={0.7}
         >
-          <Text style={[styles.seeAll, { color: theme.brandText }]}>{t('see_all')}</Text>
+          <Text style={[styles.seeAll, { color: theme.brandText }]}>See More</Text>
         </ScalePressable>
       </View>
       <ScrollView

@@ -9,7 +9,9 @@ import { router, Stack, useSegments } from "expo-router";
 import * as Notifications from "expo-notifications";
 import React from "react";
 import { StatusBar } from "expo-status-bar";
-import { ActivityIndicator, LogBox, View } from "react-native";
+import { AppState, LogBox, View } from "react-native";
+import { Image } from "expo-image";
+import * as SplashScreen from "expo-splash-screen";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { Toast } from "@/components/ui";
 import { StoreProvider } from "@/lib/store";
@@ -32,6 +34,9 @@ import { ReduceMotion, ReducedMotionConfig } from 'react-native-reanimated';
 // The app deliberately applies the student's reduced-motion preference globally.
 LogBox.ignoreLogs(['[Reanimated] Reduced motion setting is overwritten with mode']);
 
+// Keep the native logo visible until the first app layout has rendered.
+void SplashScreen.preventAutoHideAsync().catch(() => {});
+
 function AppNavigation(){
   const theme=useAppTheme();
   const { user, session }=useAuth();
@@ -52,16 +57,21 @@ function AppNavigation(){
   React.useEffect(()=>{void setupCouponlyNotificationChannels().catch(()=>{});},[]);
   React.useEffect(()=>{
     if(!user)return;
-    void syncCouponlyPushToken(user.id,false);
+    // Existing accounts may have never reached onboarding's permission request.
+    void syncCouponlyPushToken(user.id,true);
     const tokenSubscription=Notifications.addPushTokenListener(()=>{void syncCouponlyPushToken(user.id,false);});
-    return ()=>tokenSubscription.remove();
+    const resumeSubscription=AppState.addEventListener("change",state=>{if(state==="active")void syncCouponlyPushToken(user.id,false);});
+    return ()=>{tokenSubscription.remove();resumeSubscription.remove();};
   },[user?.id]);
   React.useEffect(()=>{
     const openNotification=(response:Notifications.NotificationResponse|null)=>{
       if(!response)return;
       const path=response.notification.request.content.data?.path;
       const supported=new Set(['/realx','/realx/history','/realx/map','/realx/opportunities','/realx/saved','/realx/search','/notifications']);
-      if(typeof path==='string'&&supported.has(path))router.push(path as any);
+      if(typeof path==='string'&&supported.has(path)){
+        router.push(path as any);
+        void Notifications.clearLastNotificationResponseAsync().catch(()=>{});
+      }
     };
     void Notifications.getLastNotificationResponseAsync().then(openNotification).catch(()=>{});
     const subscription=Notifications.addNotificationResponseReceivedListener(openNotification);
@@ -71,11 +81,14 @@ function AppNavigation(){
 }
 
 export default function RootLayout(){
-  const [loaded]=useFonts({
+  const [loaded, fontError]=useFonts({
     Outfit_400Regular,
     Outfit_600SemiBold,
     Outfit_700Bold,
   });
-  if(!loaded)return <View style={{flex:1,backgroundColor:"#FAFAFA",alignItems:"center",justifyContent:"center"}}><ActivityIndicator color="#0A0A0A"/></View>;
-  return <AnalyticsProvider><SafeAreaProvider><QueryClientProvider client={queryClient}><AppThemeProvider><LocaleProvider><ThemeProvider><AuthProvider><ProfileProvider><BenefitsProvider><CatalogueProvider><NearbyProvider><StoreProvider><AppNavigation/></StoreProvider></NearbyProvider></CatalogueProvider></BenefitsProvider></ProfileProvider></AuthProvider></ThemeProvider></LocaleProvider></AppThemeProvider></QueryClientProvider></SafeAreaProvider></AnalyticsProvider>;
+  const onAppLayout=React.useCallback(()=>{
+    if(loaded||fontError)void SplashScreen.hideAsync().catch(()=>{});
+  },[loaded,fontError]);
+  if(!loaded&&!fontError)return <View style={{flex:1,backgroundColor:"#000000",alignItems:"center",justifyContent:"center"}}><StatusBar style="light"/><Image source={require('../assets/images/kouponly-logo.webp')} style={{width:240,height:240}} contentFit="contain" accessibilityLabel="Kouponly logo"/></View>;
+  return <View style={{flex:1}} onLayout={onAppLayout}><AnalyticsProvider><SafeAreaProvider><QueryClientProvider client={queryClient}><AppThemeProvider><LocaleProvider><ThemeProvider><AuthProvider><ProfileProvider><BenefitsProvider><CatalogueProvider><NearbyProvider><StoreProvider><AppNavigation/></StoreProvider></NearbyProvider></CatalogueProvider></BenefitsProvider></ProfileProvider></AuthProvider></ThemeProvider></LocaleProvider></AppThemeProvider></QueryClientProvider></SafeAreaProvider></AnalyticsProvider></View>;
 }

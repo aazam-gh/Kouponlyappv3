@@ -7,7 +7,7 @@ import "./src/localization/i18n";
 jest.mock("react-native-reanimated", () => {
   const { View } = require("react-native");
   const value = (toValue: unknown) => toValue;
-  const Animated = { View, Text: require("react-native").Text, ScrollView: require("react-native").ScrollView, createAnimatedComponent: (Component: unknown) => Component };
+  const Animated = { View, Text: require("react-native").Text, ScrollView: require("react-native").ScrollView, FlatList: require("react-native").FlatList, createAnimatedComponent: (Component: unknown) => Component };
   const builder: any = new Proxy({}, { get: () => () => builder });
   return {
     __esModule: true,
@@ -23,6 +23,7 @@ jest.mock("react-native-reanimated", () => {
     interpolateColor: (_input: number, _range: number[], output: string[]) => output[0],
     runOnJS: (callback: (...args: any[]) => any) => callback,
     runOnUI: (callback: (...args: any[]) => any) => callback,
+    useAnimatedScrollHandler: () => () => {},
     useAnimatedReaction: jest.fn(),
     useAnimatedStyle: (styleFactory: () => unknown) => styleFactory(),
     useDerivedValue: (factory: () => unknown) => ({ value: factory() }),

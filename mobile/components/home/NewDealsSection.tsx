@@ -28,7 +28,7 @@ export default function NewDealsSection() {
 
   return (
     <>
-      <HomeSectionHeading prefix={t('new_deals_label_prefix')} highlight={t('new_deals_label_highlight')} />
+      <HomeSectionHeading prefix={t('new_deals_label_prefix')} highlight={t('new_deals_label_highlight')} onSeeMore={() => router.push({ pathname: '/vendors', params: { section: 'new' } } as any)} />
       <ZigzagSection width={width} cutoutColor={theme.background}>
         <>
           <Svg accessible={false} pointerEvents="none" width={24} height={72} style={styles.leftSprite} viewBox="0 0 24 72">
@@ -42,9 +42,9 @@ export default function NewDealsSection() {
           </Svg>
           <Svg accessible={false} pointerEvents="none" width={24} height={20} style={styles.ticketSprite} viewBox="0 0 24 20">
             <Path d="M2 3h20v4a3 3 0 0 0 0 6v4H2v-4a3 3 0 0 0 0-6z" fill="#159646" opacity={0.58} />
-            <Path d="M12 5.5v9" stroke="#B7F52B" strokeWidth={1.5} strokeDasharray="1.5 1.5" />
+            <Path d="M12 5.5v9" stroke={BorderPalette.brandGreen} strokeWidth={1.5} strokeDasharray="1.5 1.5" />
           </Svg>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={[styles.scrollContent, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
+          <ScrollView snapToInterval={width * 0.6 + HOME_CAROUSEL_GAP} decelerationRate="fast" horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={[styles.scrollContent, { flexDirection: isRTL ? 'row-reverse' : 'row', paddingHorizontal: width * 0.2, alignItems: 'center' }]}>
             {newestDeals.map(deal => (
               <RestaurantCard
                 key={deal.vendorId || deal.id}

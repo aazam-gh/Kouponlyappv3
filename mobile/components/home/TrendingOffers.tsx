@@ -17,7 +17,6 @@ import HomeSectionHeading from './HomeSectionHeading';
 import {
     HOME_CAROUSEL_GAP,
     HOME_HORIZONTAL_GUTTER,
-    HOME_SECTION_TOP_SPACING,
 } from './layout';
 
 type TrendingOffersProps = {
@@ -134,7 +133,7 @@ export default function TrendingOffers({ onVendorPress }: TrendingOffersProps) {
 
     return (
         <View style={styles.container}>
-            <HomeSectionHeading prefix={labelPrefix} highlight={labelHighlight} />
+            <HomeSectionHeading prefix={labelPrefix} highlight={labelHighlight} onSeeMore={() => router.push({ pathname: '/vendors', params: { section: 'trending' } } as any)} />
             <ScrollView
                 ref={scrollViewRef}
                 horizontal
@@ -190,7 +189,7 @@ export default function TrendingOffers({ onVendorPress }: TrendingOffersProps) {
 
 const styles = StyleSheet.create({
     container: {
-        paddingTop: HOME_SECTION_TOP_SPACING,
+        paddingTop: 16,
     },
     carouselName: {
         fontSize: 16,

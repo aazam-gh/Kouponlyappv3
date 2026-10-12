@@ -11,7 +11,7 @@ const base64ToBytes=(value:string)=>Uint8Array.from(atob(value),c=>c.charCodeAt(
 const normalizeEmail=(value:unknown)=>String(value||"").trim().toLowerCase();
 const isEmail=(value:string)=>/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(value);
 const isSchoolEmail=(email:string)=>/^[^@\s]+@rajagiri\.edu\.in$/.test(email);
-const isInternalMobileTestEmail=(email:string)=>normalizeEmail(email)==="info@kouponly.in";
+const isMobileAccountEmailException=(email:string)=>["info@kouponly.in","pauljasonthykatt@gmail.com","sabinjsshaji2002@gmail.com"].includes(normalizeEmail(email));
 const normalizeDigits=(value:any)=>String(value??"").replace(/[٠-٩۰-۹]/g,(digit)=>{const arabic="٠١٢٣٤٥٦٧٨٩",persian="۰۱۲۳۴۵۶۷۸۹";const i=arabic.indexOf(digit);return String(i>-1?i:persian.indexOf(digit));});
 const asRows=(response:any)=>response.data||[];
 async function existsStudent(service:any,email:string){const {data,error}=await service.from("couponly_students").select("id").eq("email",email).limit(1);if(error)throw error;return Boolean(data?.length);}
@@ -30,7 +30,7 @@ async function sendExpoPushToUser(service:any,uid:string,message:Record<string,u
     const result=await fetch("https://exp.host/--/api/v2/push/send",{method:"POST",headers:{Accept:"application/json","Accept-Encoding":"gzip, deflate","Content-Type":"application/json"},body:JSON.stringify(chunk.map((to:string)=>({to,...message})))});
     if(!result.ok)throw new Error("Push notification delivery failed");
     const payload=await result.json();
-    (payload.data||[]).forEach((ticket:any,index:number)=>{if(ticket.status==="error"&&["DeviceNotRegistered","InvalidCredentials"].includes(ticket.details?.error||""))invalid.push(chunk[index]);});
+    (payload.data||[]).forEach((ticket:any,index:number)=>{if(ticket.status==="error"&&ticket.details?.error==="DeviceNotRegistered")invalid.push(chunk[index]);});
   }
   if(invalid.length)await service.from("couponly_push_tokens").delete().in("token",invalid);
 }
@@ -55,6 +55,17 @@ Deno.serve(async(request)=>{
     const requireUser=()=>{if(!user)throw Object.assign(new Error("Login required"),{status:401});return user;};
     const requireAdmin=async()=>{const current=requireUser();if(await roleOf(client,current.id)!=="admin")throw Object.assign(new Error("Admin access required"),{status:403});return current;};
     switch(action){
+      case "submitStudentRequest": {
+        // Only this service-role endpoint supplies the verified owner and gateway origin.
+        const ip=request.headers.get("x-forwarded-for")?.split(",")[0]?.trim()||"unknown";
+        const {data:requestId,error}=await service.rpc("kouponly_submit_student_request",{
+          p_id:data.id||null,p_kind:data.kind||null,p_name:data.name||"",p_domain:data.domain||"",p_email:data.email||"",
+          p_contact:data.contact||"",p_phone:data.phone||"",p_user_id:user?.id||null,
+          p_origin_hash:await sha256("community:"+ip),
+        });
+        if(error)throw Object.assign(new Error(error.message),{status:400});
+        return reply({requestId});
+      }
       case "checkStudentExists":
       case "checkStudentExistsLogin": {
         const email=normalizeEmail(data.email);if(!isEmail(email))throw Object.assign(new Error("Valid email required"),{status:400});
@@ -66,7 +77,7 @@ Deno.serve(async(request)=>{
         const email=normalizeEmail(data.email),purpose=String(data.purpose||"");
         if(!isEmail(email)||!["signup","login","verification"].includes(purpose))throw Object.assign(new Error("A valid email and OTP purpose are required"),{status:400});
         const ip=request.headers.get("x-forwarded-for")?.split(",")[0]||"unknown";
-        if(purpose==="signup"&&!isSchoolEmail(email)&&!isInternalMobileTestEmail(email))throw Object.assign(new Error("Use your @rajagiri.edu.in email address"),{status:403});
+        if(purpose==="signup"&&!isSchoolEmail(email)&&!isMobileAccountEmailException(email))throw Object.assign(new Error("Use your @rajagiri.edu.in email address"),{status:403});
         if(purpose==="verification"&&!isSchoolEmail(email))throw Object.assign(new Error("Use your @rajagiri.edu.in email address"),{status:403});
         await incrementRateLimit(service,await sha256("send:"+email+":"+purpose+":"+ip),5,900);
         if(purpose!=="login"&&await existsStudent(service,email))throw Object.assign(new Error("An account with this email already exists"),{status:409});
@@ -176,7 +187,8 @@ Deno.serve(async(request)=>{
       }
       case "registerPushToken": {
         const current=requireUser();const token=String(data.token||"");if(!/^(ExponentPushToken|ExpoPushToken)\[[^\]]+\]$/.test(token))throw Object.assign(new Error("A valid Expo push token is required"),{status:400});
-        const {error}=await client.from("couponly_push_tokens").upsert({user_id:current.id,token,platform:data.platform||null},{onConflict:"token"});
+        if(!["ios","android","web"].includes(data.platform))throw Object.assign(new Error("A valid device platform is required"),{status:400});
+        const {error}=await client.from("couponly_push_tokens").upsert({user_id:current.id,token,platform:data.platform,updated_at:new Date().toISOString()},{onConflict:"token"});
         if(error)throw error;return reply({success:true});
       }
       case "unregisterPushToken": {

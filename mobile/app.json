@@ -21,7 +21,7 @@
     "android": {
       "package": "com.kouponly.app",
       "adaptiveIcon": {
-        "backgroundColor": "#0A0A0A",
+        "backgroundColor": "#000000",
         "foregroundImage": "./assets/images/android-adaptive-icon.png"
       },
       "predictiveBackGestureEnabled": true,
@@ -36,6 +36,15 @@
     },
     "plugins": [
       "expo-router",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/images/kouponly-logo.png",
+          "imageWidth": 240,
+          "resizeMode": "contain",
+          "backgroundColor": "#000000"
+        }
+      ],
       "expo-notifications",
       [
         "expo-location",

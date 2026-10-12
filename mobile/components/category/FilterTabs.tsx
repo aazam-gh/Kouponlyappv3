@@ -80,7 +80,7 @@ export default function FilterTabs({ selectedFilter, onFilterChange, filters }: 
                         styles.slider,
                         {
                             width: tabWidth,
-                            backgroundColor: Colors.limeGreen,
+                            backgroundColor: Colors.brandGreen,
                             borderColor: BorderPalette.border,
                         },
                         sliderStyle,

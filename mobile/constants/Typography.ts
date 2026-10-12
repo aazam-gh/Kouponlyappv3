@@ -3,7 +3,7 @@ import type { TextStyle } from 'react-native';
 const FontFamilyTokens = {
     display: 'Outfit_700Bold',
     body: 'Outfit_400Regular',
-    bodyStrong: 'Outfit_700Bold',
+    bodyStrong: 'Outfit_600SemiBold',
 } as const;
 
 export type TextVariant = 'display' | 'body' | 'bodyStrong';
@@ -56,7 +56,7 @@ export const Typography = {
         bold: FontFamilyTokens.display,
     },
     outfit: {
-        medium: FontFamilyTokens.body,
+        medium: 'Outfit_600SemiBold',
         semiBold: FontFamilyTokens.bodyStrong,
         bold: 'Outfit_700Bold',
     },

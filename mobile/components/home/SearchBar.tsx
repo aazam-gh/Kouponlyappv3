@@ -6,7 +6,7 @@ import Ionicons from "@expo/vector-icons/Ionicons";
 import { GlassView, isGlassEffectAPIAvailable } from "expo-glass-effect";
 import { useNavigation } from "expo-router";
 import { useEffect, useState } from "react";
-import { Platform, StyleSheet, TextInput, View } from 'react-native';
+import { Keyboard, Platform, StyleSheet, TextInput, View } from 'react-native';
 import { Typography } from "../../constants/Typography";
 import { useAppTheme } from "../../context/AppThemeContext";
 import { useAppLocale } from "../../context/LocaleContext";
@@ -229,7 +229,8 @@ function SearchBarContent({
         value={value}
         onChangeText={onChangeText}
         returnKeyType="search"
-        onSubmitEditing={onSubmit}
+        submitBehavior="blurAndSubmit"
+        onSubmitEditing={() => { Keyboard.dismiss(); onSubmit?.(); }}
         selectionColor={activeColor}
         cursorColor={activeColor}
         onFocus={onFocus}

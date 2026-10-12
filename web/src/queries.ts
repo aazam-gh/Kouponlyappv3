@@ -42,6 +42,7 @@ export interface Vendor {
     email?: string
     phoneNumber?: string
     website?: string
+    instagramUrl?: string
     status?: 'Active' | 'Inactive'
     contact?: string
     profilePicture?: string

@@ -2,6 +2,7 @@ import React from 'react';
 import { render } from '@testing-library/react-native';
 import HomeAlias from '../app/realx';
 import ExploreAlias from '../app/realx/map';
+import SavedAlias from '../app/realx/saved';
 import ProfileAlias from '../app/realx/profile';
 import NativeTabNavigator from '../components/navigation/TabNavigator.ios';
 
@@ -21,15 +22,16 @@ describe('persistent bottom navigation', () => {
     [HomeAlias, '/(tabs)'],
     [ExploreAlias, '/(tabs)/explore'],
     [ProfileAlias, '/(tabs)/profile'],
+    [SavedAlias, '/(tabs)/saved'],
   ])('redirects a legacy screen into the tab navigator', async (Screen, destination) => {
     const view = await render(<Screen />);
     expect(view.getByTestId('destination').props.children).toBe(destination);
   });
 
-  it('keeps all three iOS tabs expanded while scrolling', async () => {
+  it('keeps all four iOS tabs expanded while scrolling', async () => {
     await render(<NativeTabNavigator />);
     const props = mockTabs.mock.calls.at(-1)![0];
     expect(props.minimizeBehavior).toBe('never');
-    expect(props.children[0].map((child: any) => child.props.name)).toEqual(['index', 'explore', 'profile']);
+    expect(props.children[0].map((child: any) => child.props.name)).toEqual(['index', 'explore', 'saved', 'profile']);
   });
 });

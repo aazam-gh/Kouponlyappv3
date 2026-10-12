@@ -42,6 +42,7 @@
     "expo-location": "~55.1.14",
     "expo-notifications": "~55.0.27",
     "expo-router": "~55.0.18",
+    "expo-splash-screen": "~55.0.25",
     "expo-status-bar": "~55.0.6",
     "expo-updates": "~55.0.26",
     "i18next": "^25.8.18",

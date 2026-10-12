@@ -14,6 +14,7 @@ import { logger } from '../../utils/logger';
 import { RemoteImage } from '../RemoteImage';
 import { StateSurface } from '../StateSurface';
 import AndroidBottomSheetModal from '../AndroidBottomSheetModal';
+import ZigzagSection from './ZigzagSection';
 
 type CategoryItem = HomeCategoryItem;
 
@@ -39,8 +40,8 @@ export default function CategoryGrid({ categories: propCategories, onCategoryPre
 
     const categories = propCategories || fetchedCategories;
     const columnWidth = (width - 8) / 5;
-    const imageSize = Math.min(64, Math.max(48, columnWidth - 4));
-    const rowHeight = imageSize + 36;
+    const imageSize = Math.min(64, Math.max(48, columnWidth - 12));
+    const rowHeight = imageSize + 31;
 
     const openCategory = (item: CategoryItem) => {
         triggerSubtleHaptic();
@@ -48,7 +49,7 @@ export default function CategoryGrid({ categories: propCategories, onCategoryPre
         else router.push({ pathname: '/realx/category/[id]', params: { id: item.id, name: item.name, englishName: item.englishName || item.name } } as any);
     };
 
-    const renderCategory = (item: CategoryItem, itemWidth = columnWidth) => (
+    const renderCategory = (item: CategoryItem, itemWidth = columnWidth, labelColor = theme.text) => (
         <ScalePressable
             key={item.id}
             style={[styles.categoryItem, { width: itemWidth }]}
@@ -59,26 +60,27 @@ export default function CategoryGrid({ categories: propCategories, onCategoryPre
         >
             <View style={[styles.imageContainer, { width: imageSize, height: imageSize, backgroundColor: theme.surface, borderColor: BorderPalette.border }]}>
                 {item.image ? (
-                    <RemoteImage source={typeof item.image === 'string' ? { uri: item.image } : item.image} style={styles.categoryImage} contentFit="cover" />
+                    <RemoteImage source={typeof item.image === 'string' ? { uri: item.image } : item.image} style={styles.categoryImage} imageStyle={styles.categoryImageCrop} contentFit="cover" />
                 ) : (
                     <Text style={[styles.categoryFallbackIcon, { color: theme.text }]}>{item.icon}</Text>
                 )}
             </View>
-            <Text style={[styles.categoryName, { color: theme.text }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.72}>
+            <Text style={[styles.categoryName, { color: labelColor }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.72}>
                 {item.name}
             </Text>
         </ScalePressable>
     );
 
     if (!propCategories && isLoading) {
-        return <View style={[styles.container, styles.grid]}>
-            {Array.from({ length: 10 }, (_, index) => (
-                <View key={`category-skeleton-${index}`} style={[styles.categoryItem, { width: columnWidth }]}>
-                    <View style={[styles.categorySkeleton, { width: imageSize, height: imageSize, backgroundColor: theme.cardMuted }]} />
-                    <View style={[styles.categoryNameSkeleton, { backgroundColor: theme.cardMuted }]} />
-                </View>
-            ))}
-        </View>;
+        return <ZigzagSection width={width} cutoutColor={theme.background} contentStyle={styles.sectionContent}>
+            <View style={[styles.container, styles.grid]}>
+                {Array.from({ length: 10 }, (_, index) => (
+                    <View key={`category-skeleton-${index}`} style={[styles.categoryItem, { width: columnWidth }]}>
+                        <View style={[styles.categorySkeleton, { width: imageSize, height: imageSize, backgroundColor: theme.cardMuted }]} />
+                    </View>
+                ))}
+            </View>
+        </ZigzagSection>;
     }
 
     if (!propCategories && error) return <StateSurface kind="error" compact onRetry={() => void refetch()} />;
@@ -94,25 +96,27 @@ export default function CategoryGrid({ categories: propCategories, onCategoryPre
     }, []);
 
     return <>
-        <View style={[styles.container, { minHeight: rowHeight }]}>
-            <View style={styles.homeRow}>
-                {visibleCategories.map(item => renderCategory(item))}
-                {hasMore ? (
-                    <ScalePressable
-                        style={[styles.categoryItem, { width: columnWidth }]}
-                        onPress={() => setMoreVisible(true)}
-                        activeOpacity={0.78}
-                        accessibilityRole="button"
-                        accessibilityLabel={t('more')}
-                    >
-                        <View style={[styles.moreButton, { width: imageSize, height: imageSize, backgroundColor: 'transparent', borderColor: BorderPalette.border }]}>
-                            <Ellipsis size={28} color={theme.text} />
-                        </View>
-                        <Text style={[styles.categoryName, { color: theme.text }]} numberOfLines={1}>{t('more')}</Text>
-                    </ScalePressable>
-                ) : null}
+        <ZigzagSection width={width} cutoutColor={theme.background} contentStyle={styles.sectionContent}>
+            <View style={[styles.container, { minHeight: rowHeight }]}>
+                <View style={styles.homeRow}>
+                    {visibleCategories.map(item => renderCategory(item, columnWidth, '#FFFFFF'))}
+                    {hasMore ? (
+                        <ScalePressable
+                            style={[styles.categoryItem, { width: columnWidth }]}
+                            onPress={() => setMoreVisible(true)}
+                            activeOpacity={0.78}
+                            accessibilityRole="button"
+                            accessibilityLabel={t('more')}
+                        >
+                            <View style={[styles.moreButton, { width: imageSize, height: imageSize, backgroundColor: theme.surface, borderColor: BorderPalette.border }]}>
+                                <Ellipsis size={28} color={theme.text} />
+                            </View>
+                            <Text style={[styles.categoryName, { color: '#FFFFFF' }]} numberOfLines={1}>{t('more')}</Text>
+                        </ScalePressable>
+                    ) : null}
+                </View>
             </View>
-        </View>
+        </ZigzagSection>
         <AndroidBottomSheetModal visible={moreVisible} onClose={() => setMoreVisible(false)} testID="category-drawer">
             <Text accessibilityRole="header" style={[styles.drawerTitle, { color: theme.text }]}>{t('category_grid_title')}</Text>
             <ScrollView style={{ maxHeight: height * 0.65 }} contentContainerStyle={styles.drawerRows} showsVerticalScrollIndicator={false}>
@@ -127,16 +131,17 @@ export default function CategoryGrid({ categories: propCategories, onCategoryPre
 }
 
 const styles = StyleSheet.create({
-    container: { paddingHorizontal: 4, paddingTop: 12 },
+    sectionContent: { paddingTop: 0, paddingBottom: 0 },
+    container: { paddingHorizontal: 4, paddingTop: 6 },
     grid: { flexDirection: 'row', flexWrap: 'wrap' },
     homeRow: { flexDirection: 'row', justifyContent: 'space-between' },
-    categoryItem: { alignItems: 'center', paddingHorizontal: 1, paddingBottom: 10 },
+    categoryItem: { alignItems: 'center', paddingHorizontal: 1 },
     imageContainer: { alignItems: 'center', justifyContent: 'center', overflow: 'hidden', borderWidth: StyleSheet.hairlineWidth, borderRadius: 22, marginBottom: 7 },
     categoryImage: { width: '100%', height: '100%' },
+    categoryImageCrop: { width: '160%', height: '160%', left: '-30%', top: '-50%' },
     categoryFallbackIcon: { fontSize: 34, ...Typography.getTextVariantStyle('body') },
     categoryName: { width: '100%', minHeight: 18, fontSize: 13, lineHeight: 16, ...Typography.getTextVariantStyle('body'), textAlign: 'center', textAlignVertical: 'top' },
-    categorySkeleton: { borderRadius: 22, opacity: 0.8 },
-    categoryNameSkeleton: { width: 48, height: 12, borderRadius: 6, marginTop: 8 },
+    categorySkeleton: { borderRadius: 22, opacity: 0.8, overflow: 'hidden', justifyContent: 'flex-end' },
     moreButton: { alignItems: 'center', justifyContent: 'center', overflow: 'hidden', borderWidth: StyleSheet.hairlineWidth, borderRadius: 22, marginBottom: 7 },
     drawerTitle: { marginHorizontal: 24, marginBottom: 12, fontSize: 20, fontWeight: '700' },
     drawerRows: { paddingHorizontal: 20, paddingBottom: 16, gap: 8 },

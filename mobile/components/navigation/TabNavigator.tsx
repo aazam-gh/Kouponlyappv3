@@ -23,6 +23,7 @@ function TabContent() {
   const screens = [
     { name: 'index', title: t('home'), icon: 'home', outlineIcon: 'home-outline' },
     { name: 'explore', title: t('explore'), icon: 'compass', outlineIcon: 'compass-outline' },
+    { name: 'saved', title: t('saved'), icon: 'bookmark', outlineIcon: 'bookmark-outline' },
     { name: 'profile', title: t('profile'), icon: 'person', outlineIcon: 'person-outline' },
   ];
 

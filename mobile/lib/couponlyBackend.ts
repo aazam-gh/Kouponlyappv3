@@ -4,7 +4,7 @@ import { getSupabase, supabaseConfigured } from '@/lib/supabase';
 export type VerificationRole = 'student' | 'creator';
 export type CouponlyVerificationStatus = 'pending' | 'approving' | 'approved' | 'rejected' | 'cancelled' | 'profile_completed';
 
-async function invoke<T>(action: string, data: Record<string, unknown> = {}): Promise<T> {
+export async function invoke<T>(action: string, data: Record<string, unknown> = {}): Promise<T> {
   if (!supabaseConfigured) throw new Error('Supabase is not configured.');
   const { data: result, error } = await getSupabase().functions.invoke('kouponly-mobile-action', {
     body: { action, data },

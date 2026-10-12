@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from "react";
 import { AccessibilityInfo, Platform, Pressable, Text, TextInput } from "react-native";
 import { useReducedMotion } from 'react-native-reanimated';
+import { Colors } from '@/constants/Colors';
 
 export type ThemeMode = "light" | "dark";
 export type ThemePreference = ThemeMode | "system";
@@ -43,7 +44,7 @@ export interface Theme {
 }
 
 const light: ThemeColors = {
-  ink: "#0A0F0C", inkOnAccent: "#0A0F0C", blackSoft: "#202020", lime: "#18B852",
+  ink: "#0A0F0C", inkOnAccent: "#0A0F0C", blackSoft: "#202020", lime: Colors.brandGreen,
   paper: "#FFFFFF", elevated: "#FFFFFF", card: "#FFFFFF", muted: "#5F6861",
   line: "rgba(0, 0, 0, 0.5)", soft: "#F1F4EF", success: "#08784F", danger: "#B42318",
   onDark: "#FFFFFF", onDarkMuted: "#D0D0D4", backdrop: "rgba(0,0,0,0.52)",
@@ -51,7 +52,7 @@ const light: ThemeColors = {
 };
 
 const dark: ThemeColors = {
-  ink: "#F4F8F3", inkOnAccent: "#080808", blackSoft: "#E4E4E7", lime: "#18B852",
+  ink: "#F4F8F3", inkOnAccent: "#080808", blackSoft: "#E4E4E7", lime: Colors.brandGreen,
   paper: "#0B0F0D", elevated: "#171C19", card: "#141916", muted: "#C8D0C8",
   line: "#29322D", soft: "#1E2420", success: "#52D69A", danger: "#FF6961",
   onDark: "#FFFFFF", onDarkMuted: "#D0D0D4", backdrop: "rgba(0,0,0,0.68)",
@@ -82,12 +83,12 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     AccessibilityInfo.isReduceMotionEnabled().then(setReduceMotion);
-    AccessibilityInfo.isReduceTransparencyEnabled().then(setReduceTransparency);
-    AccessibilityInfo.isBoldTextEnabled().then(setBoldText);
+    AccessibilityInfo.isReduceTransparencyEnabled?.().then(setReduceTransparency);
+    AccessibilityInfo.isBoldTextEnabled?.().then(setBoldText);
     const contrast = Platform.OS === "ios"
-      ? AccessibilityInfo.isDarkerSystemColorsEnabled()
-      : AccessibilityInfo.isHighTextContrastEnabled();
-    contrast.then(setHighContrast).catch(() => undefined);
+      ? AccessibilityInfo.isDarkerSystemColorsEnabled?.()
+      : AccessibilityInfo.isHighTextContrastEnabled?.();
+    contrast?.then(setHighContrast).catch(() => undefined);
     const subscriptions = [
       AccessibilityInfo.addEventListener("reduceMotionChanged", setReduceMotion),
       AccessibilityInfo.addEventListener("reduceTransparencyChanged", setReduceTransparency),
@@ -125,13 +126,13 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       ...(Text as any).defaultProps,
       allowFontScaling: true,
       maxFontSizeMultiplier: 2.4,
-      style: [{ color: value.colors.ink }],
+      style: [{ color: value.colors.ink, fontFamily: "Outfit_400Regular" }],
     };
     (TextInput as any).defaultProps = {
       ...(TextInput as any).defaultProps,
       allowFontScaling: true,
       maxFontSizeMultiplier: 2.4,
-      style: [{ color: value.colors.ink }],
+      style: [{ color: value.colors.ink, fontFamily: "Outfit_400Regular" }],
     };
   }, [value.colors]);
 
@@ -174,9 +175,9 @@ export const C: ThemeColors = new Proxy({ ...light }, {
 
 export const F = {
   heading: "Outfit_700Bold",
-  headingSemi: "Outfit_700Bold",
+  headingSemi: "Outfit_600SemiBold",
   body: "Outfit_400Regular",
-  bodySemi: "Outfit_700Bold",
+  bodySemi: "Outfit_600SemiBold",
   bodyBold: "Outfit_700Bold",
 } as const;
 

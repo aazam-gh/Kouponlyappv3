@@ -38,7 +38,7 @@ export default function NewDeals({ onVendorPress }: NewDealsProps) {
     const action = () => canAskAgain
         ? void load({ askForPermission: true, force: true })
         : void Linking.openSettings();
-    const heading = <HomeSectionHeading prefix={t('offers_near_you_prefix')} highlight={t('offers_near_you_highlight')} />;
+    const heading = <HomeSectionHeading prefix={t('offers_near_you_prefix')} highlight={t('offers_near_you_highlight')} onSeeMore={() => router.push({ pathname: '/vendors', params: { section: 'nearby' } } as any)} />;
 
     if (status === 'idle' || status === 'loading') {
         return <View style={styles.container}>{heading}<StateSurface kind="loading" compact /></View>;
@@ -80,10 +80,10 @@ export default function NewDeals({ onVendorPress }: NewDealsProps) {
                     overlapLogo
                     offerCard
                     discountLabel={dealDiscountLabel(vendor)}
-                    borderColor={BorderPalette.border}
+                    borderColor={theme.border}
                     titleCaseName
                     contentStyle={{ minHeight: 48, justifyContent: 'flex-start', paddingTop: 8, paddingBottom: 0 }}
-                    style={{ width: cardWidth, borderWidth: 1, borderColor: BorderPalette.border, borderRadius: 20, overflow: 'hidden' }}
+                    style={{ width: cardWidth, borderWidth: 1, borderColor: theme.border, borderRadius: 20, overflow: 'hidden' }}
                     onPress={() => onVendorPress ? onVendorPress(vendor) : router.push({ pathname: '/realx/vendor/[id]', params: { id: vendor.vendorId } } as any)}
                 />
             ))}
@@ -92,7 +92,7 @@ export default function NewDeals({ onVendorPress }: NewDealsProps) {
 }
 
 const styles = StyleSheet.create({
-    container: { paddingTop: 16, paddingBottom: 24 },
+    container: { paddingTop: 12, paddingBottom: 16 },
     scrollContent: { paddingHorizontal: HOME_HORIZONTAL_GUTTER, gap: HOME_CAROUSEL_GAP },
     action: { alignSelf: 'center', borderRadius: 999, paddingHorizontal: 18, paddingVertical: 11 },
     actionText: { fontSize: 14, fontWeight: '700' },

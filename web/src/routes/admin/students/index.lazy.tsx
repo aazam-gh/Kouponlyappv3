@@ -1,3 +1,4 @@
+import { StudentRequests } from '@/components/admin/StudentRequests'
 import { createLazyFileRoute, Link } from '@tanstack/react-router'
 import { useQuery } from '@tanstack/react-query'
 import { adminStudentsQuery } from '@/lib/admin-students'
@@ -33,5 +34,6 @@ function Students() {
         <span className="text-sm text-muted-foreground">Page {search.page} · {query.data.total} students</span>
         <Button variant="outline" disabled={search.page * search.pageSize >= query.data.total || query.isFetching} onClick={() => void navigate({ search: { ...search, page: search.page + 1 } })}>Next</Button></div>
     </>}
+    <StudentRequests />
   </div>
 }

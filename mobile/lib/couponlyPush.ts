@@ -5,6 +5,7 @@ import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
 import { registerCouponlyPushToken, unregisterCouponlyPushToken } from '@/lib/couponlyBackend';
 import { getSupabase } from '@/lib/supabase';
+import { logger } from '@/utils/logger';
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
@@ -19,9 +20,8 @@ const TOKEN_KEY = 'couponly.expoPushToken';
 const LEGACY_TOKEN_KEY = 'realx.expoPushToken';
 const SYNC_KEY = 'couponly.expoPushTokenSync';
 const LEGACY_SYNC_KEY = 'realx.expoPushTokenSync';
-const MAX_SYNC_AGE = 7 * 24 * 60 * 60 * 1000;
-
-type TokenSync = { token: string; userId: string; syncedAt: number };
+const PERMISSION_PROMPTED_KEY = 'couponly.notificationPermissionPrompted';
+const syncsInFlight = new Map<string, Promise<string | null>>();
 
 function projectId() {
   return Constants.expoConfig?.extra?.eas?.projectId || Constants.easConfig?.projectId || undefined;
@@ -33,23 +33,43 @@ async function isCouponlyStudent(userId: string) {
   return Boolean(data);
 }
 
-export async function syncCouponlyPushToken(userId: string, requestPermission = false) {
+export function syncCouponlyPushToken(userId: string, requestPermission = false) {
+  const existingSync = syncsInFlight.get(userId);
+  if (existingSync) return existingSync;
+  const sync = performCouponlyPushTokenSync(userId, requestPermission).finally(() => {
+    syncsInFlight.delete(userId);
+  });
+  syncsInFlight.set(userId, sync);
+  return sync;
+}
+
+async function performCouponlyPushTokenSync(userId: string, requestPermission: boolean) {
   try {
     if ((Platform.OS !== 'ios' && Platform.OS !== 'android') || !Device.isDevice || !(await isCouponlyStudent(userId))) return null;
-    let { status } = await Notifications.getPermissionsAsync();
-    if (status !== 'granted' && requestPermission) ({ status } = await Notifications.requestPermissionsAsync());
+    await setupCouponlyNotificationChannels();
+    let permissions = await Notifications.getPermissionsAsync();
+    let { status } = permissions;
+    if (status !== 'granted' && requestPermission && permissions.canAskAgain) {
+      const alreadyPrompted = await AsyncStorage.getItem(PERMISSION_PROMPTED_KEY);
+      if (alreadyPrompted !== 'true') {
+        permissions = await Notifications.requestPermissionsAsync();
+        status = permissions.status;
+        await AsyncStorage.setItem(PERMISSION_PROMPTED_KEY, 'true');
+      }
+    }
     if (status !== 'granted') return null;
     const easProjectId = projectId();
     if (!easProjectId) return null;
     const token = (await Notifications.getExpoPushTokenAsync({ projectId: easProjectId })).data;
-    let cached: TokenSync | null = null;
-    try { cached = JSON.parse((await AsyncStorage.getItem(SYNC_KEY)) || (await AsyncStorage.getItem(LEGACY_SYNC_KEY)) || 'null') as TokenSync | null; } catch {}
-    if (cached?.token === token && cached.userId === userId && Date.now() - cached.syncedAt < MAX_SYNC_AGE) return token;
     const platform = Platform.OS === 'ios' || Platform.OS === 'android' ? Platform.OS : 'web';
+    // Always upsert: a local cache must not prevent recovery if the server row was removed.
     await registerCouponlyPushToken(token, platform);
     await Promise.all([AsyncStorage.setItem(TOKEN_KEY, token), AsyncStorage.setItem(SYNC_KEY, JSON.stringify({ token, userId, syncedAt: Date.now() })), AsyncStorage.multiRemove([LEGACY_TOKEN_KEY, LEGACY_SYNC_KEY])]);
     return token;
-  } catch {
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : String(error);
+    if (__DEV__) logger.error('[push] Could not sync the device push token:', detail);
+    else console.error('[push] Could not sync the device push token:', detail);
     return null;
   }
 }

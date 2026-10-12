@@ -1,45 +1,39 @@
-import type { ReactNode } from 'react';
-import { View, StyleSheet } from 'react-native';
+import { useContext, type ReactNode } from 'react';
+import Animated, { useAnimatedStyle } from 'react-native-reanimated';
+import { ZigzagRevealContext } from './ScrollCrunchSection';
+import { View, StyleSheet, type StyleProp, type ViewStyle } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 import { Colors } from '@/constants/Colors';
 
-const EDGE_HEIGHT = 12;
-const BOTTOM_EDGE_INSET = 1;
+const EDGE_HEIGHT = 10;
 
-function ZigzagEdge({ width, bottom = false, cutoutColor }: { width: number; bottom?: boolean; cutoutColor: string }) {
-    if (bottom) {
-        // Keep a one-pixel lime connection to the section content so SVG
-        // antialiasing cannot expose a white hairline before the teeth.
-        const baseline = BOTTOM_EDGE_INSET;
-        const bottomY = EDGE_HEIGHT + BOTTOM_EDGE_INSET;
-        let cutoutPath = `M 0 ${baseline}`;
-        for (let x = 10, point = 1; x < width; x += 10, point += 1) {
-            cutoutPath += ` L ${x} ${point % 2 === 1 ? bottomY : baseline}`;
-        }
-        cutoutPath += ` L ${width} ${baseline} L ${width} ${bottomY} L 0 ${bottomY} Z`;
-        return <Svg width={width} height={bottomY} viewBox={`0 0 ${width} ${bottomY}`} preserveAspectRatio="none">
-            <Path d={`M 0 0 H ${width} V ${bottomY} H 0 Z`} fill={Colors.limeGreen} />
-            <Path d={cutoutPath} fill={cutoutColor} />
-        </Svg>;
+function ZigzagEdge({ width, bottom = false }: { width: number; bottom?: boolean; cutoutColor: string }) {
+    let path = `M 0 ${EDGE_HEIGHT}`;
+    for (let x = 0; x < width; x += 24) {
+        path += ` Q ${x + 6} 0 ${x + 12} ${EDGE_HEIGHT / 2} Q ${x + 18} ${EDGE_HEIGHT} ${x + 24} ${EDGE_HEIGHT}`;
     }
-
-    const baseline = EDGE_HEIGHT;
-    let path = `M 0 ${baseline}`;
-    for (let x = 10, point = 1; x < width; x += 10, point += 1) {
-        path += ` L ${x} ${point % 2 === 0 ? baseline : EDGE_HEIGHT - baseline}`;
-    }
-    path += ` L ${width} ${baseline} Z`;
-    return <Svg width={width} height={EDGE_HEIGHT} viewBox={`0 0 ${width} ${EDGE_HEIGHT}`} preserveAspectRatio="none"><Path d={path} fill={Colors.limeGreen} /></Svg>;
+    path += ` L ${width} ${EDGE_HEIGHT} L 0 ${EDGE_HEIGHT} Z`;
+    return <Svg width={width} height={EDGE_HEIGHT} viewBox={`0 0 ${width} ${EDGE_HEIGHT}`} style={bottom ? { transform: [{ rotate: '180deg' }], marginTop: -1 } : undefined}><Path d={path} fill={Colors.brandGreen} stroke={Colors.brandGreen} strokeWidth={bottom ? 4 : 1} /></Svg>;
 }
 
-export default function ZigzagSection({ width, cutoutColor, children }: { width: number; cutoutColor: string; children: ReactNode }) {
+export default function ZigzagSection({ width, cutoutColor, children, contentStyle }: { width: number; cutoutColor: string; children: ReactNode; contentStyle?: StyleProp<ViewStyle> }) {
+    const reveal = useContext(ZigzagRevealContext);
+    const backgroundStyle = useAnimatedStyle(() => {
+        const progress = reveal?.get() ?? 1;
+        return { opacity: progress, transform: [{ scaleX: progress }, { scaleY: progress }] };
+    });
     return <View>
-        <ZigzagEdge width={width} cutoutColor={cutoutColor} />
-        <View style={styles.content}>{children}</View>
-        <ZigzagEdge width={width} bottom cutoutColor={cutoutColor} />
+        <Animated.View testID="zigzag-background" accessible={false} pointerEvents="none" style={[StyleSheet.absoluteFill, backgroundStyle]}>
+            <ZigzagEdge width={width} cutoutColor={cutoutColor} />
+            <View style={{ flex: 1, backgroundColor: Colors.brandGreen }} />
+            <ZigzagEdge width={width} bottom cutoutColor={cutoutColor} />
+        </Animated.View>
+        <View style={{ height: EDGE_HEIGHT }} />
+        <View testID="zigzag-content" style={[styles.content, contentStyle]}>{children}</View>
+        <View style={{ height: EDGE_HEIGHT - 1 }} />
     </View>;
 }
 
 const styles = StyleSheet.create({
-    content: { paddingTop: 12, paddingBottom: 24, backgroundColor: Colors.limeGreen },
+    content: { paddingTop: 12, paddingBottom: 24 },
 });

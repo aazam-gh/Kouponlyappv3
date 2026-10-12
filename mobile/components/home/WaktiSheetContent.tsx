@@ -500,7 +500,7 @@ const styles = StyleSheet.create({
         paddingVertical: 14,
         paddingHorizontal: 24,
         marginTop: 0,
-        boxShadow: '0 16px 32px rgba(24, 184, 82, 0.30)',
+        boxShadow: '0 16px 32px rgba(24, 185, 82, 0.30)',
     },
     ctaRTL: {
         flexDirection: 'row-reverse',

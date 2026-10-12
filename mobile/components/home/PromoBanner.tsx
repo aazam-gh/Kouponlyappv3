@@ -15,7 +15,7 @@ import { logger } from '../../utils/logger';
 import { Colors } from '../../constants/Colors';
 import { HOME_CAROUSEL_GAP, HOME_HORIZONTAL_GUTTER } from './layout';
 
-const BANNER_HEIGHT = 192;
+const BANNER_HEIGHT = 240;
 const BANNER_SIDE_PADDING = HOME_HORIZONTAL_GUTTER;
 const BANNER_GAP = HOME_CAROUSEL_GAP;
 const BANNER_AUTO_SCROLL_MS = 4000;
@@ -248,7 +248,7 @@ const styles = StyleSheet.create({
     },
     activeIndicator: {
         width: 24,
-        backgroundColor: Colors.limeGreen,
+        backgroundColor: Colors.brandGreen,
     },
     scrollContent: {
         paddingHorizontal: BANNER_SIDE_PADDING,

@@ -1,4 +1,5 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { summarizeTickets, processNotificationReceipts } from "../_shared/push.ts";
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
@@ -298,34 +299,63 @@ Deno.serve(async (request) => {
         if(topic!=="all-users")fail("Only the all-users audience is currently supported");
         if(imageUrl){try{if(new URL(imageUrl).protocol!=="https:")throw new Error("HTTPS required");}catch{fail("Image URL must be a valid HTTPS URL");}}
         const dateKey=new Intl.DateTimeFormat("en-CA",{timeZone:"Asia/Qatar",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date());
-        const {data:quota,error:quotaError}=await service.rpc("couponly_consume_notification_quota",{p_date_key:dateKey,p_daily_limit:2});
-        if(quotaError)throw quotaError;if(!quota)fail("Daily notification limit of 2 reached",429);
-        const {data:record,error}=await service.from("couponly_notifications").insert({title,body:message,data:{imageUrl:imageUrl||null,topic},status:"queued",sent_by:user.id,date_key:dateKey}).select("id").single();
-        if(error)throw error;
         const entries:any[]=[];
         for(let offset=0;;offset+=1000){const {data:page,error:tokenError}=await service.from("couponly_push_tokens").select("id,user_id,token").order("id").range(offset,offset+999);if(tokenError)throw tokenError;entries.push(...(page||[]));if(!page||page.length<1000)break;}
-        let sentCount=0,failedCount=0,invalidTokenCount=0;const successfulUsers=new Set<string>();
+        if(entries.length===0)fail("No registered push devices. Open Kouponly on a device and allow notifications before sending a campaign.",409);
+        const {data:quota,error:quotaError}=await service.rpc("couponly_consume_notification_quota",{p_date_key:dateKey,p_daily_limit:2});
+        if(quotaError)throw quotaError;
+        if(!quota)fail("Daily notification limit reached (2 per Qatar day).",429);
+        const {data:record,error}=await service.from("couponly_notifications").insert({title,body:message,data:{imageUrl:imageUrl||null,topic},status:"queued",sent_by:user.id,date_key:dateKey}).select("id").single();
+        if(error)throw error;
+        let sentCount=0,failedCount=0,invalidTokenCount=0;
+        const successfulUsers=new Set<string>();
+        const errors:string[]=[];
         for(let offset=0;offset<entries.length;offset+=100){
           const chunk=entries.slice(offset,offset+100);
-          const push=await fetch("https://exp.host/--/api/v2/push/send",{method:"POST",headers:{"Content-Type":"application/json","Accept":"application/json","Accept-Encoding":"gzip, deflate"},body:JSON.stringify(chunk.map((item:any)=>({to:item.token,title,body:message,channelId:"reelx_general_v2",...(imageUrl?{richContent:{image:imageUrl}}:{}),data:{type:"admin_broadcast",campaignId:record.id,imageUrl:imageUrl||null,path:"/notifications"}})))});
-          if(!push.ok){failedCount+=chunk.length;continue;}
-          const payload=await push.json();const tickets=Array.isArray(payload.data)?payload.data:[];
-          const receipts:any[]=[];const invalidTokens:string[]=[];
-          tickets.forEach((ticket:any,index:number)=>{const token=chunk[index];if(!token)return;if(ticket.status==="ok"){sentCount++;successfulUsers.add(token.user_id);if(ticket.id)receipts.push({campaign_id:record.id,token_id:token.id,receipt_id:ticket.id,status:"pending"});}else{failedCount++;const reason=ticket.details?.error||null;if(["DeviceNotRegistered","InvalidCredentials"].includes(reason)){invalidTokenCount++;invalidTokens.push(token.token);}}});
-          if(receipts.length){const {error:receiptError}=await service.from("couponly_notification_deliveries").insert(receipts);if(receiptError)throw receiptError;}
-          if(invalidTokens.length){const {error:removeError}=await service.from("couponly_push_tokens").delete().in("token",invalidTokens);if(removeError)throw removeError;}
+          let payload:any;
+          try {
+            const push=await fetch("https://exp.host/--/api/v2/push/send",{
+              method:"POST",headers:{"Content-Type":"application/json",Accept:"application/json"},
+              signal:AbortSignal.timeout(15000),
+              body:JSON.stringify(chunk.map((item:any)=>({to:item.token,title,body:message,priority:"high",channelId:"reelx_general_v2",...(imageUrl?{richContent:{image:imageUrl}}:{}),data:{type:"admin_broadcast",campaignId:record.id,imageUrl:imageUrl||null,path:"/notifications"}})))
+            });
+            payload=await push.json();
+            if(!push.ok)payload={errors:payload.errors||[{message:`Expo rejected the request (${push.status})`}]};
+          } catch(error) {
+            payload={errors:[{message:String((error as any)?.message||error)}]};
+          }
+          const receipts:any[]=[],invalidTokens:string[]=[];
+          for(const result of summarizeTickets(chunk,payload)){
+            if(result.accepted){
+              sentCount++;successfulUsers.add(result.entry.user_id);
+              receipts.push({campaign_id:record.id,token_id:result.entry.id,receipt_id:result.receiptId,status:"pending"});
+            } else {
+              failedCount++;errors.push(result.error);
+              if(result.invalid){invalidTokenCount++;invalidTokens.push(result.entry.token);}
+            }
+          }
+          if(receipts.length){const {error}=await service.from("couponly_notification_deliveries").insert(receipts);if(error)throw error;}
+          if(invalidTokens.length){const {error}=await service.from("couponly_push_tokens").delete().in("token",invalidTokens);if(error)throw error;}
         }
         const historyRows=[...successfulUsers].map(user_id=>({user_id,kind:"admin_broadcast",title,body:message,data:{campaignId:record.id,imageUrl:imageUrl||null}}));
-        for(let offset=0;offset<historyRows.length;offset+=500){const {error:historyError}=await service.from("notifications").insert(historyRows.slice(offset,offset+500));if(historyError)throw historyError;}
-        let receiptSuccess=0,receiptFailure=0;
-        const pending:any[]=[];for(let offset=0;;offset+=500){const {data:page,error:pageError}=await service.from("couponly_notification_deliveries").select("id,receipt_id,token_id").eq("campaign_id",record.id).eq("status","pending").range(offset,offset+499);if(pageError)throw pageError;pending.push(...(page||[]));if(!page||page.length<500)break;}
-        for(let offset=0;offset<pending.length;offset+=300){const chunk=pending.slice(offset,offset+300);const receiptResponse=await fetch("https://exp.host/--/api/v2/push/getReceipts",{method:"POST",headers:{"Content-Type":"application/json","Accept":"application/json"},body:JSON.stringify({ids:chunk.map((item:any)=>item.receipt_id)})});if(!receiptResponse.ok)continue;const receiptBody=await receiptResponse.json();for(const item of chunk){const receipt=receiptBody.data?.[item.receipt_id];if(!receipt)continue;const failed=receipt.status==="error";if(failed)receiptFailure++;else receiptSuccess++;if(failed&&["DeviceNotRegistered","InvalidCredentials"].includes(receipt.details?.error||"")){invalidTokenCount++;if(item.token_id)await service.from("couponly_push_tokens").delete().eq("id",item.token_id);}await service.from("couponly_notification_deliveries").update({status:failed?"error":"ok",details:receipt}).eq("id",item.id);}}
-        const deliveryStatus=entries.length===0?"sent":failedCount===entries.length?"failed":"sent";
-        const {error:updateError}=await service.from("couponly_notifications").update({status:deliveryStatus,sent_count:sentCount,failed_count:failedCount,invalid_token_count:invalidTokenCount,total_registered:entries.length,receipt_success_count:receiptSuccess,receipt_failure_count:receiptFailure,completed_at:new Date().toISOString()}).eq("id",record.id);
+        for(let offset=0;offset<historyRows.length;offset+=500){const {error}=await service.from("notifications").insert(historyRows.slice(offset,offset+500));if(error)throw error;}
+        const deliveryStatus=sentCount?"processing":"failed";
+        const deliveryErrors=[...new Set(errors)].slice(0,10);
+        const {error:updateError}=await service.from("couponly_notifications").update({status:deliveryStatus,sent_count:sentCount,failed_count:failedCount,invalid_token_count:invalidTokenCount,total_registered:entries.length,data:{imageUrl:imageUrl||null,topic,errors:deliveryErrors},completed_at:sentCount?null:new Date().toISOString()}).eq("id",record.id);
         if(updateError)throw updateError;
-        await insertAudit(service,user.id,action,"notification",record.id,{recipientCount:entries.length,sentCount,failedCount,invalidTokenCount,receiptSuccess,receiptFailure});
-        return response({success:true,campaignId:record.id,status:deliveryStatus});
+        await insertAudit(service,user.id,action,"notification",record.id,{recipientCount:entries.length,sentCount,failedCount,invalidTokenCount});
+        return response({success:sentCount>0,campaignId:record.id,status:deliveryStatus,sentCount,failedCount,totalRegistered:entries.length,errors:deliveryErrors});
       }
+      case "notificationStatus": {
+        requireAdmin();
+        await processNotificationReceipts(service);
+        const {data:campaigns,error}=await service.from("couponly_notifications").select("*").order("sent_at",{ascending:false}).limit(10);
+        if(error)throw error;
+        const {count,error:countError}=await service.from("couponly_push_tokens").select("id",{count:"exact",head:true});
+        if(countError)throw countError;
+        return response({campaigns,registeredDevices:count||0});
+      }
+
       case "deleteTransaction": {
         requireAdmin();
         const id=String(data.transactionId||"");if(!id)fail("transactionId is required");

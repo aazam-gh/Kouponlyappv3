@@ -14,6 +14,8 @@ import { useAppTheme } from '@/context/AppThemeContext';
 import { useCatalogue } from '@/lib/catalogue';
 import { useNearbyDistances } from '@/lib/nearby';
 import { deals, type Deal } from '@/lib/data';
+import { searchVendors } from '@/lib/vendor-search';
+import { F } from '@/lib/theme';
 import { triggerSubtleHaptic } from '@/utils/haptics';
 import { usePostHog } from 'posthog-react-native';
 
@@ -36,14 +38,7 @@ export default function RealXSearchScreen() {
     setCommitted(next.trim().toLocaleLowerCase());
   }, [q]);
 
-  const results = React.useMemo(() => {
-    const terms = committed.split(/\s+/).filter(Boolean);
-    if (!terms.length) return [];
-    return deals.filter((deal) => {
-      const text = `${deal.name} ${deal.category} ${deal.place} ${deal.offer} ${deal.saving} ${deal.description} ${(deal.offers || []).map(offer => `${offer.title} ${offer.description} ${offer.saving}`).join(' ')}`.toLocaleLowerCase();
-      return terms.every(term => text.includes(term));
-    });
-  }, [committed, revision]);
+  const results = React.useMemo(() => searchVendors(deals, committed), [committed, revision]);
   const recommendations = React.useMemo(() => [...deals].sort((a, b) => b.trend - a.trend).slice(0, RECOMMENDATION_LIMIT), [revision]);
 
   const submit = () => { setCommitted(input.trim().toLocaleLowerCase()); if (input.trim()) posthog.capture('search_submitted'); Keyboard.dismiss(); };
@@ -60,12 +55,14 @@ export default function RealXSearchScreen() {
       <HeaderIconButton icon={'arrow-back'} onPress={() => router.back()} accessibilityLabel={t('back')} />
       <View style={[s.search, { backgroundColor: theme.inputBackground, borderColor: theme.inputBorder }]}>
         <Ionicons name="search" size={18} color={theme.brand} />
-        <TextInput testID="vendor-search-input" ref={inputRef} style={[s.input, { color: theme.text, textAlign: 'left', writingDirection: 'ltr' }]} placeholder={t('search_offers_placeholder')} placeholderTextColor={theme.inputPlaceholder} value={input} onChangeText={setInput} onSubmitEditing={submit} returnKeyType="search" autoFocus accessibilityLabel={t('search_offers_placeholder')} />
+        <TextInput testID="vendor-search-input" ref={inputRef} style={[s.input, { color: theme.text, textAlign: 'left', writingDirection: 'ltr' }]} placeholder={t('search_offers_placeholder')} placeholderTextColor={theme.inputPlaceholder} value={input} onChangeText={text => { setInput(text); setCommitted(text.trim().toLocaleLowerCase()); }} onSubmitEditing={submit} returnKeyType="search" submitBehavior="blurAndSubmit" accessibilityLabel={t('search_offers_placeholder')} />
         {input.length > 0 ? <ScalePressable accessibilityRole="button" accessibilityLabel={t('clear')} onPress={() => { setInput(''); setCommitted(''); }} hitSlop={10}><Ionicons name="close-circle" size={18} color={theme.iconMuted} /></ScalePressable> : null}
       </View>
     </View>
 
-    <Animated.View key={committed} entering={CONTENT_ENTER} style={{ flex: 1 }}>{status === 'loading' && !deals.length ? <View style={s.center}><ActivityIndicator size="large" color={theme.brand} /></View> : !committed ? <View style={s.center}><EmptyState icon="search-outline" title={t('search_offers_empty_title')} body={t('search_offers_empty_hint')} color={theme} /></View> : noMatches ? <FlatList
+    <Animated.View entering={CONTENT_ENTER} style={{ flex: 1 }}>{status === 'loading' && !deals.length ? <View style={s.center}><ActivityIndicator size="large" color={theme.brand} /></View> : !committed ? <View style={s.center}><EmptyState icon="search-outline" title={t('search_offers_empty_title')} body={t('search_offers_empty_hint')} color={theme} /></View> : noMatches ? <FlatList
+      keyboardShouldPersistTaps="handled"
+      keyboardDismissMode="on-drag"
       data={recommendations}
       keyExtractor={item => String(item.vendorId || item.id)}
       numColumns={1}
@@ -83,6 +80,8 @@ export default function RealXSearchScreen() {
       </View>}
       ListEmptyComponent={<View style={s.center}><EmptyState icon="search-outline" title={t('search_offers_no_results_title')} body={t('search_offers_no_results_hint', { query: committed })} color={theme} /></View>}
     /> : status === 'loading' && !results.length ? <View style={s.center}><ActivityIndicator size="large" color={theme.brand} /></View> : results.length ? <FlatList
+      keyboardShouldPersistTaps="handled"
+      keyboardDismissMode="on-drag"
       data={results}
       keyExtractor={item => String(item.vendorId || item.id)}
       numColumns={1}
@@ -104,7 +103,7 @@ function EmptyState({ icon, title, body, color }: { icon: 'search-outline'; titl
 const s = StyleSheet.create({
   root: { flex: 1 }, header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 12, gap: 12 },
   search: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8, borderRadius: 28, paddingHorizontal: 14, paddingVertical: 12, borderWidth: 1 },
-  input: { flex: 1, fontSize: 15, padding: 0 }, center: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 20 },
+  input: { flex: 1, fontFamily: F.body, fontSize: 16, padding: 0 }, center: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 20 },
   emptyState: { width: '100%', maxWidth: 300, paddingVertical: 24, alignItems: 'center' }, emptyIcon: { width: 48, height: 48, borderRadius: 24, alignItems: 'center', justifyContent: 'center', marginBottom: 14 },
   emptyTitle: { fontSize: 18, textAlign: 'center', lineHeight: 24, fontWeight: '600' }, emptyBody: { fontSize: 14, textAlign: 'center', lineHeight: 20, maxWidth: 280, marginTop: 6 },
   noResultHeader: { alignItems: 'center', paddingHorizontal: 20, paddingTop: 20 }, tryAnother: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 16, paddingVertical: 6 }, tryAnotherText: { fontSize: 14, fontWeight: '600' },

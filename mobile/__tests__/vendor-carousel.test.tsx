@@ -9,6 +9,7 @@ let mockReduceMotion = false;
 jest.mock('../lib/theme', () => ({ ...jest.requireActual('../lib/theme'), useMotionPreferences: () => ({ reduceMotion: mockReduceMotion }) }));
 
 jest.mock('expo-router', () => ({useLocalSearchParams:()=>({id:'1'}),useRouter:()=>({push:jest.fn()}),useFocusEffect:(effect:()=>void)=>require('react').useEffect(effect,[effect])}));
+jest.mock('../lib/nearby',()=>({useNearbyDistances:()=>({distanceByVendor:new Map()})}));
 jest.mock('../lib/catalogue',()=>({useCatalogue:()=>({status:'cloud'})}));
 jest.mock('../lib/auth',()=>({useAuth:()=>({user:null})}));
 jest.mock('../lib/benefits',()=>({useBenefits:()=>({benefits:null})}));

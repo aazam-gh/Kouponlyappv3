@@ -147,7 +147,7 @@ export default function BrandGrid() {
 
     return (
         <View style={styles.container}>
-            <HomeSectionHeading prefix={brandLabelPrefix} highlight={brandLabelHighlight} />
+            <HomeSectionHeading prefix={brandLabelPrefix} highlight={brandLabelHighlight} onSeeMore={() => router.push({ pathname: '/vendors', params: { section: 'brands' } } as any)} />
             <BrandRow items={row1} onPressBrand={handlePress} />
             {!isSingleRow && (
                 <View style={styles.rowSpacing}>
