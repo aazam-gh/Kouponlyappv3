@@ -142,7 +142,8 @@ export default function TrendingOffers({ onVendorPress }: TrendingOffersProps) {
                 directionalLockEnabled
                 canCancelContentTouches
                 keyboardShouldPersistTaps="always"
-                decelerationRate="normal"
+                snapToInterval={offerScrollInterval}
+                decelerationRate="fast"
                 scrollEventThrottle={16}
                 onScrollBeginDrag={handleScrollBegin}
                 onMomentumScrollBegin={handleScrollBegin}

@@ -45,9 +45,9 @@ it('does not replace newer coupon state with an old successful claim receipt', a
   expect(view.getByText('used:vendor-one')).toBeTruthy();
 });
 
-it('clears stale benefits when the server withdraws account eligibility',async()=>{
+it.each(['Verified email required','Verified @rajagiri.edu.in email required'])('clears stale benefits on %s',async(message)=>{
  mockRpc.mockImplementation((name:string)=>Promise.resolve({data:name==='kouponly_account_benefits'?{inviteCode:'AB234'}:false,error:null}));
  const view=await render(<BenefitsProvider><Reader/></BenefitsProvider>);await waitFor(()=>expect(view.getByText('AB234')).toBeTruthy());
- mockRpc.mockResolvedValue({data:null,error:{message:'Verified @rajagiri.edu.in email required'}});
+ mockRpc.mockResolvedValue({data:null,error:{message}});
  await act(async()=>{await reader.refresh().catch(()=>{});});expect(view.queryByText('AB234')).toBeNull();expect(view.getByText('none')).toBeTruthy();
 });

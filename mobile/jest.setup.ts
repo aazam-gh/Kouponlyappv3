@@ -13,7 +13,7 @@ jest.mock("react-native-reanimated", () => {
     __esModule: true,
     default: Animated,
     cubicBezier: (...args: number[]) => args,
-    FadeIn: builder, FadeOut: builder, FadeInUp: builder, FadeInDown: builder, FadeOutUp: builder, LinearTransition: builder,
+    FadeIn: builder, FadeOut: builder, FadeInUp: builder, FadeInDown: builder, FadeOutUp: builder, SlideInDown: builder, LinearTransition: builder,
     ReducedMotionConfig: () => null,
     Easing: { cubic: value, quad: value, ease: value, in: value, out: value, inOut: value, bezier: () => value },
     Extrapolation: { CLAMP: 'clamp', EXTEND: 'extend', IDENTITY: 'identity' },

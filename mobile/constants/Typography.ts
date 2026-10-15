@@ -32,13 +32,6 @@ export function getTextVariantStyle(variant: TextVariant): TextStyle {
     return textVariantStyles[variant];
 }
 
-export function getLocalizedTextVariantStyle(variant: TextVariant, _locale: 'en'): TextStyle {
-    return {
-        fontFamily: FontFamilyTokens[variant],
-        fontStyle: 'normal',
-    };
-}
-
 function getTextDirectionStyle({
     isRTL: explicitRTL,
     textAlign,
@@ -63,6 +56,5 @@ export const Typography = {
     fontFamily: FontFamilyTokens,
     variants: textVariantStyles,
     getTextVariantStyle,
-    getLocalizedTextVariantStyle,
     getTextDirectionStyle,
 } as const;

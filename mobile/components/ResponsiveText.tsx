@@ -1,7 +1,7 @@
 import { forwardRef } from 'react';
 import { Text, type TextProps } from 'react-native';
 
-import { getLocalizedTextVariantStyle, getTextVariantStyle, type TextVariant } from '../constants/Typography';
+import { getTextVariantStyle, type TextVariant } from '../constants/Typography';
 import { useAppLocale } from '../context/LocaleContext';
 
 type ResponsiveTextProps = TextProps & {
@@ -20,7 +20,7 @@ const ResponsiveText = forwardRef<Text, ResponsiveTextProps>(function Responsive
   },
   ref,
 ) {
-  const { locale, isRTL } = useAppLocale();
+  const { isRTL } = useAppLocale();
 
   return (
     <Text
@@ -31,7 +31,6 @@ const ResponsiveText = forwardRef<Text, ResponsiveTextProps>(function Responsive
       minimumFontScale={minimumFontScale}
       style={[
         getTextVariantStyle(variant),
-        getLocalizedTextVariantStyle(variant, locale),
         {
           flexShrink: 1,
           minWidth: 0,

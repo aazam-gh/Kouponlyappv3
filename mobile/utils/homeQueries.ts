@@ -1,9 +1,7 @@
 import { queryOptions, type QueryClient } from '@tanstack/react-query';
-import { Image } from 'expo-image';
 import { getSupabase } from '@/lib/supabase';
 import { fetchCloudCatalogue } from '@/lib/backend';
 import { queryClient, queryKeys } from './queryClient';
-import type { Opportunity } from '../types/opportunities';
 export type HomeLocale='en';
 export type HomeCategoryItem={id:string;name:string;englishName?:string;image?:string|number;icon?:string};
 export type HomeBannerItem={bannerId:string;altText:string;id?:string;images:{desktop?:string;mobile?:string};isActive:boolean;vendorId?:string;lastUpdated?:string};
@@ -20,6 +18,5 @@ export const homeQueryOptions={
  offers:()=>queryOptions<HomeOfferCard[]>({queryKey:queryKeys.trendingOffers(),queryFn:async()=>vendorCards().then(cards=>cards.slice().sort((a,b)=>(b.isTrending?1:0)-(a.isTrending?1:0)))}),
  featuredBanner:()=>queryOptions<HomeFeaturedBannerItem[]>({queryKey:queryKeys.cmsDocument('featuredBrandShowcase'),queryFn:async()=>{const result=await cms<{items?:HomeFeaturedBannerItem[]}>('featuredBrandShowcase');return (result.items||[]).filter(isValidHomeFeaturedBanner).sort((a,b)=>(a.order||0)-(b.order||0))}}),
  brands:()=>queryOptions<HomeBrandItem[]>({queryKey:queryKeys.cmsDocument('brand'),queryFn:async()=>{const result=await cms<{brands?:HomeBrandItem[]}>('brand');return (result.brands||[]).filter(row=>row.isActive)}}),
- opportunities:()=>queryOptions<Opportunity[]>({queryKey:queryKeys.opportunities(),queryFn:async()=>{const {data,error}=await getSupabase().from('realx_opportunities').select('*').eq('published',true).order('created_at',{ascending:false}).limit(20);if(error)throw error;return data as Opportunity[]}}),
 };
 export function preloadHomeData(locale:HomeLocale,client:QueryClient=queryClient){const criticalReady=Promise.all([client.fetchQuery(homeQueryOptions.categories(locale)),client.fetchQuery(homeQueryOptions.offers())]).then(()=>undefined);return {criticalReady,completion:criticalReady}}

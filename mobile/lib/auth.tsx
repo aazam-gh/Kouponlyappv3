@@ -1,4 +1,3 @@
-import { canCreateMobileAccount, isSchoolEmail, SCHOOL_EMAIL_MESSAGE } from './school-email';
 import * as Linking from 'expo-linking';
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import type { Session, User } from '@supabase/supabase-js';
@@ -174,7 +173,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const signUp = useCallback(async (name: string, email: string, password: string, referralCode?: string): Promise<AuthResult> => {
-    if (!canCreateMobileAccount(email)) return { error: SCHOOL_EMAIL_MESSAGE };
     try {
       const { data, error } = await getSupabase().auth.signUp({
         email: email.trim(),
@@ -200,7 +198,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const updateEmail = useCallback(async (email: string): Promise<AuthResult> => {
-    if (!isSchoolEmail(email)) return { error: SCHOOL_EMAIL_MESSAGE };
     try {
       const { error } = await getSupabase().auth.updateUser({ email: email.trim() });
       return error ? { error: error.message } : {};

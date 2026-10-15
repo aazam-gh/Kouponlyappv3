@@ -34,7 +34,7 @@ export default function GiftCardFlowScaffold({
 }: Props) {
     const insets = useSafeAreaInsets();
     const { theme } = useAppTheme();
-    const { locale, isRTL } = useAppLocale();
+    const { isRTL } = useAppLocale();
     const { t } = useTranslation();
     const progress = Math.max(0, Math.min(1, step / totalSteps));
 
@@ -91,7 +91,7 @@ export default function GiftCardFlowScaffold({
             </View>
 
             <View style={[styles.heading, isRTL && styles.headingRTL]}>
-                <Text style={[styles.title, Typography.getLocalizedTextVariantStyle('display', locale), { color: theme.text }, isRTL && styles.textRTL]}>{title}</Text>
+                <Text style={[styles.title, Typography.getTextVariantStyle('display'), { color: theme.text }, isRTL && styles.textRTL]}>{title}</Text>
             </View>
 
             {scroll ? (

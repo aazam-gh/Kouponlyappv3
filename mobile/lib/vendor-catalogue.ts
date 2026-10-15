@@ -86,7 +86,7 @@ export function projectVendorCatalogue(
     const externalUrl = stringValue(vendor.website, stringValue(payload.website, '')) || undefined;
     const deal: Deal = {
       id, vendorId: vendor.id, categoryId: mainCategory.id, subcategoryIds,
-      offers: vendorOffers.map(row => ({ id: row.id, index: offerIndexes.get(row.id)!, title: row.title,
+      offers: vendorOffers.map(row => ({ currency: stringValue(row.currency) || undefined, id: row.id, index: offerIndexes.get(row.id)!, title: row.title,
         logo: stringValue(row.image_url) || undefined, description: row.description || '', saving: row.saving_label || '', terms: row.terms || undefined, redemptionInstructions: row.redemption_instructions || undefined,
         cardLabels: labelValues(row.card_labels ?? row.payload?.cardLabels, row.card_label ?? row.payload?.cardLabel),
         cardLabel: labelValues(row.card_labels ?? row.payload?.cardLabels, row.card_label ?? row.payload?.cardLabel)[0],

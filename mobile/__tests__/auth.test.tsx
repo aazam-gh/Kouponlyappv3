@@ -1,12 +1,12 @@
 import React from 'react';
 import { fireEvent, render, waitFor } from '@testing-library/react-native';
+import { Alert } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
 jest.mock('../context/AppThemeContext', () => ({ useAppTheme: () => ({ isDark: false, theme: { background:'#fff', card:'#fff', cardMuted:'#f1f4ef', border:'#e2e8e1', text:'#0a0f0c', mutedText:'#5f6861', subtleText:'#5f6861', brand:'#18b852', brandText:'#128a43', brandSoft:'#e8f8ed', actionSolid:'#0e7a38', onActionSolid:'#fff', inputPlaceholder:'#5f6861', danger:'#d92d20', info:'#2563eb', warning:'#b7791f' } }) }));
 jest.mock('../context/LocaleContext', () => ({ useAppLocale: () => ({ locale:'en', isRTL:false }) }));
 jest.mock('../lib/theme', () => ({ ...jest.requireActual('../lib/theme'), useMotionPreferences: () => ({ reduceMotion: true, reduceTransparency: false }) }));
 jest.mock('react-native-reanimated', () => {
-  const React = require('react');
   const Native = require('react-native');
   const entering = { duration: () => entering, delay: () => entering, easing: () => entering, withInitialValues: () => entering, reduceMotion: () => entering };
   return {
@@ -36,16 +36,13 @@ import OnboardingScreen from '../app/realx/onboarding';
 import * as couponlyBackend from '../lib/couponlyBackend';
 
 describe('Kouponly account onboarding entry', () => {
-  it('offers student-only account creation', async () => {
+  it('opens student signup directly without a role-selection screen', async () => {
     const view = await render(<SafeAreaProvider initialMetrics={{frame:{x:0,y:0,width:393,height:852},insets:{top:59,left:0,right:0,bottom:34}}}><AuthScreen/></SafeAreaProvider>);
-    expect(view.getByText('BROKE?')).toBeTruthy();
     expect(view.getByText('Create account')).toBeTruthy();
     expect(view.getByText('Explore as Guest')).toBeTruthy();
     await fireEvent.press(view.getByText('Create account'));
-    await waitFor(() => expect(view.getByText('Join as a student')).toBeTruthy());
-    expect(view.queryByText('onboarding_join_as_creator')).toBeNull();
-    await fireEvent.press(view.getByText('FOR STUDENTS'));
-    await waitFor(() => expect(router.push).toHaveBeenCalledWith(expect.objectContaining({ pathname: '/realx/onboarding', params: expect.objectContaining({ flow: 'signup', role: 'student' }) })));
+    await waitFor(() => expect(router.push).toHaveBeenCalledWith(expect.objectContaining({ pathname: '/realx/onboarding', params: expect.objectContaining({ flow: 'signup' }) })));
+    expect(view.queryByText('Join as a student')).toBeNull();
   });
   it('uses the source email-code login flow with the Supabase-backed action', async () => {
     jest.mocked(useLocalSearchParams).mockReturnValue({ flow: 'login' } as any);
@@ -60,15 +57,47 @@ describe('Kouponly account onboarding entry', () => {
     sendCode.mockRestore();
     jest.mocked(useLocalSearchParams).mockReturnValue({} as any);
   });
+  it('allows a non-Rajagiri email to request a signup code', async () => {
+    jest.mocked(useLocalSearchParams).mockReturnValue({ flow: 'signup' } as any);
+    const alert = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+    const sendCode = jest.spyOn(couponlyBackend, 'sendCouponlyEmailCode').mockResolvedValue({ success: true, expiresIn: 60 } as any);
+    const view = await render(<SafeAreaProvider initialMetrics={{frame:{x:0,y:0,width:393,height:852},insets:{top:59,left:0,right:0,bottom:34}}}><OnboardingScreen/></SafeAreaProvider>);
+    await fireEvent.changeText(view.getByLabelText('Email address'), 'student@gmail.com');
+    await fireEvent.changeText(view.getByLabelText('First name'), 'Test');
+    await fireEvent.changeText(view.getByLabelText('Last name'), 'Student');
+    await fireEvent.press(view.getByText('Send Verification Code'));
+    await waitFor(() => expect(sendCode).toHaveBeenCalledWith('student@gmail.com', 'signup'));
+    expect(alert).not.toHaveBeenCalled();
+    expect(view.getByText('Check your email')).toBeTruthy();
+    alert.mockRestore();
+    sendCode.mockRestore();
+    jest.mocked(useLocalSearchParams).mockReturnValue({} as any);
+  });
+  it('shows a generic failure if the signup server returns its obsolete Rajagiri-only error', async () => {
+    jest.mocked(useLocalSearchParams).mockReturnValue({ flow: 'signup' } as any);
+    const sendCode = jest.spyOn(couponlyBackend, 'sendCouponlyEmailCode').mockRejectedValue(new Error('Use your @rajagiri.edu.in email address'));
+    const view = await render(<SafeAreaProvider initialMetrics={{frame:{x:0,y:0,width:393,height:852},insets:{top:59,left:0,right:0,bottom:34}}}><OnboardingScreen/></SafeAreaProvider>);
+    await fireEvent.changeText(view.getByLabelText('Email address'), 'student@gmail.com');
+    await fireEvent.changeText(view.getByLabelText('First name'), 'Test');
+    await fireEvent.changeText(view.getByLabelText('Last name'), 'Student');
+    await fireEvent.press(view.getByText('Send Verification Code'));
+    await waitFor(() => expect(sendCode).toHaveBeenCalledWith('student@gmail.com', 'signup'));
+    expect(view.queryByText('Use your @rajagiri.edu.in email address')).toBeNull();
+    expect(view.getByText('Unable to send the verification code right now. Please try again later.')).toBeTruthy();
+    sendCode.mockRestore();
+    jest.mocked(useLocalSearchParams).mockReturnValue({} as any);
+  });
   it('labels signup codes as verification codes', async () => {
     jest.mocked(useLocalSearchParams).mockReturnValue({ flow: 'signup' } as any);
     const sendCode = jest.spyOn(couponlyBackend, 'sendCouponlyEmailCode').mockResolvedValue({ success: true, expiresIn: 60 } as any);
     const view = await render(<SafeAreaProvider initialMetrics={{frame:{x:0,y:0,width:393,height:852},insets:{top:59,left:0,right:0,bottom:34}}}><OnboardingScreen/></SafeAreaProvider>);
+    expect(view.getByText('Step 1 of 2')).toBeTruthy();
     await fireEvent.changeText(view.getByLabelText('Email address'), 'student@rajagiri.edu.in');
     await fireEvent.changeText(view.getByLabelText('First name'), 'Test');
     await fireEvent.changeText(view.getByLabelText('Last name'), 'Student');
     await fireEvent.press(view.getByText('Send Verification Code'));
     await waitFor(() => expect(sendCode).toHaveBeenCalledWith('student@rajagiri.edu.in', 'signup'));
+    expect(view.getByText('Step 2 of 2')).toBeTruthy();
     expect(view.getByText('Enter the verification code from your email.')).toBeTruthy();
     sendCode.mockRestore();
     jest.mocked(useLocalSearchParams).mockReturnValue({} as any);

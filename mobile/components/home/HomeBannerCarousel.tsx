@@ -1,9 +1,7 @@
 import { useMotionPreferences } from '@/lib/theme';
-import ScalePressable from '@/components/ScalePressable';
 import { useQuery } from '@tanstack/react-query';
 import { useEffect, useRef, useState } from 'react';
 import { NativeScrollEvent, NativeSyntheticEvent, ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
-import Animated, { Extrapolation, interpolate, interpolateColor, useAnimatedScrollHandler, useAnimatedStyle, useSharedValue } from 'react-native-reanimated';
 
 import {
     homeQueryOptions,
@@ -11,28 +9,9 @@ import {
 } from '../../utils/homeQueries';
 import { HOME_COMPACT_BANNER_HEIGHT } from './layout';
 import FeaturedBanner from './FeaturedBanner';
-import { Colors } from '../../constants/Colors';
 
 const FEATURED_BANNER_TOP_SPACING = 16;
-const FEATURED_BANNER_INDICATOR_HEIGHT = 24;
 const DISPLAY_DURATION_MS = 4000;
-
-function PaginationIndicator({ index, pageProgress, currentIndex, reduceMotion }: {
-    index: number;
-    pageProgress: { get: () => number };
-    currentIndex: number;
-    reduceMotion: boolean;
-}) {
-    const animatedStyle = useAnimatedStyle(() => {
-        const progress = reduceMotion ? currentIndex : pageProgress.get();
-        return {
-            backgroundColor: interpolateColor(progress, [index - 1, index, index + 1], ['#D6D9D7', Colors.brandGreen, '#D6D9D7']),
-            transform: [{ scaleX: interpolate(progress, [index - 1, index, index + 1], [0.3, 1, 0.3], Extrapolation.CLAMP) }],
-        };
-    }, [currentIndex, index, reduceMotion]);
-
-    return <Animated.View style={[styles.indicator, animatedStyle]} />;
-}
 
 export default function HomeBannerCarousel() {
     const [currentIndex, setCurrentIndex] = useState(0);
@@ -40,7 +19,6 @@ export default function HomeBannerCarousel() {
     const [autoplayResetKey, setAutoplayResetKey] = useState(0);
     const currentIndexRef = useRef(0);
     const scrollViewRef = useRef<ScrollView | null>(null);
-    const pageProgress = useSharedValue(0);
     const { width: screenWidth } = useWindowDimensions();
     const {
         data: featuredBannerData = [],
@@ -54,10 +32,6 @@ export default function HomeBannerCarousel() {
             : [];
 
     const slideCount = featuredBanners.length;
-    const handleAnimatedScroll = useAnimatedScrollHandler(event => {
-        pageProgress.set(event.contentOffset.x / screenWidth);
-    });
-
     useEffect(() => {
         if (reduceMotion || slideCount <= 1) {
             return;
@@ -113,19 +87,19 @@ export default function HomeBannerCarousel() {
 
     return (
         <View style={styles.container} accessibilityLabel="Home promotional banners">
-            <Animated.ScrollView
+            <ScrollView
                 ref={scrollViewRef}
                 horizontal
                 pagingEnabled
+                bounces={false}
                 showsHorizontalScrollIndicator={false}
                 nestedScrollEnabled
                 directionalLockEnabled
                 canCancelContentTouches
-                decelerationRate="normal"
+                decelerationRate="fast"
                 scrollEventThrottle={16}
                 onScrollEndDrag={handleScrollEnd}
                 onMomentumScrollEnd={handleScrollEnd}
-                onScroll={handleAnimatedScroll}
                 style={styles.stage}
             >
                 {featuredBanners.map((featuredBanner) => (
@@ -139,58 +113,18 @@ export default function HomeBannerCarousel() {
                         />
                     </View>
                 ))}
-            </Animated.ScrollView>
-            {slideCount > 1 ? (
-                <View style={styles.pagination} accessibilityLabel="Featured banner navigation">
-                    {featuredBanners.map((featuredBanner, index) => (
-                        <ScalePressable
-                            key={`featured-indicator-${featuredBanner.id}`}
-                            onPress={() => {
-                                currentIndexRef.current = index;
-                                setCurrentIndex(index);
-                                setAutoplayResetKey((key) => key + 1);
-                            }}
-                            hitSlop={8}
-                            accessibilityRole="button"
-                            accessibilityLabel={`Show featured banner ${index + 1}`}
-                            accessibilityState={{ selected: currentIndex === index }}
-                            style={styles.indicatorButton}
-                        >
-                            <PaginationIndicator index={index} pageProgress={pageProgress} currentIndex={currentIndex} reduceMotion={reduceMotion} />
-                        </ScalePressable>
-                    ))}
-                </View>
-            ) : null}
+            </ScrollView>
         </View>
     );
 }
 
 const styles = StyleSheet.create({
     container: {
-        height: FEATURED_BANNER_TOP_SPACING + HOME_COMPACT_BANNER_HEIGHT + FEATURED_BANNER_INDICATOR_HEIGHT,
+        height: FEATURED_BANNER_TOP_SPACING + HOME_COMPACT_BANNER_HEIGHT,
         position: 'relative',
     },
     stage: {
         height: FEATURED_BANNER_TOP_SPACING + HOME_COMPACT_BANNER_HEIGHT,
         position: 'relative',
-    },
-    pagination: {
-        height: FEATURED_BANNER_INDICATOR_HEIGHT,
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: 7,
-    },
-    indicatorButton: {
-        width: 32,
-        height: FEATURED_BANNER_INDICATOR_HEIGHT,
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-    indicator: {
-        width: 20,
-        height: 6,
-        borderRadius: 999,
-        backgroundColor: Colors.brandGreen,
     },
 });

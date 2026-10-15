@@ -11,7 +11,6 @@ const base64ToBytes=(value:string)=>Uint8Array.from(atob(value),c=>c.charCodeAt(
 const normalizeEmail=(value:unknown)=>String(value||"").trim().toLowerCase();
 const isEmail=(value:string)=>/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(value);
 const isSchoolEmail=(email:string)=>/^[^@\s]+@rajagiri\.edu\.in$/.test(email);
-const isMobileAccountEmailException=(email:string)=>["info@kouponly.in","pauljasonthykatt@gmail.com","sabinjsshaji2002@gmail.com"].includes(normalizeEmail(email));
 const normalizeDigits=(value:any)=>String(value??"").replace(/[٠-٩۰-۹]/g,(digit)=>{const arabic="٠١٢٣٤٥٦٧٨٩",persian="۰۱۲۳۴۵۶۷۸۹";const i=arabic.indexOf(digit);return String(i>-1?i:persian.indexOf(digit));});
 const asRows=(response:any)=>response.data||[];
 async function existsStudent(service:any,email:string){const {data,error}=await service.from("couponly_students").select("id").eq("email",email).limit(1);if(error)throw error;return Boolean(data?.length);}
@@ -40,6 +39,12 @@ async function sendResendEmail(email:string,code:string,purpose:string){
   const result=await fetch("https://api.resend.com/emails",{method:"POST",headers:{"Authorization":"Bearer "+apiKey,"Content-Type":"application/json"},body:JSON.stringify({from,to:[email],subject:purpose==="verification"?"Verify your email":"Your Kouponly sign in code",text:"Your verification code is "+code+". It expires in five minutes."})});
   if(!result.ok){console.error("Resend email delivery failed with status",result.status);throw Object.assign(new Error(`Could not send the verification email (provider status ${result.status}).`),{status:502});}
 }
+async function sendContactMessage(name:string,email:string,message:string){
+  const apiKey=Deno.env.get("RESEND_API_KEY");if(!apiKey)throw Object.assign(new Error("Contact email is not configured."),{status:503});
+  const from=Deno.env.get("RESEND_FROM_EMAIL")||"Kouponly <verification@kouponly.com>";
+  const result=await fetch("https://api.resend.com/emails",{method:"POST",headers:{"Authorization":"Bearer "+apiKey,"Content-Type":"application/json"},body:JSON.stringify({from,to:["hello@kouponly.com"],reply_to:email,subject:"Kouponly contact form",text:`From: ${name}\nEmail: ${email}\n\n${message}`})});
+  if(!result.ok){console.error("Resend contact message failed with status",result.status);throw Object.assign(new Error("Unable to send your message right now. Please try again later."),{status:502});}
+}
 Deno.serve(async(request)=>{
   if(request.method==="OPTIONS")return new Response("ok",{headers:cors});
   if(request.method!=="POST")return reply({error:"Method not allowed"},405);
@@ -55,6 +60,14 @@ Deno.serve(async(request)=>{
     const requireUser=()=>{if(!user)throw Object.assign(new Error("Login required"),{status:401});return user;};
     const requireAdmin=async()=>{const current=requireUser();if(await roleOf(client,current.id)!=="admin")throw Object.assign(new Error("Admin access required"),{status:403});return current;};
     switch(action){
+      case "sendContactMessage": {
+        const name=String(data.name||"").trim(),email=normalizeEmail(data.email),message=String(data.message||"").trim();
+        if(name.length<2||name.length>100||!isEmail(email)||email.length>254||message.length<10||message.length>4000)throw Object.assign(new Error("Check your name, email address, and message."),{status:400});
+        const ip=request.headers.get("x-forwarded-for")?.split(",")[0]?.trim()||"unknown";
+        await incrementRateLimit(service,await sha256("contact:"+email+":"+ip),5,900);
+        await sendContactMessage(name,email,message);
+        return reply({success:true});
+      }
       case "submitStudentRequest": {
         // Only this service-role endpoint supplies the verified owner and gateway origin.
         const ip=request.headers.get("x-forwarded-for")?.split(",")[0]?.trim()||"unknown";
@@ -77,7 +90,6 @@ Deno.serve(async(request)=>{
         const email=normalizeEmail(data.email),purpose=String(data.purpose||"");
         if(!isEmail(email)||!["signup","login","verification"].includes(purpose))throw Object.assign(new Error("A valid email and OTP purpose are required"),{status:400});
         const ip=request.headers.get("x-forwarded-for")?.split(",")[0]||"unknown";
-        if(purpose==="signup"&&!isSchoolEmail(email)&&!isMobileAccountEmailException(email))throw Object.assign(new Error("Use your @rajagiri.edu.in email address"),{status:403});
         if(purpose==="verification"&&!isSchoolEmail(email))throw Object.assign(new Error("Use your @rajagiri.edu.in email address"),{status:403});
         await incrementRateLimit(service,await sha256("send:"+email+":"+purpose+":"+ip),5,900);
         if(purpose!=="login"&&await existsStudent(service,email))throw Object.assign(new Error("An account with this email already exists"),{status:409});

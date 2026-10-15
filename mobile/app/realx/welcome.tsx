@@ -1,22 +1,14 @@
 import ScalePressable from '@/components/ScalePressable';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { Image } from 'expo-image';
-import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
+import { Redirect, useLocalSearchParams, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import AppText from '../../components/AppText';
 import {
     OnboardingButtonMotion,
-    OnboardingDiscoverTransitionMotion,
     OnboardingGlowMotion,
-    OnboardingPressableMotion,
-    OnboardingRoleCardMotion,
 } from '../../components/onboarding/OnboardingMotion';
-import { OnboardingScaffold } from '../../components/onboarding/OnboardingUI';
-import StaggeredHeadingText from '../../components/onboarding/StaggeredHeadingText';
 import { useAppTheme } from '../../context/AppThemeContext';
 import { useAppLocale } from '../../context/LocaleContext';
 import { Typography } from '../../constants/Typography';
@@ -83,61 +75,14 @@ export default function OnboardingScreen() {
     const router = useRouter();
     const params = useLocalSearchParams<{ intent?: string; prefillEmail?: string }>();
     const { width, height } = useWindowDimensions();
-    const [step, setStep] = useState(params.intent === 'create' ? 1 : 0);
-    const [isDiscoverTransitioning, setIsDiscoverTransitioning] = useState(false);
-    const [selectedRole, setSelectedRole] = useState<'student' | null>(null);
-
-    useFocusEffect(
-        useCallback(() => {
-            // Expo Router can invoke a focus effect while the screen is still
-            // being mounted. Defer the reset until the mount has completed so
-            // React does not receive a state update from an unmounted screen.
-            const resetTimer = setTimeout(() => setSelectedRole(null), 0);
-            return () => clearTimeout(resetTimer);
-        }, [])
-    );
-
     const { t } = useTranslation();
     const { theme } = useAppTheme();
     const { isRTL } = useAppLocale();
-    const compactHeight = height < 820;
-    const mascotWidth = Math.min(width * 1.75, 650);
-    const mascotFrameHeight = Math.min(height * (compactHeight ? 0.31 : 0.33), 270);
-    const mascotImageHeight = Math.min(height * 0.38, 300);
-
-    useEffect(() => {
-    }, [step]);
-
-    const completeDiscoverTransition = useCallback(() => {
-        setStep(1);
-        setIsDiscoverTransitioning(false);
-    }, []);
-
-    const handleCreateAccount = () => {
-        if (isDiscoverTransitioning) {
-            return;
-        }
-
-        setIsDiscoverTransitioning(true);
+    const signupParams = {
+        flow: 'signup',
+        ...(typeof params.prefillEmail === 'string' ? { email: params.prefillEmail } : {}),
     };
-
-    const handleSelectStudent = () => {
-        if (selectedRole) {
-            return;
-        }
-
-        setSelectedRole('student');
-        setTimeout(() => {
-            router.push({
-                pathname: '/realx/onboarding',
-                params: {
-                    role: 'student',
-                    flow: 'signup',
-                    ...(params.prefillEmail ? { prefillEmail: params.prefillEmail } : {}),
-                }
-            } as any);
-        }, 180);
-    };
+    const handleCreateAccount = () => router.push({ pathname: '/realx/onboarding', params: signupParams } as any);
 
     const handleLogin = () => {
         router.push({
@@ -150,39 +95,7 @@ export default function OnboardingScreen() {
         router.replace('/realx' as any);
     };
 
-    if (step === 1) {
-        return (
-            <>
-                <StatusBar style="dark" />
-                <OnboardingScaffold
-                    title={t('onboarding_v2_role_title')}
-                    subtitle={t('onboarding_v2_role_subtitle')}
-                    onBack={() => setStep(0)}
-                    onClose={() => setStep(0)}
-                    progress={{ current: 1, total: 4 }}
-                >
-                <View style={styles.cardsWrapper}>
-                    <OnboardingRoleCardMotion
-                        delay={80}
-                        dimmed={false}
-                        selected={selectedRole === 'student'}
-                    >
-                        <OnboardingPressableMotion
-                            disabled={selectedRole !== null}
-                            onPress={handleSelectStudent}
-                            style={[styles.roleCard, { backgroundColor: theme.actionSolid }]}
-                        >
-                            <AppText style={[styles.roleTitle, { color: theme.onActionSolid }]}>{t('onboarding_join_as_student')}</AppText>
-                            <Ionicons name={isRTL ? 'arrow-back' : 'arrow-forward'} size={22} color={theme.onActionSolid} />
-                        </OnboardingPressableMotion>
-                    </OnboardingRoleCardMotion>
-
-                </View>
-
-                </OnboardingScaffold>
-            </>
-        );
-    }
+    if (params.intent === 'create') return <Redirect href={{ pathname: '/realx/onboarding', params: signupParams } as any} />;
 
     return (
         <View style={styles.container}>
@@ -205,48 +118,13 @@ export default function OnboardingScreen() {
                 </View>
             ))}
 
-            <OnboardingDiscoverTransitionMotion
-                active={isDiscoverTransitioning}
-                backgroundColor={theme.background}
-                onComplete={completeDiscoverTransition}
-                style={styles.motionFill}
-            >
                 <SafeAreaView style={styles.safeArea}>
                     <View style={styles.content}>
-                        <View style={styles.topSection}>
-                        <View style={[styles.headlineContainer, compactHeight && styles.headlineContainerCompact]}>
-                            <StaggeredHeadingText
-                                text={t('onboarding_headline_broke')}
-                                textStyle={styles.headlineBroke}
-                                fontHeight={isRTL ? 56 : 44}
-                                delay={180}
-                            />
-                            <StaggeredHeadingText
-                                text={t('onboarding_headline_not_anymore')}
-                                textStyle={styles.headlineNotAnymore}
-                                containerStyle={styles.headlineHighlight}
-                                fontHeight={isRTL ? 56 : 44}
-                                delay={320}
-                            />
+                        <View style={styles.header}>
+                            <Text accessibilityRole="header" numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.72} style={[styles.headerTitle, { color: theme.text, fontSize: Math.min(width * 0.23, 96), lineHeight: Math.min(width * 0.26, 106) }]}>
+                                k<Text style={{ color: Colors.brandGreen }}>o</Text>uponly
+                            </Text>
                         </View>
-                        </View>
-
-                        <View
-                            style={[
-                                styles.graphicContainer,
-                                { width, height: mascotFrameHeight },
-                            ]}
-                        >
-                            <View style={isRTL ? styles.mascotFlip : undefined}>
-                                <Image
-                                    source={require('../../assets/images/onboarding.webp')}
-                                    style={{ width: mascotWidth, height: mascotImageHeight }}
-                                    contentFit="contain"
-                                    contentPosition="left"
-                                />
-                            </View>
-                        </View>
-
                         {/* Footer */}
                         <View style={styles.footer}>
                             <OnboardingButtonMotion enabled>
@@ -256,7 +134,6 @@ export default function OnboardingScreen() {
                                 >
                                     <ScalePressable
                                         style={[styles.button, { backgroundColor: theme.actionSolid }]}
-                                        disabled={isDiscoverTransitioning}
                                         onPress={handleLogin}
                                         activeOpacity={0.9}
                                         accessibilityRole="button"
@@ -295,7 +172,6 @@ export default function OnboardingScreen() {
                         </View>
                     </View>
                 </SafeAreaView>
-            </OnboardingDiscoverTransitionMotion>
         </View>
     );
 }
@@ -313,9 +189,6 @@ const styles = StyleSheet.create({
         opacity: 0.24,
         zIndex: 0,
     },
-    motionFill: {
-        flex: 1,
-    },
     content: {
         flex: 1,
         alignItems: 'center',
@@ -324,48 +197,16 @@ const styles = StyleSheet.create({
         justifyContent: 'space-between',
         zIndex: 1,
     },
-    topSection: {
+    header: {
         width: '100%',
-    },
-    headlineContainer: {
-        marginTop: 20,
-        alignSelf: 'flex-start',
-        paddingStart: 10,
-        maxWidth: 250,
-        transform: [{ translateY: 32 }],
-    },
-    headlineContainerCompact: {
-        marginTop: 24,
-    },
-    headlineBroke: {
-        ...Typography.getTextVariantStyle('display'),
-        fontSize: 32,
-        color: '#0A0F0C',
-        lineHeight: 44,
-    },
-    headlineNotAnymore: {
-        ...Typography.getTextVariantStyle('display'),
-        fontSize: 32,
-        color: '#0A0F0C',
-        lineHeight: 44,
-    },
-    headlineHighlight: {
-        backgroundColor: Colors.brandGreen,
-        borderRadius: 6,
-        paddingHorizontal: 6,
-    },
-    headlineHighlightRTL: {
-        alignSelf: 'flex-end',
-    },
-    graphicContainer: {
+        flex: 1,
+        alignItems: 'center',
         justifyContent: 'center',
-        alignItems: 'flex-start',
-        alignSelf: 'flex-start',
-        marginStart: -24,
-        transform: [{ translateY: 16 }],
     },
-    mascotFlip: {
-        transform: [{ scaleX: -1 }],
+    headerTitle: {
+        ...Typography.getTextVariantStyle('display'),
+        textAlign: 'center',
+        letterSpacing: -2,
     },
     footer: {
         width: '100%',
@@ -448,21 +289,5 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         alignItems: 'center',
         backgroundColor: '#FFFFFF',
-    },
-    cardsWrapper: {
-        width: '100%',
-        gap: 16,
-    },
-    roleCard: {
-        minHeight: 64,
-        borderRadius: 32,
-        paddingHorizontal: 24,
-        paddingVertical: 14,
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-    },
-    roleTitle: {
-        fontSize: 17,
     },
 });

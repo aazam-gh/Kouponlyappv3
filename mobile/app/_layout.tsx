@@ -1,4 +1,5 @@
 import '@/src/localization/i18n';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFonts } from "expo-font";
 import {
   Outfit_400Regular,
@@ -37,13 +38,16 @@ LogBox.ignoreLogs(['[Reanimated] Reduced motion setting is overwritten with mode
 // Keep the native logo visible until the first app layout has rendered.
 void SplashScreen.preventAutoHideAsync().catch(() => {});
 
-function AppNavigation(){
+type FirstRunStatus = 'checking' | 'new' | 'existing';
+
+function AppNavigation({ firstRunStatus }: { firstRunStatus: Exclude<FirstRunStatus, 'checking'> }){
   const theme=useAppTheme();
   const { user, session }=useAuth();
   const posthog=usePostHog();
   const segments=useSegments();
   const screen=segments.filter(segment=>!segment.startsWith('(')).join('/')||'home';
   const previousUserId=React.useRef<string|null>(null);
+  const firstRunRedirected=React.useRef(false);
   React.useEffect(()=>{
     const userId=session?.user.id??null;
     if(userId&&previousUserId.current&&previousUserId.current!==userId)posthog.reset();
@@ -54,6 +58,13 @@ function AppNavigation(){
   React.useEffect(()=>{
     posthog.screen(screen);
   },[posthog,screen]);
+  React.useEffect(()=>{
+    const routeSegments=segments as string[];
+    if(firstRunStatus!=='new'||firstRunRedirected.current)return;
+    firstRunRedirected.current=true;
+    if(routeSegments.includes('welcome'))return;
+    router.replace('/realx/welcome' as any);
+  },[firstRunStatus,segments]);
   React.useEffect(()=>{void setupCouponlyNotificationChannels().catch(()=>{});},[]);
   React.useEffect(()=>{
     if(!user)return;
@@ -77,10 +88,11 @@ function AppNavigation(){
     const subscription=Notifications.addNotificationResponseReceivedListener(openNotification);
     return ()=>subscription.remove();
   },[]);
-  return <><ReducedMotionConfig mode={theme.motion.reduceMotion ? ReduceMotion.Always : ReduceMotion.System}/><StatusBar style={theme.dark?"light":"dark"}/><Stack screenOptions={{headerShown:false,contentStyle:{backgroundColor:theme.colors.paper},animation:theme.motion.reduceMotion?"fade":"default"}}><Stack.Screen name="wakti" options={{presentation:'modal',animation:theme.motion.reduceMotion?'fade':'slide_from_bottom',animationMatchesGesture:true}} /></Stack><Toast/></>;
+  return <><ReducedMotionConfig mode={theme.motion.reduceMotion ? ReduceMotion.Always : ReduceMotion.System}/><StatusBar style={theme.dark?"light":"dark"}/><Stack initialRouteName={firstRunStatus==='new'?'realx/welcome':'(tabs)'} screenOptions={{headerShown:false,contentStyle:{backgroundColor:theme.colors.paper},animation:theme.motion.reduceMotion?"fade":"default"}}/><Toast/></>;
 }
 
 export default function RootLayout(){
+  const [firstRunStatus,setFirstRunStatus]=React.useState<FirstRunStatus>('checking');
   const [loaded, fontError]=useFonts({
     Outfit_400Regular,
     Outfit_600SemiBold,
@@ -89,6 +101,18 @@ export default function RootLayout(){
   const onAppLayout=React.useCallback(()=>{
     if(loaded||fontError)void SplashScreen.hideAsync().catch(()=>{});
   },[loaded,fontError]);
-  if(!loaded&&!fontError)return <View style={{flex:1,backgroundColor:"#000000",alignItems:"center",justifyContent:"center"}}><StatusBar style="light"/><Image source={require('../assets/images/kouponly-logo.webp')} style={{width:240,height:240}} contentFit="contain" accessibilityLabel="Kouponly logo"/></View>;
-  return <View style={{flex:1}} onLayout={onAppLayout}><AnalyticsProvider><SafeAreaProvider><QueryClientProvider client={queryClient}><AppThemeProvider><LocaleProvider><ThemeProvider><AuthProvider><ProfileProvider><BenefitsProvider><CatalogueProvider><NearbyProvider><StoreProvider><AppNavigation/></StoreProvider></NearbyProvider></CatalogueProvider></BenefitsProvider></ProfileProvider></AuthProvider></ThemeProvider></LocaleProvider></AppThemeProvider></QueryClientProvider></SafeAreaProvider></AnalyticsProvider></View>;
+  React.useEffect(()=>{
+    let active=true;
+    void AsyncStorage.getAllKeys().then(keys=>{
+      if(!active)return;
+      const hasExistingAppState=keys.some(key=>
+        key==='kouponly.guest.state.v3'||key==='kouponly.prototype.state.v1'||key==='kouponly.prototype.state.v2'||key==='kouponly.prototype.state.v3'||
+        (key.startsWith('kouponly.user.')&&key.endsWith('.state.v3'))
+      );
+      setFirstRunStatus(hasExistingAppState?'existing':'new');
+    }).catch(()=>{if(active)setFirstRunStatus('existing')});
+    return()=>{active=false};
+  },[]);
+  if((!loaded&&!fontError)||firstRunStatus==='checking')return <View style={{flex:1,backgroundColor:"#FFFFFF",alignItems:"center",justifyContent:"center"}}><StatusBar style="dark"/><Image source={require('../assets/images/kouponly-logo.webp')} style={{width:240,height:240}} contentFit="contain" accessibilityLabel="Kouponly logo"/></View>;
+  return <View style={{flex:1}} onLayout={onAppLayout}><AnalyticsProvider><SafeAreaProvider><QueryClientProvider client={queryClient}><AppThemeProvider><LocaleProvider><ThemeProvider><AuthProvider><ProfileProvider><BenefitsProvider><CatalogueProvider><NearbyProvider><StoreProvider><AppNavigation firstRunStatus={firstRunStatus}/></StoreProvider></NearbyProvider></CatalogueProvider></BenefitsProvider></ProfileProvider></AuthProvider></ThemeProvider></LocaleProvider></AppThemeProvider></QueryClientProvider></SafeAreaProvider></AnalyticsProvider></View>;
 }

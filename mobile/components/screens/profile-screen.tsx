@@ -5,7 +5,7 @@ import { useIsFocused, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Alert, Linking, Platform, ScrollView, StatusBar as NativeStatusBar, StyleSheet, Text, View } from 'react-native';
+import { Alert, Platform, ScrollView, StatusBar as NativeStatusBar, StyleSheet, Text, View } from 'react-native';
 
 import { Typography } from '../../constants/Typography';
 import AppText from '../../components/AppText';
@@ -73,7 +73,6 @@ export default function ProfileScreen() {
       ]
     );
   };
-
   if (isGuest) {
     return (
       <View style={[styles.container, { backgroundColor: theme.background }]}>
@@ -129,7 +128,7 @@ export default function ProfileScreen() {
             <MenuItem
               icon="mail-outline"
               label={t('contact_us')}
-              onPress={() => Linking.openURL('mailto:hello@kouponly.com')}
+              onPress={() => router.push('/contact-us' as any)}
               isRTL={isRTL}
             />
             <MenuItem
@@ -204,12 +203,6 @@ export default function ProfileScreen() {
           <MenuItem icon="restaurant-outline" label="Request a restaurant" onPress={() => router.push({ pathname: '/student-request', params: { kind: 'restaurant' } } as any)} isRTL={isRTL} />
           <MenuItem icon="school-outline" label="Suggest a school domain" onPress={() => router.push({ pathname: '/student-request', params: { kind: 'school' } } as any)} isRTL={isRTL} />
           <MenuItem
-            icon="bookmark-outline"
-            label={'Saved Vendors'}
-            onPress={() => router.push('/realx/saved' as any)}
-            isRTL={isRTL}
-          />
-          <MenuItem
             icon="time-outline"
             label={t('redemption_history')}
             onPress={() => router.push('/realx/history' as any)}
@@ -218,7 +211,7 @@ export default function ProfileScreen() {
           <MenuItem
             icon="mail-outline"
             label={t('contact_us')}
-            onPress={() => Linking.openURL('mailto:hello@kouponly.com')}
+            onPress={() => router.push('/contact-us' as any)}
             isRTL={isRTL}
           />
           <MenuItem

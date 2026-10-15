@@ -66,7 +66,7 @@ export function AdminSidebar({
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
-        <p className="px-2 pt-1 text-xs text-muted-foreground">Free Rajagiri MVP</p>
+        <p className="px-2 pt-1 text-xs text-muted-foreground">Free Kouponly membership</p>
       </SidebarHeader>
       <SidebarContent className="mt-3 px-2">
         <NavMain items={data.navMain} />

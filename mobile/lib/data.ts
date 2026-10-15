@@ -5,7 +5,7 @@ export type Deal = {
 };
 
 export const onlineUrlFor = (name:string, explicitUrl?:string) => explicitUrl || `https://www.google.com/search?q=${encodeURIComponent(name)}`;
-export type VendorOffer = {id:string; index:number; title:string; logo?:string; description:string; saving:string; cardLabel?:string; cardLabels?:string[]; terms?:string; redemptionInstructions?:string; redemption:"online"|"inStore"; discountType?:string; discountValue?:number};
+export type VendorOffer = {currency?:string; id:string; index:number; title:string; logo?:string; description:string; saving:string; cardLabel?:string; cardLabels?:string[]; terms?:string; redemptionInstructions?:string; redemption:"online"|"inStore"; discountType?:string; discountValue?:number};
 export function dealDiscountLabel(deal: Deal): string | undefined {
   const offer = deal.offers?.[0];
   if (offer?.discountType === 'percentage' && Number.isFinite(offer.discountValue) && offer.discountValue! > 0) return `${offer.discountValue}% OFF`;

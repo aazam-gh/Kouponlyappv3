@@ -7,12 +7,14 @@ const mockSession = { user: mockUser, access_token: 'test', refresh_token: 'test
 const mockMaybeSingle = jest.fn();
 const mockAdmin = jest.fn<Promise<{data:boolean;error:null}>, []>(async () => ({data:false,error:null}));
 const mockLogout=jest.fn(async()=>({error:null}));
+const mockUpdateUser=jest.fn(async()=>({error:null}));
 let mockAuthListener:(event:string,session:any)=>void;
 jest.mock('../lib/couponlyPush',()=>({unregisterCouponlyPushTokenForCurrentUser:async()=>{throw Error('offline push registration');}}));
 const mockSupabase = {
   rpc: mockAdmin,
   auth: {
     signOut:mockLogout,
+    updateUser:mockUpdateUser,
     onAuthStateChange: (listener:any) => {mockAuthListener=listener;return { data: { subscription: { unsubscribe: jest.fn() } } };},
     getSession: async () => ({ data: { session: mockSession }, error: null }),
     getUser: async () => ({ data: { user: mockUser }, error: null }),
@@ -29,9 +31,10 @@ jest.doMock('../lib/supabase', () => ({
 const { AuthProvider, useAuth } = require('../lib/auth') as typeof import('../lib/auth');
 
 function Probe() {
-  const { user, loading, refreshStudentAccess, signOut } = useAuth();
+  const { user, loading, refreshStudentAccess, signOut, updateEmail } = useAuth();
   return <>
     <Pressable onPress={()=>void signOut()}><Text>Sign out</Text></Pressable>
+    <Pressable onPress={()=>void updateEmail(' friend@gmail.com ')}><Text>Change email</Text></Pressable>
     <Text>{loading ? 'checking' : user ? 'student' : 'guest'}</Text>
     <Text>{user?.id ?? 'no-student-id'}</Text>
     {refreshStudentAccess ? <Pressable onPress={() => void refreshStudentAccess()}><Text>Refresh student</Text></Pressable> : null}
@@ -72,4 +75,12 @@ it('does not grant a new session the previous account student access while check
  await act(async()=>mockAuthListener('SIGNED_IN',{...mockSession,user:{...mockUser,id:'new-account'}}));
  expect(view.queryByText('new-account')).toBeNull();
  await act(async()=>resolve({data:null,error:null}));await waitFor(()=>expect(view.getByText('guest')).toBeTruthy());
+});
+
+it('allows a general email domain to use Supabase email-change verification',async()=>{
+ mockMaybeSingle.mockResolvedValue({data:{id:mockUser.id},error:null});
+ const view=await render(<AuthProvider><Probe/></AuthProvider>);
+ await waitFor(()=>expect(view.getByText(mockUser.id)).toBeTruthy());
+ await fireEvent.press(view.getByText('Change email'));
+ expect(mockUpdateUser).toHaveBeenCalledWith({email:'friend@gmail.com'});
 });

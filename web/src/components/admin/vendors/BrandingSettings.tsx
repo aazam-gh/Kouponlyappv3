@@ -156,6 +156,7 @@ export function BrandingSettings({
     return (
         <div className="space-y-8">
             <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-2"><Label htmlFor="vendor-phone">Phone</Label><Input id="vendor-phone" type="tel" inputMode="tel" autoComplete="tel" placeholder="+974 5000 0000" value={formData.phoneNumber || ''} onChange={e => setFormData({ ...formData, phoneNumber: e.target.value })} /></div>
                 <div className="space-y-2"><Label htmlFor="vendor-website">Website</Label><Input id="vendor-website" placeholder="https://example.com" value={formData.website || ''} onChange={e => setFormData({ ...formData, website: e.target.value })} /></div>
                 <div className="space-y-2"><Label htmlFor="vendor-instagram">Instagram</Label><Input id="vendor-instagram" placeholder="https://instagram.com/yourrestaurant" value={formData.instagramUrl || ''} onChange={e => setFormData({ ...formData, instagramUrl: e.target.value })} /></div>
             </div>

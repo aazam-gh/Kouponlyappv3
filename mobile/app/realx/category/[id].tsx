@@ -11,6 +11,8 @@ import { categories, deals, type Deal } from '@/lib/data';
 import { useAppTheme } from '@/context/AppThemeContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNearbyDistances } from '@/lib/nearby';
+import { isCouponOfferUsed, useBenefits } from '@/lib/benefits';
+import { sortVendors, type VendorSortMode } from '@/lib/vendor-sorting';
 
 export default function RealXCategoryScreen() {
   const { id, name, englishName } = useLocalSearchParams<{ id: string; name?: string; englishName?: string }>();
@@ -20,7 +22,9 @@ export default function RealXCategoryScreen() {
   const insets = useSafeAreaInsets();
   const { status, revision, refresh } = useCatalogue();
   const { distanceByVendor } = useNearbyDistances();
+  const { benefits } = useBenefits();
   const [filter, setFilter] = React.useState('all');
+  const [sortMode, setSortMode] = React.useState<VendorSortMode>('alphabetical');
   const [subcategory, setSubcategory] = React.useState('all');
   const [input, setInput] = React.useState('');
   const [query, setQuery] = React.useState('');
@@ -44,8 +48,8 @@ export default function RealXCategoryScreen() {
       (distanceByVendor.get(String(a.vendorId || a.id))?.distanceKm ?? Infinity)
       - (distanceByVendor.get(String(b.vendorId || b.id))?.distanceKm ?? Infinity));
     if (filter === 'top') return matching.sort((a, b) => b.trend - a.trend);
-    return matching;
-  }, [category?.id, distanceByVendor, filter, query, revision, subcategory]);
+    return sortVendors(matching, sortMode, vendor => !benefits?.subscription || (vendor.offers ?? []).some(offer => !isCouponOfferUsed(benefits, offer.id, vendor.vendorId || String(vendor.id))));
+  }, [benefits, category?.id, distanceByVendor, filter, query, revision, sortMode, subcategory]);
   const cardWidth = width - 40;
   const submitSearch = () => { setQuery(input.trim()); setSubcategory('all'); Keyboard.dismiss(); };
 
@@ -60,7 +64,7 @@ export default function RealXCategoryScreen() {
       ListHeaderComponent={<>
         <CategoryHeader onBackPress={() => router.back()} accessory={<SearchBar compact placeholder={t('search_placeholder_category', { category: String(title).toLocaleLowerCase() })} value={input} onChangeText={setInput} onSubmit={submitSearch} />} />
         {isCategoryActive ? <>
-          <FilterTabs selectedFilter={filter} onFilterChange={setFilter} />
+          <FilterTabs selectedFilter={filter} onFilterChange={setFilter} sortMode={sortMode} onSortModeChange={setSortMode} />
           {subcategories.length > 1 ? <SubCategoryChips subCategories={subcategories} selectedId={subcategory} onSelect={item => setSubcategory(item.id)} /> : null}
         </> : null}
         {status === 'offline' ? <View style={{ paddingHorizontal: 20 }}><CatalogueNotice /></View> : null}

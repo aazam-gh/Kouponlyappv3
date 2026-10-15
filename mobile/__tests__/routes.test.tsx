@@ -5,7 +5,7 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 import { StoreProvider } from "../lib/store";
 import { NearbyProvider } from "../lib/nearby";
 import { router, useLocalSearchParams } from "expo-router";
-import { loadFixture, clearFixture, fixture } from '../test/catalogue-fixture';
+import { loadFixture, clearFixture } from '../test/catalogue-fixture';
 import MapScreen from "../components/screens/explore-screen";
 import MeScreen from "../app/(tabs)/me";
 
@@ -13,7 +13,7 @@ import DealScreen from "../app/deal/[id]";
 import VendorRoute from "../app/realx/vendor/[id]";
 import HistoryScreen from '../app/realx/history';
 
-jest.mock('../lib/benefits', () => ({ useBenefits: () => ({benefits: null, isAdmin: false}) }));
+jest.mock('../lib/benefits', () => ({ useBenefits: () => ({benefits: null, isAdmin: false}), isCouponOfferUsed: () => false }));
 
 jest.mock('supercluster', () => ({
   __esModule: true,
@@ -121,9 +121,9 @@ describe("reachable route coverage", () => {
     expect(view.queryByText('Dessert details')).toBeNull();
     expect(view.getByLabelText('Show details for Sweets discount').props.accessibilityState.expanded).toBe(false);
     await fireEvent.press(view.getByLabelText('Show details for Sweets discount'));
-    expect(view.getByLabelText('Locate vendor')).toBeTruthy();
+    expect(view.getByLabelText(/^Show vendor location/)).toBeTruthy();
     expect(view.getByTestId('redeem-offer-2')).toBeTruthy();
-    await fireEvent.press(view.getByLabelText('Locate vendor'));
+    await fireEvent.press(view.getByLabelText(/^Show vendor location/));
     expect(view.getByText('Branches')).toBeTruthy();
     expect(view.getByText('Second branch')).toBeTruthy();
   });

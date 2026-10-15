@@ -1,6 +1,6 @@
 import ScalePressable from '@/components/ScalePressable';
 import { useAppTheme } from '@/context/AppThemeContext';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View, type StyleProp, type TextStyle } from 'react-native';
 
 import { Typography } from '../../constants/Typography';
 import { useAppLocale } from '../../context/LocaleContext';
@@ -11,9 +11,10 @@ type Props = {
   prefix: string;
   highlight: string;
   onSeeMore?: () => void;
+  headingStyle?: StyleProp<TextStyle>;
 };
 
-export default function HomeSectionHeading({ prefix, highlight, onSeeMore }: Props) {
+export default function HomeSectionHeading({ prefix, highlight, onSeeMore, headingStyle }: Props) {
   const { theme } = useAppTheme();
   const { isRTL } = useAppLocale();
   return (
@@ -23,6 +24,7 @@ export default function HomeSectionHeading({ prefix, highlight, onSeeMore }: Pro
           styles.heading,
           Typography.getTextDirectionStyle({ isRTL }),
           { color: theme.text },
+          headingStyle,
         ]}
       >
         {prefix}

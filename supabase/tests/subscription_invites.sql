@@ -21,10 +21,11 @@ begin
   assert (select count(*)=count(distinct kouponly_invite_codes.code) from public.kouponly_invite_codes),'unique invites';
   assert public.kouponly_claim_code(code,gen_random_uuid())->>'error'='SELF_REFERRAL','self referral denied';
   assert public.kouponly_claim_code('INVALID',gen_random_uuid())->>'error'='INVALID_CODE','invalid code denied';
-  response:=public.kouponly_redeem_coupon('benefits-offer-a1',round,mutation);
-  assert public.kouponly_redeem_coupon('benefits-offer-a1',round,mutation)=response,'redemption retry';
-  begin perform public.kouponly_redeem_coupon('benefits-offer-a2',round,gen_random_uuid()); raise exception 'second offer accepted'; exception when raise_exception then assert sqlerrm='VENDOR_ALREADY_USED','shared vendor quota'; end;
-  begin perform public.kouponly_redeem_coupon('benefits-offer-b',round,mutation); raise exception 'changed retry accepted'; exception when raise_exception then assert sqlerrm='IDEMPOTENCY_MISMATCH','retry payload binding'; end;
+  response:=public.kouponly_redeem_coupon('benefits-offer-a1',round,mutation,250.00);
+  assert public.kouponly_redeem_coupon('benefits-offer-a1',round,mutation,250.00)=response,'redemption retry';
+  perform public.kouponly_redeem_coupon('benefits-offer-a2',round,gen_random_uuid(),250.00);
+  begin perform public.kouponly_redeem_coupon('benefits-offer-a2',round,gen_random_uuid(),250.00); raise exception 'same offer accepted twice'; exception when raise_exception then assert sqlerrm='OFFER_ALREADY_USED','offer quota in a round'; end;
+  begin perform public.kouponly_redeem_coupon('benefits-offer-b',round,mutation,250.00); raise exception 'changed retry accepted'; exception when raise_exception then assert sqlerrm='IDEMPOTENCY_MISMATCH','retry payload binding'; end;
   perform set_config('request.jwt.claim.sub',bob::text,true);
   claim:=public.kouponly_claim_code(lower(code),gen_random_uuid()); assert claim->>'status'='attached','unverified referral pending: '||claim::text;
   assert (select count(*)=0 from public.kouponly_reward_grants where user_id=alice),'no unverified reward';
@@ -35,10 +36,10 @@ begin
   perform set_config('request.jwt.claim.sub',alice::text,true);
   response:=public.kouponly_account_benefits(); fresh:=(response->'subscription'->>'roundId')::uuid;
   assert fresh<>round,'refresh opens new round'; assert response->'usedVendorIds'='[]'::jsonb,'coupons restored';
-  assert (select count(*)=1 from public.redemptions where user_id=alice),'past receipt preserved';
-  begin perform public.kouponly_redeem_coupon('benefits-offer-b',round,gen_random_uuid()); raise exception 'stale round accepted'; exception when raise_exception then assert sqlerrm='ROUND_CHANGED','stale round rejected'; end;
-  perform public.kouponly_redeem_coupon('benefits-offer-a2',fresh,gen_random_uuid());
-  assert (select count(*)=2 from public.redemptions where user_id=alice),'new receipt after refresh';
+  assert (select count(*)=2 from public.redemptions where user_id=alice),'past receipts preserved';
+  begin perform public.kouponly_redeem_coupon('benefits-offer-b',round,gen_random_uuid(),250.00); raise exception 'stale round accepted'; exception when raise_exception then assert sqlerrm='ROUND_CHANGED','stale round rejected'; end;
+  perform public.kouponly_redeem_coupon('benefits-offer-a2',fresh,gen_random_uuid(),250.00);
+  assert (select count(*)=3 from public.redemptions where user_id=alice),'new receipt after refresh';
   perform set_config('request.jwt.claim.sub','dddddddd-0000-0000-0000-000000000001',true);
   mutation:=gen_random_uuid(); response:=public.kouponly_admin_create_voucher('Test voucher',1,now()+interval '1 day',mutation); voucher:=response->>'code';
   assert public.kouponly_admin_create_voucher('Test voucher',1,now()+interval '1 day',mutation)=response,'voucher creation retry';
@@ -72,7 +73,7 @@ begin
   assert public.kouponly_claim_code(voucher,gen_random_uuid())->>'error'='VOUCHER_EXHAUSTED','global voucher allowance';
   fresh:=(public.kouponly_account_benefits()->'subscription'->>'roundId')::uuid;
   update public.kouponly_subscription_periods set starts_at=now()-interval '1 month',ends_at=now() where user_id=carol;
-  begin perform public.kouponly_redeem_coupon('benefits-offer-b',fresh,gen_random_uuid()); raise exception 'expired redemption accepted'; exception when raise_exception then assert sqlerrm='SUBSCRIPTION_REQUIRED','expiry enforced'; end;
+  begin perform public.kouponly_redeem_coupon('benefits-offer-b',fresh,gen_random_uuid(),250.00); raise exception 'expired redemption accepted'; exception when raise_exception then assert sqlerrm='SUBSCRIPTION_REQUIRED','expiry enforced'; end;
   delete from public.kouponly_code_attempts where user_id=carol;
   for n in 1..11 loop
     claim:=public.kouponly_claim_code('INVALID',gen_random_uuid());

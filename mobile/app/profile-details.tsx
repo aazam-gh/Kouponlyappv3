@@ -22,7 +22,7 @@ function InfoRow({ label, value, isRTL }: { label: string; value: string; isRTL:
 
 export default function ProfileDetailsScreen() {
   const { user, deleteAccount } = useAuth();
-  const { profile, avatarUrl, chooseAvatar, uploading, refresh } = useProfile();
+  const { profile, avatarUrl, uploading, refresh } = useProfile();
   const { theme } = useAppTheme();
   const { isRTL } = useAppLocale();
   const { t } = useTranslation();

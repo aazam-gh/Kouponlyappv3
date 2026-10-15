@@ -33,7 +33,6 @@ function BrandRow({
     onPressBrand: (brand: BrandItem) => void;
 }) {
     const { theme } = useAppTheme();
-    const { isRTL } = useAppLocale();
     const renderBrand = (brand: BrandItem) => (
         <ScalePressable
             key={brand.id}

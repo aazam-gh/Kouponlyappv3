@@ -1,5 +1,7 @@
 # Free Rajagiri MVP — 2026-10-09
 
+> Email eligibility and offer quotas have since changed. See [invite codes for every verified email](any-email-referrals.md) for the current behavior and deployment verification. The account-domain restrictions below describe the original 2026-10-09 release.
+
 The free MVP replaces the prepaid subscription and manual-voucher model.
 
 - New Supabase Auth accounts and email changes must use the exact @rajagiri.edu.in domain. Email verification is required for coupons, profile completion, and referral claims. Phone verification alone is insufficient. Existing administrator sign-in remains available.

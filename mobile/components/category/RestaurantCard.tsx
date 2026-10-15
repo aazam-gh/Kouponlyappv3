@@ -71,7 +71,7 @@ const styles = StyleSheet.create({
   cardLabelPill: { overflow: 'hidden', borderRadius: 999, paddingHorizontal: 9, paddingVertical: 6, backgroundColor: '#F39A00', color: '#FFFFFF', fontSize: 10, fontWeight: '700' },
   cashbackPill: { overflow: 'hidden', borderRadius: 999, paddingHorizontal: 9, paddingVertical: 6, backgroundColor: '#6E45D5', color: '#FFFFFF', fontSize: 10, fontWeight: '700' },
   offerBadge: { position: 'absolute', top: 10, left: 10, maxWidth: '82%', borderRadius: 999, paddingHorizontal: 11, paddingVertical: 7, backgroundColor: Colors.brandGreen },
-  offerBadgeText: { color: '#111111', fontSize: 12, lineHeight: 16, fontWeight: '700' },
+  offerBadgeText: { color: '#FFFFFF', fontSize: 12, lineHeight: 16, fontWeight: '700' },
   distanceBadge: { position: 'absolute', top: 10, right: 10, borderRadius: 999, paddingHorizontal: 9, paddingVertical: 6, backgroundColor: 'rgba(20,20,20,0.72)', flexDirection: 'row', alignItems: 'center', gap: 4 },
   distance: { color: '#FFFFFF', fontSize: 12, fontWeight: '700' },
   logoFrame: { position: 'absolute', right: 12, bottom: -22, zIndex: 3, width: 64, height: 64, borderRadius: 16, borderWidth: 2, justifyContent: 'center', alignItems: 'center', overflow: 'hidden' },

@@ -12,7 +12,6 @@ import { StateSurface } from '../StateSurface';
 import { triggerSubtleHaptic } from '../../utils/haptics';
 import { homeQueryOptions, type HomeBannerItem } from '../../utils/homeQueries';
 import { logger } from '../../utils/logger';
-import { Colors } from '../../constants/Colors';
 import { HOME_CAROUSEL_GAP, HOME_HORIZONTAL_GUTTER } from './layout';
 
 const BANNER_HEIGHT = 240;
@@ -189,26 +188,6 @@ export default function PromoBanner({ banners: bannersOverride, onBannerPress }:
                     );
                 })}
             </Animated.ScrollView>
-            {banners.length > 1 ? (
-                <View style={styles.pagination} accessibilityLabel="Hero banner navigation">
-                    {banners.map((banner, index) => (
-                        <ScalePressable
-                            key={`hero-indicator-${banner.bannerId || banner.id || index}`}
-                            onPress={() => {
-                                currentIndexRef.current = index;
-                                setCurrentIndex(index);
-                            }}
-                            hitSlop={8}
-                            accessibilityRole="button"
-                            accessibilityLabel={`Show hero banner ${index + 1} of ${banners.length}`}
-                            accessibilityState={{ selected: currentIndex === index }}
-                            style={styles.indicatorButton}
-                        >
-                            <View style={[styles.indicator, currentIndex === index ? styles.activeIndicator : styles.inactiveIndicator]} />
-                        </ScalePressable>
-                    ))}
-                </View>
-            ) : null}
         </View>
     );
 }
@@ -224,31 +203,6 @@ const styles = StyleSheet.create({
     },
     carousel: {
         height: BANNER_HEIGHT,
-    },
-    pagination: {
-        height: 30,
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: 4,
-    },
-    indicatorButton: {
-        minWidth: 28,
-        height: 30,
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-    indicator: {
-        height: 7,
-        borderRadius: 999,
-    },
-    inactiveIndicator: {
-        width: 7,
-        backgroundColor: '#C8CECA',
-    },
-    activeIndicator: {
-        width: 24,
-        backgroundColor: Colors.brandGreen,
     },
     scrollContent: {
         paddingHorizontal: BANNER_SIDE_PADDING,

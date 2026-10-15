@@ -20,13 +20,13 @@ function Membership() {
     <div className="flex items-start justify-between gap-4"><div><h1 className="text-2xl font-semibold">Coupons & referrals</h1><p className="mt-1 text-sm text-muted-foreground">Free monthly coupons and personal invite refreshes.</p></div>
       <Button variant="outline" onClick={() => void query.refetch()} disabled={query.isFetching}>Refresh</Button></div>
     {query.isPending ? <p>Loading coupon activity…</p> : query.isError ? <p role="alert" className="text-destructive">{query.error.message}</p> : <div className="grid gap-4 sm:grid-cols-3">
-      {([['Verified eligible students', query.data.eligibleUsers], ['Coupons consumed this month', query.data.redemptionsThisMonth], ['Lifetime referral refreshes', query.data.referralRefreshes]] as const).map(([label, value]) =>
+      {([['Verified eligible accounts', query.data.eligibleUsers], ['Coupons consumed this month', query.data.redemptionsThisMonth], ['Lifetime referral refreshes', query.data.referralRefreshes]] as const).map(([label, value]) =>
         <Card key={label}><CardHeader><CardTitle className="text-sm text-muted-foreground">{label}</CardTitle></CardHeader><CardContent className="text-3xl font-semibold">{value}</CardContent></Card>)}
     </div>}
     <Card><CardHeader><CardTitle>MVP rules</CardTitle></CardHeader><CardContent className="space-y-3 text-sm leading-relaxed">
-      <p>Only verified <strong>@rajagiri.edu.in</strong> email addresses qualify. Membership is free.</p>
-      <p>Each student receives one coupon per vendor per calendar month, shared across all offers and branches. The month resets at midnight on the first day in India.</p>
-      <p>A verified friend using a personal invite opens a fresh coupon round for the inviter. Unused coupons do not stack, and the month’s expiry stays the same. Maximum three refreshes per student across all months.</p>
+      <p>Verified email addresses from <strong>any domain</strong> qualify. Membership is free.</p>
+      <p>Each account receives one coupon per offer per calendar month, shared across branches. The month resets at midnight on the first day in India.</p>
+      <p>A verified friend using a personal invite opens a fresh coupon round for the inviter. Unused coupons do not stack, and the month’s expiry stays the same. Maximum three refreshes per account across all months.</p>
       <p>Confirmation consumes the coupon and creates a unique receipt code. Receipt history stays available after every reset.</p>
     </CardContent></Card>
     <div className="flex flex-wrap gap-3"><Button asChild><Link to="/admin/transactions" search={{ page: 1, pageSize: 25 }}>View consumed coupons</Link></Button>

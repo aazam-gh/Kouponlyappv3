@@ -17,7 +17,7 @@ export default function InviteCodeCard() {
     if (!code) return;
     try {
       if (kind === 'copy') { await Clipboard.setStringAsync(code); setMessage('Invite code copied'); }
-      else await Share.share({ message: `Join me on Kouponly! Enter my invite code ${code}. Free for @rajagiri.edu.in students.` });
+      else await Share.share({ message: `Join me on Kouponly! Enter my invite code ${code}. Free coupons with any verified email address.` });
     } catch { setMessage(kind === 'copy' ? 'Unable to copy your code. Try again.' : 'Unable to share your code. Try again.'); }
   };
   return <View style={{ gap: 20 }}>
@@ -29,7 +29,7 @@ export default function InviteCodeCard() {
     <Text accessibilityRole="header" style={{ color: theme.text, fontSize: 18, ...Typography.getTextVariantStyle('bodyStrong') }}>Your invite code</Text>
     {code ? <>
       <Text selectable testID="personal-invite-code" accessibilityLabel={`Invite code ${code}`} style={{ color: theme.brandText, fontSize: 30, letterSpacing: 5, ...Typography.getTextVariantStyle('bodyStrong') }}>{code}</Text>
-      <Text style={{ color: theme.mutedText, fontSize: 13, lineHeight: 20 }}>Invite up to {benefits.referralLimit} friends with a @rajagiri.edu.in email. When they use your code, all your coupons for this month refresh. Unused coupons do not accumulate.</Text>
+      <Text style={{ color: theme.mutedText, fontSize: 13, lineHeight: 20 }}>Invite up to {benefits.referralLimit} friends using any email address. When they verify their email and use your code, all your coupons for this month refresh. Unused coupons do not accumulate.</Text>
       <View style={{ flexDirection: 'row', gap: 10 }}>
         {(['copy', 'share'] as const).map(kind => <ScalePressable key={kind} accessibilityRole="button" onPress={() => void action(kind)} style={{ minHeight: 44, flex: 1, borderRadius: 22, alignItems: 'center', justifyContent: 'center', backgroundColor: theme.surfaceElevated }}>
           <Text style={{ color: theme.text, ...Typography.getTextVariantStyle('bodyStrong') }}>{kind === 'copy' ? 'Copy code' : 'Share code'}</Text>

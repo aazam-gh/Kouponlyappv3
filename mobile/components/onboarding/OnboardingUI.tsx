@@ -37,7 +37,7 @@ type ScaffoldProps = {
 
 export function OnboardingScaffold({ children, title, headerTitle, subtitle, onBack, onClose, headerAction, progress, footer, transitionKey }: ScaffoldProps) {
   const { theme, isDark } = useAppTheme();
-  const { locale, isRTL } = useAppLocale();
+  const { isRTL } = useAppLocale();
   const { t } = useTranslation();
 
   return (
@@ -77,7 +77,7 @@ export function OnboardingScaffold({ children, title, headerTitle, subtitle, onB
             keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={false}
           >
-            {title ? <Text accessibilityRole="header" style={[styles.title, Typography.getLocalizedTextVariantStyle('display', locale), { color: theme.text }, isRTL && styles.textRTL]}>{title}</Text> : null}
+            {title ? <Text accessibilityRole="header" style={[styles.title, Typography.getTextVariantStyle('display'), { color: theme.text }, isRTL && styles.textRTL]}>{title}</Text> : null}
             {subtitle ? <Text style={[styles.subtitle, { color: theme.mutedText }, isRTL && styles.textRTL]}>{subtitle}</Text> : null}
             <Animated.View key={transitionKey} entering={CONTENT_ENTER} style={styles.body}>{children}</Animated.View>
           </ScrollView>

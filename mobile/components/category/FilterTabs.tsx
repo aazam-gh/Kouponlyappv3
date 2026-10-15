@@ -2,14 +2,15 @@ import { Colors as BorderPalette } from '@/constants/Colors';
 import { useMotionPreferences } from '@/lib/theme';
 import ScalePressable from '@/components/ScalePressable';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { type ComponentProps, useEffect, useMemo } from 'react';
-import { StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { type ComponentProps, useEffect, useMemo, useState } from 'react';
+import { Modal, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import Animated, { useSharedValue, useAnimatedStyle, withTiming, Easing } from 'react-native-reanimated';
 import { useTranslation } from 'react-i18next';
 import { Typography } from '../../constants/Typography';
 import { Colors } from '../../constants/Colors';
 import { useAppTheme } from '../../context/AppThemeContext';
 import { useAppLocale } from '../../context/LocaleContext';
+import { type VendorSortMode, vendorSortOptions } from '@/lib/vendor-sorting';
 
 type FilterOption = {
     id: string;
@@ -21,22 +22,27 @@ interface FilterTabsProps {
     selectedFilter: string;
     onFilterChange: (filterId: string) => void;
     filters?: FilterOption[];
+    sortMode?: VendorSortMode;
+    onSortModeChange?: (mode: VendorSortMode) => void;
+    horizontalPadding?: number;
 }
 
-export default function FilterTabs({ selectedFilter, onFilterChange, filters }: FilterTabsProps) {
+export default function FilterTabs({ selectedFilter, onFilterChange, filters, sortMode = 'alphabetical', onSortModeChange, horizontalPadding = 20 }: FilterTabsProps) {
     const { t } = useTranslation();
     const { reduceMotion } = useMotionPreferences();
     const { isDark, theme } = useAppTheme();
     const { isRTL } = useAppLocale();
     const { width } = useWindowDimensions();
+    const [sortOpen, setSortOpen] = useState(false);
+    const [outerWidth, setOuterWidth] = useState(0);
 
     const currentFilters = useMemo<FilterOption[]>(() => filters || [
-        { id: 'all', label: t('filter_all'), icon: 'apps-outline' },
+        { id: 'all', label: 'Sort', icon: 'options-outline' },
         { id: 'nearest', label: t('nearest'), icon: 'navigate-outline' },
         { id: 'top', label: t('filter_top'), icon: 'flame' },
     ], [filters, t]);
 
-    const containerWidth = width - 40;
+    const containerWidth = Math.max(0, (outerWidth || width) - horizontalPadding * 2);
     const tabWidth = containerWidth / currentFilters.length;
 
     const initialIndex = currentFilters.findIndex(f => f.id === selectedFilter);
@@ -67,7 +73,13 @@ export default function FilterTabs({ selectedFilter, onFilterChange, filters }: 
     const selectedColor = theme.onActionSolid;
 
     return (
-        <View style={styles.outerContainer}>
+        <View
+            onLayout={({ nativeEvent }) => {
+                const nextWidth = nativeEvent.layout.width;
+                setOuterWidth(current => Math.abs(current - nextWidth) > 0.5 ? nextWidth : current);
+            }}
+            style={[styles.outerContainer, { paddingHorizontal: horizontalPadding }]}
+        >
             <View style={[
                 styles.container,
                 {
@@ -94,7 +106,7 @@ export default function FilterTabs({ selectedFilter, onFilterChange, filters }: 
                         <ScalePressable
                             key={filter.id}
                             style={[styles.filterButton, { width: tabWidth }]}
-                            onPress={() => onFilterChange(filter.id)}
+                            onPress={() => filter.id === 'all' && onSortModeChange ? setSortOpen(true) : onFilterChange(filter.id)}
                             activeOpacity={1}
                         >
                             <Ionicons
@@ -109,13 +121,28 @@ export default function FilterTabs({ selectedFilter, onFilterChange, filters }: 
                     );
                 })}
             </View>
+            {onSortModeChange ? <Modal visible={sortOpen} transparent animationType="fade" onRequestClose={() => setSortOpen(false)}>
+                <Pressable accessibilityRole="button" accessibilityLabel="Close sort options" onPress={() => setSortOpen(false)} style={styles.modalOverlay}>
+                    <Pressable onPress={event => event.stopPropagation()} style={[styles.sortPopup, { backgroundColor: theme.surfaceElevated, borderColor: theme.border }]}>
+                        <Text accessibilityRole="header" style={[styles.sortTitle, { color: theme.text }]}>Sort</Text>
+                        {vendorSortOptions.map(option => {
+                            const active = sortMode === option.id;
+                            return <ScalePressable key={option.id} accessibilityRole="button" accessibilityState={{ selected: active }} onPress={() => { onSortModeChange(option.id); onFilterChange('all'); setSortOpen(false); }} style={[styles.sortOption, active && { backgroundColor: theme.cardMuted }]}>
+                                <Ionicons name={option.icon} size={20} color={active ? theme.brand : theme.icon} />
+                                <Text style={[styles.sortOptionText, { color: theme.text }]}>{option.label}</Text>
+                                {active ? <Ionicons name="checkmark" size={19} color={theme.brand} /> : null}
+                            </ScalePressable>;
+                        })}
+                    </Pressable>
+                </Pressable>
+            </Modal> : null}
         </View>
     );
 }
 
 const styles = StyleSheet.create({
     outerContainer: {
-        paddingHorizontal: 20,
+        width: '100%',
         paddingVertical: 12,
     },
     container: {
@@ -145,4 +172,9 @@ const styles = StyleSheet.create({
         fontSize: 14,
         ...Typography.getTextVariantStyle('bodyStrong'),
     },
+    modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.38)', justifyContent: 'center', paddingHorizontal: 28 },
+    sortPopup: { borderRadius: 22, borderWidth: StyleSheet.hairlineWidth, padding: 16, gap: 4, elevation: 12 },
+    sortTitle: { fontSize: 18, marginBottom: 8, ...Typography.getTextVariantStyle('bodyStrong') },
+    sortOption: { minHeight: 48, flexDirection: 'row', alignItems: 'center', gap: 12, borderRadius: 14, paddingHorizontal: 10 },
+    sortOptionText: { flex: 1, fontSize: 15, ...Typography.getTextVariantStyle('body') },
 });

@@ -6,7 +6,7 @@ import { StatusBar } from 'expo-status-bar';
 import { FlatList, Keyboard, Platform, Text, RefreshControl, StatusBar as NativeStatusBar, StyleSheet, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
-import { BrandGrid, CategoryGrid, HomeBackgroundIcons, HomeBannerCarousel, NewDeals, NewDealsSection, OpportunityHighlights, PartnerBannerCarousel, TrendingOffers } from '@/components/home';
+import { BrandGrid, CategoryGrid, HomeBackgroundIcons, HomeBannerCarousel, NewDeals, NewDealsSection, PartnerBannerCarousel, TrendingOffers } from '@/components/home';
 import ScalePressable from '@/components/ScalePressable';
 import { RemoteImage } from '@/components/RemoteImage';
 import { searchVendors } from '@/lib/vendor-search';
@@ -23,7 +23,7 @@ import { useTabBarScrollVisibility } from '@/components/TabBarScrollVisibility';
 import { queryClient } from '@/utils/queryClient';
 import { triggerSubtleHaptic } from '@/utils/haptics';
 
-const VENDOR_PAGE_SIZE = 6;
+const VENDOR_PAGE_SIZE = 10;
 
 export default function HomeScreen() {
   const { user } = useAuth();
@@ -39,6 +39,7 @@ export default function HomeScreen() {
   const suggestions = React.useMemo(() => searchVendors(vendors, searchQuery).slice(0, 5), [vendors, searchQuery]);
   const scrollY = useSharedValue(0);
   const viewportHeight = useSharedValue(0);
+  const searchHeaderHeight = useSharedValue(68);
   const scrollHandler = useAnimatedScrollHandler(event => { scrollY.set(Math.max(0, event.contentOffset.y)); });
   const listRef = React.useRef<FlatList>(null);
   const navigation = useNavigation();
@@ -49,7 +50,7 @@ export default function HomeScreen() {
     : t('guest_home_name');
   const refreshHome = React.useCallback(() => Promise.all([
     queryClient.refetchQueries({
-      predicate: query => ['catalogue-home', 'categories', 'cmsDocument', 'trendingOffers', 'vendor', 'opportunities'].includes(String(query.queryKey[0])),
+      predicate: query => ['catalogue-home', 'categories', 'cmsDocument', 'trendingOffers', 'vendor'].includes(String(query.queryKey[0])),
       type: 'active',
     }),
     loadNearby({ force: true }),
@@ -74,24 +75,26 @@ export default function HomeScreen() {
     <View style={{ height: top, backgroundColor: theme.background }} />
     <View style={s.wrapper}>
       <Animated.FlatList
+        key="home-top-brands-five-columns"
         style={{ backgroundColor: theme.background }}
         data={visibleVendors}
         keyExtractor={vendor => String(vendor.vendorId || vendor.id)}
         ref={listRef}
-        numColumns={3}
-        columnWrapperStyle={{ paddingHorizontal: 20, gap: 12 }}
+        numColumns={5}
+        columnWrapperStyle={{ paddingHorizontal: 20, gap: 8 }}
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode="on-drag"
-        renderItem={({ item: vendor }) => <ScalePressable accessibilityRole="button" accessibilityLabel={vendor.name} onPress={() => openVendor(String(vendor.vendorId || vendor.id))} style={{ flex: 1, maxWidth: '31%', marginBottom: 16, gap: 8 }}>
-          <View style={{ width: '90%', alignSelf: 'center', aspectRatio: 1, backgroundColor: theme.logoTile, borderRadius: 18, overflow: 'hidden', borderWidth: 1, borderColor: theme.border, alignItems: 'center', justifyContent: 'center' }}>
+        renderItem={({ item: vendor }) => <ScalePressable accessibilityRole="button" accessibilityLabel={vendor.name} onPress={() => openVendor(String(vendor.vendorId || vendor.id))} style={{ flex: 1, marginBottom: 16 }}>
+          <View style={{ width: '100%', aspectRatio: 1, backgroundColor: theme.logoTile, borderRadius: 18, overflow: 'hidden', borderWidth: 1, borderColor: theme.border, alignItems: 'center', justifyContent: 'center' }}>
             {vendor.logo ? <RemoteImage source={{ uri: vendor.logo }} style={{ width: '100%', height: '100%' }} contentFit="cover" /> : <Text style={{ color: theme.brandText, fontSize: 28, ...Typography.getTextVariantStyle('bodyStrong') }}>{vendor.name.charAt(0)}</Text>}
           </View>
-          <Text numberOfLines={2} style={{ color: theme.text, fontSize: 14, textAlign: 'center', ...Typography.getTextVariantStyle('bodyStrong') }}>{vendor.name}</Text>
         </ScalePressable>}
         initialNumToRender={VENDOR_PAGE_SIZE}
         maxToRenderPerBatch={VENDOR_PAGE_SIZE}
         windowSize={5}
         showsVerticalScrollIndicator={false}
+        decelerationRate="fast"
+        removeClippedSubviews={false}
         contentContainerStyle={[s.content, { paddingBottom: 64 + insets.bottom + 16 }]}
         refreshControl={refreshControl}
         {...tabBarScrollVisibility}
@@ -101,20 +104,18 @@ export default function HomeScreen() {
           <HomeBackgroundIcons />
           <VerificationStatusBanner />
           <PartnerBannerCarousel onBannerPress={banner => openVendor(banner.vendorId)} />
-          <ScrollCrunchSection testID="category-scroll-crunch" scrollY={scrollY} viewportHeight={viewportHeight} bottomInset={64 + insets.bottom}><CategoryGrid /></ScrollCrunchSection>
+          <ScrollCrunchSection testID="category-scroll-crunch" scrollY={scrollY} viewportHeight={viewportHeight} bottomInset={64 + insets.bottom} pinBelowHeader={searchHeaderHeight}><CategoryGrid /></ScrollCrunchSection>
           <NewDeals onVendorPress={vendor => openVendor(vendor.vendorId || String(vendor.id))} />
-          <ScrollCrunchSection testID="new-deals-scroll-crunch" scrollY={scrollY} viewportHeight={viewportHeight} bottomInset={64 + insets.bottom}><NewDealsSection /></ScrollCrunchSection>
+          <NewDealsSection scrollY={scrollY} viewportHeight={viewportHeight} bottomInset={64 + insets.bottom} searchHeaderHeight={searchHeaderHeight} />
           <HomeBannerCarousel />
           <TrendingOffers onVendorPress={vendor => openVendor(vendor.vendorId || vendor.id)} />
           <BrandGrid />
-          <OpportunityHighlights />
           {vendors.length > 0 ? <View style={s.vendorHeading}>
-            <HomeSectionHeading prefix="" highlight="Top Vendors" onSeeMore={() => router.push('/vendors' as any)} />
+            <HomeSectionHeading prefix="Top Brands" highlight="" onSeeMore={() => router.push('/vendors' as any)} />
           </View> : null}
         </>}
-        ListFooterComponent={<View style={{ height: 22 }} />}
       />
-      <View style={[s.header, { backgroundColor: theme.background }]}>
+      <View onLayout={event => searchHeaderHeight.set(event.nativeEvent.layout.height)} style={[s.header, { backgroundColor: theme.background }]}>
         <GreetingHeader testID="home-search" userName={userName} searchQuery={searchQuery} onSearchChange={setSearchQuery} onSearchSubmit={search} />
         {searchQuery.trim() ? <View style={{ marginHorizontal: 20, marginTop: 8, padding: 12, borderRadius: 20, backgroundColor: theme.card, borderWidth: 1, borderColor: theme.border }}>
           {suggestions.length ? suggestions.map(vendor => <ScalePressable key={vendor.id} accessibilityRole="button" onPress={() => openVendor(String(vendor.vendorId || vendor.id))} style={{ minHeight: 48, justifyContent: 'center' }}><Text style={{ color: theme.text, ...Typography.getTextVariantStyle('bodyStrong') }}>{vendor.name}</Text><Text style={{ color: theme.mutedText, fontSize: 12 }}>{vendor.category}</Text></ScalePressable>) : <Text style={{ color: theme.mutedText }}>No matching vendors</Text>}

@@ -1,12 +1,12 @@
 import ScalePressable from '@/components/ScalePressable';
-import { canCreateMobileAccount, isSchoolEmail, SCHOOL_EMAIL_MESSAGE } from '@/lib/school-email';
+import { isSchoolEmail, SCHOOL_EMAIL_MESSAGE } from '@/lib/school-email';
 import * as ImagePicker from 'expo-image-picker';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Image as ExpoImage } from 'expo-image';
 import { router, useLocalSearchParams } from 'expo-router';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-import { Linking, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Alert, Linking, StyleSheet, Text, TextInput, View } from 'react-native';
 import { InlineNotice, OnboardingField, OnboardingPrimaryButton, OnboardingScaffold, OnboardingTextButton } from '@/components/onboarding/OnboardingUI';
 import { benefitsRpc, makeMutationId } from '@/lib/benefits';
 import { useAuth } from '@/lib/auth';
@@ -65,10 +65,12 @@ export default function RealXOnboardingScreen() {
   React.useEffect(() => {
     if (step === 'status' && status && status !== 'pending' && status !== 'approving') void clearPendingVerification();
   }, [step, status]);
+  React.useEffect(() => {
+    if (flow === 'signup' && message.toLowerCase().includes('use your @rajagiri.edu.in email address')) setMessage('');
+  }, [flow, message]);
 
   const sendCode = async () => {
-    if (flow === 'signup' && !canCreateMobileAccount(email)) { setMessage(SCHOOL_EMAIL_MESSAGE); return; }
-    if (flow === 'verification' && !isSchoolEmail(email)) { setMessage(SCHOOL_EMAIL_MESSAGE); return; }
+    if (flow === 'verification' && !isSchoolEmail(email)) { Alert.alert('School email required', SCHOOL_EMAIL_MESSAGE); return; }
     setBusy(true); setMessage('');
     try {
       await sendCouponlyEmailCode(email.trim().toLowerCase(), flow);
@@ -78,7 +80,9 @@ export default function RealXOnboardingScreen() {
       setMessage(flow === 'verification' ? 'We sent a code to confirm your email before ID review.' : flow === 'signup' ? 'Enter the verification code from your email.' : 'Enter the sign-in code from your email.');
     } catch (error) {
       const detail = error instanceof Error ? error.message : 'Unable to send the email code.';
-      setMessage(detail);
+      setMessage(flow === 'signup' && detail.toLowerCase().includes('@rajagiri.edu.in')
+        ? 'Unable to send the verification code right now. Please try again later.'
+        : detail);
     } finally { setBusy(false); }
   };
   const verifyCode = async () => {
@@ -179,7 +183,7 @@ export default function RealXOnboardingScreen() {
   };
   const progress = flow === 'login' || step === 'done' ? undefined : flow === 'verification'
     ? { current: step === 'email' ? 2 : step === 'code' ? 3 : step === 'document' ? 4 : 5, total: 5 }
-    : { current: step === 'email' ? 2 : 3, total: 3 };
+    : { current: step === 'email' ? 1 : 2, total: 2 };
   const disabled = step === 'email' ? !email.trim() || (flow === 'signup' && (!firstName.trim() || !lastName.trim())) : step === 'code' ? code.trim().length < 6 : step === 'document' ? !image : false;
   const onSubmit = step === 'email' ? sendCode : step === 'code' ? verifyCode : step === 'document' ? submitId : step === 'status' && (status === 'rejected' || status === 'cancelled') ? () => { setFlow('verification'); setStep('email'); setMessage(''); } : () => router.replace('/realx' as any);
 
@@ -193,9 +197,8 @@ export default function RealXOnboardingScreen() {
     footer={<OnboardingPrimaryButton label={primaryLabel} loadingLabel={step === 'code' && flow === 'signup' ? t('onboarding_v2_creating_account') : undefined} loading={busy} disabled={disabled} onPress={() => void onSubmit()} />}
   >
     {step === 'email' ? <>
-      <OnboardingField label={flow === 'login' ? t('onboarding_login_email_placeholder') : t('onboarding_email_placeholder')} value={email} onChangeText={setEmail} keyboardType="email-address" autoCapitalize="none" autoCorrect={false} autoComplete="email" editable={!busy && !user} style={{ writingDirection: 'ltr', textAlign: 'left' }} />
-      {flow !== 'login' ? <OnboardingTextButton label="School email domain not available? Suggest your institute" disabled={busy} onPress={() => router.push({ pathname: '/student-request', params: { kind: 'school', email } } as any)} /> : null}
-      {flow !== 'login' ? <Text style={styles.legal}>{SCHOOL_EMAIL_MESSAGE}</Text> : null}
+      <OnboardingField label={flow === 'login' ? t('onboarding_login_email_placeholder') : t('onboarding_email_placeholder')} value={email} onChangeText={value => { setEmail(value); setMessage(''); }} keyboardType="email-address" autoCapitalize="none" autoCorrect={false} autoComplete="email" editable={!busy && !user} style={{ writingDirection: 'ltr', textAlign: 'left' }} />
+      {flow === 'verification' ? <OnboardingTextButton label="School email domain not available? Suggest your institute" disabled={busy} onPress={() => router.push({ pathname: '/student-request', params: { kind: 'school', email } } as any)} /> : null}
       {flow === 'signup' ? <>
         <OnboardingField label={t('first_name_placeholder')} value={firstName} onChangeText={setFirstName} autoComplete="given-name" autoCapitalize="words" editable={!busy} />
         <OnboardingField label={t('last_name_placeholder')} value={lastName} onChangeText={setLastName} autoComplete="family-name" autoCapitalize="words" editable={!busy} />
@@ -225,7 +228,7 @@ export default function RealXOnboardingScreen() {
       {(status === 'approved' || status === 'rejected' || status === 'cancelled') ? <OnboardingTextButton label={status === 'approved' ? 'Continue to sign in' : 'Start again'} onPress={() => { setFlow(status === 'approved' ? 'login' : 'verification'); setStep('email'); }} /> : null}
     </> : null}
     {step === 'done' ? <InlineNotice tone="success">{t('onboarding_v2_success_preview')}</InlineNotice> : null}
-    {message && step !== 'document' ? <InlineNotice tone="error">{message}</InlineNotice> : null}
+    {message && step !== 'document' ? <InlineNotice tone={step === 'done' ? 'info' : 'error'}>{message}</InlineNotice> : null}
   </OnboardingScaffold>;
 }
 

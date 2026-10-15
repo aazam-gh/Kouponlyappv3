@@ -9,7 +9,7 @@ import { useStore } from '@/lib/store';
 import { deals } from '@/lib/data';
 import { useCatalogue } from '@/lib/catalogue';
 import { getSupabase } from '@/lib/supabase';
-import { recommendedVendors, recentRedeemedVendors, type RecentRedemption } from '@/lib/saved-discovery';
+import { recommendedVendors } from '@/lib/saved-discovery';
 import { useAppTheme } from '@/context/AppThemeContext';
 import ScalePressable from '@/components/ScalePressable';
 import { RemoteImage } from '@/components/RemoteImage';
@@ -31,17 +31,23 @@ export default function SavedScreen() {
       const client = getSupabase();
       const [items, coupons, legacy] = await Promise.all([
         client.from('realx_student_saved_items').select('id,item_id,item_type,payload').eq('student_id', user!.id).order('created_at', { ascending: false }),
-        client.from('redemptions').select('vendor_id,offer_snapshot,consumed_at').eq('user_id', user!.id).eq('status', 'success').not('consumed_at', 'is', null).order('consumed_at', { ascending: false }).limit(100),
-        client.from('realx_transactions').select('vendor_id,vendor_name,created_at').eq('student_id', user!.id).eq('transaction_type', 'offer').eq('status', 'completed').order('created_at', { ascending: false }).limit(100),
+        client.from('redemptions').select('redemption_id,vendor_id,offer_snapshot,consumed_at').eq('user_id', user!.id).eq('status', 'success').not('consumed_at', 'is', null).order('consumed_at', { ascending: false }).limit(100),
+        client.from('realx_transactions').select('vendor_id,vendor_id_snapshot,vendor_name,created_at').eq('student_id', user!.id).eq('transaction_type', 'offer').eq('status', 'completed').order('created_at', { ascending: false }).limit(100),
       ]);
       if (items.error) throw items.error; if (coupons.error) throw coupons.error; if (legacy.error) throw legacy.error;
       const ids = [...new Set([...(items.data || []).filter(item => item.item_type === 'offer').map(item => item.item_id), ...state.savedOffers])];
       const offers = ids.length ? await client.from('realx_offers').select('id,vendor_id,title,image_url').in('id', ids) : { data: [], error: null };
       if (offers.error) throw offers.error;
-      return { items: (items.data || []) as SavedItem[], offers: (offers.data || []) as Offer[], recent: [
-        ...(coupons.data || []).map(row => ({ vendorId: row.vendor_id, vendorName: row.offer_snapshot?.vendorName, redeemedAt: row.consumed_at })),
-        ...(legacy.data || []).map(row => ({ vendorId: row.vendor_id, vendorName: row.vendor_name, redeemedAt: row.created_at })),
-      ] as RecentRedemption[] };
+      const rawRecent = (coupons.data || []).length ? (coupons.data || []).map(row => ({
+        id: String(row.redemption_id), vendorId: String(row.vendor_id), vendorName: row.offer_snapshot?.vendorName,
+        offerTitle: row.offer_snapshot?.title || 'Redeemed offer', redeemedAt: String(row.consumed_at),
+      })) : (legacy.data || []).map((row, index) => ({
+        id: `legacy-${row.vendor_id || row.vendor_id_snapshot}-${row.created_at}-${index}`, vendorId: String(row.vendor_id || row.vendor_id_snapshot || ''), vendorName: row.vendor_name,
+        offerTitle: 'Redeemed offer', redeemedAt: String(row.created_at),
+      }));
+      const recent = rawRecent.filter(row => row.vendorId && row.vendorId !== 'null' && Number.isFinite(Date.parse(row.redeemedAt)))
+        .map(row => ({ ...row, id: row.id || `${row.vendorId}-${row.redeemedAt}-${row.offerTitle}` }));
+      return { items: (items.data || []) as SavedItem[], offers: (offers.data || []) as Offer[], recent };
     },
   });
   useFocusEffect(React.useCallback(() => { if (user) void saved.refetch(); }, [user?.id, state.savedOffers.join(',')]));
@@ -61,23 +67,26 @@ export default function SavedScreen() {
   });
   const savedVendors = deals.filter(vendor => directlySavedVendors.includes(vendor) || savedOfferCards.some(card => card.vendorId === vendorId(vendor)));
   const removeVendor = async (vendor: typeof deals[number]) => {
-    const ids = savedOfferCards.filter(card => card.vendorId === vendorId(vendor)).map(card => card.key);
-    const oldItems = items.filter(item => (item.item_type === 'vendor' && item.item_id === vendorId(vendor)) || (item.item_type === 'offer' && ids.includes(item.item_id)));
+    const offerIds = savedOfferCards.filter(card => card.vendorId === vendorId(vendor)).map(card => card.key);
+    const oldItems = items.filter(item =>
+      (item.item_type === 'vendor' && item.item_id === vendorId(vendor)) ||
+      (item.item_type === 'offer' && offerIds.includes(item.item_id))
+    );
     if (oldItems.length) {
       const { error } = await getSupabase().from('realx_student_saved_items').delete().eq('student_id', user!.id).in('id', oldItems.map(item => item.id));
       if (error) { notify(error.message); return; }
     }
     if (state.saved.includes(vendor.id)) toggleSaved(vendor.id);
-    ids.filter(id => state.savedOffers.includes(id)).forEach(toggleSavedOffer);
+    offerIds.filter(id => state.savedOffers.includes(id)).forEach(id => toggleSavedOffer(id));
     if (user) await saved.refetch();
   };
-  const recent = recentRedeemedVendors(data?.recent || []);
+  const recent = data?.recent || [];
   const savedIds = new Set([...savedVendors.map(vendorId), ...savedOfferCards.flatMap(card => card.vendorId ? [card.vendorId] : [])]);
   const recommendations = recommendedVendors(deals, savedIds, recent.map(row => row.vendorId));
   const sections: { title: string; empty: string; data: Card[] }[] = [
-    { title: 'Saved vendors', empty: 'Tap the heart on a vendor card to save it.', data: savedVendors.map(vendor => ({ key: vendorId(vendor), title: vendor.name, subtitle: vendor.category, image: vendor.logo || vendor.image, vendorId: vendorId(vendor), remove: () => void removeVendor(vendor) })) },
-    { title: 'Recommended for you', empty: 'New recommendations will appear when offers are available.', data: recommendations.map(({ vendor, reason }) => ({ key: vendorId(vendor), title: vendor.name, subtitle: reason, image: vendor.logo || vendor.image, vendorId: vendorId(vendor) })) },
-    { title: 'Last redeemed vendors', empty: user ? 'Your successfully redeemed vendors will appear here.' : 'Sign in to see your redemption history.', data: recent.map(row => { const vendor = vendorFor(row.vendorId); return { key: row.vendorId, title: vendor?.name || row.vendorName || 'Previously redeemed vendor', subtitle: `Redeemed ${new Date(row.redeemedAt).toLocaleDateString()}`, image: vendor?.logo || vendor?.image, vendorId: vendor && row.vendorId }; }) },
+    { title: 'Saved Discounts', empty: 'Tap the bookmark on a vendor offer to save it.', data: savedVendors.map(vendor => ({ key: vendorId(vendor), title: vendor.name, subtitle: vendor.category, image: vendor.logo || vendor.image, vendorId: vendorId(vendor), remove: () => void removeVendor(vendor) })) },
+    { title: 'Redemption History', empty: user ? 'Your successfully redeemed offers will appear here.' : 'Sign in to see your redemption history.', data: recent.map(row => { const vendor = vendorFor(row.vendorId); const offerTitle = row.offerTitle || 'Redeemed offer'; const matchedOffer = vendor?.offers?.find(offer => offer.title === offerTitle); return { key: row.id || `${row.vendorId}-${row.redeemedAt}-${offerTitle}`, title: offerTitle, subtitle: `${vendor?.name || row.vendorName || 'Previously redeemed vendor'} · ${new Date(row.redeemedAt).toLocaleDateString()}`, image: vendor?.logo || vendor?.image, vendorId: vendor && row.vendorId, offer: matchedOffer?.index }; }) },
+    { title: 'More to explore', empty: 'New recommendations will appear when offers are available.', data: recommendations.map(({ vendor, reason }) => ({ key: vendorId(vendor), title: vendor.name, subtitle: reason, image: vendor.logo || vendor.image, vendorId: vendorId(vendor) })) },
   ];
   const refreshing = saved.isFetching || catalogue.status === 'loading';
   return <SafeAreaView testID="saved-tab-screen" edges={['top']} style={{ flex: 1, backgroundColor: theme.background }}>

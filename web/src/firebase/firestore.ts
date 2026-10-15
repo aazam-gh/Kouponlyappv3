@@ -109,6 +109,7 @@ function normalize(row: any, ref: Ref) {
   }
   if (ref.table==='couponly_vendors') {
     data.vendorId=row.id;
+    data.phoneNumber=row.phone ?? data.phoneNumber ?? data.phone;
     data.mainCategory=row.couponly_categories?.name ?? data.mainCategory;
     data.subcategory=(row.couponly_vendor_subcategories || []).map((link:any)=>link.couponly_subcategories?.name).filter(Boolean);
     data.catalogueDealId=row.catalogue_deal_id;

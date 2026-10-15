@@ -13,7 +13,7 @@ export function SiteHeader() {
     <div className="flex w-full items-center gap-3 px-4 lg:px-8">
       <SidebarTrigger className="-ml-1" />
       <span className="text-sm font-medium text-foreground">{title}</span>
-      {isAdmin && <Link to="/admin/membership" className="ml-auto rounded-full border border-border bg-white px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:border-primary/40 hover:text-foreground">Free Rajagiri MVP</Link>}
+      {isAdmin && <Link to="/admin/membership" className="ml-auto rounded-full border border-border bg-white px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:border-primary/40 hover:text-foreground">Free Kouponly membership</Link>}
     </div>
   </header>
 }

@@ -5,7 +5,6 @@ import { LocaleProvider } from '../context/LocaleContext';
 import { queryClient } from '../utils/queryClient';
 import { TabBarVisibilityProvider } from '../components/TabBarScrollVisibility';
 import { cleanup, fireEvent, render, waitFor } from '@testing-library/react-native';
-import { Alert } from 'react-native';
 import { act } from '@testing-library/react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -76,11 +75,12 @@ describe('mobile showcase states', () => {
     await fireEvent.press(view.getByText('Verification in Progress'));
     expect(router.push).toHaveBeenCalledWith({ pathname: '/realx/onboarding', params: { flow: 'verification', step: 'status', requestId: 'request-1', statusToken: 'status-token' } });
   });
-  it('keeps guest users in Saved with a sign-in option and recommendations', async () => {
+  it('labels the saved vendor section Saved Discounts for guest users', async () => {
     const view = await wrapper(<SavedScreen />);
     await waitFor(() => expect(view.getByText('Sign in to sync saved vendors across devices.')).toBeTruthy());
-    expect(view.getByText('Recommended for you')).toBeTruthy();
-    expect(view.getByText('Last redeemed vendors')).toBeTruthy();
+    expect(view.getByText('Saved Discounts')).toBeTruthy();
+    expect(view.queryByText('Saved Vendors')).toBeNull();
+    expect(view.getByText('Redemption History')).toBeTruthy();
   });
   it('routes the legacy work link to the source Explore map', async () => {
     await wrapper(<WorkScreen />);

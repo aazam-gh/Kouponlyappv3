@@ -32,11 +32,11 @@ try:
         sql("select kouponly_apply_billing_event('" + event + "'::jsonb)")
     round_id = sql(f"select id from kouponly_coupon_rounds where user_id='{alice}' and closed_at is null").stdout.strip()
     def redeem(_):
-        return rpc(alice, f"select kouponly_redeem_coupon('concurrent-{alice}','{round_id}','{uuid.uuid4()}')")
+        return rpc(alice, f"select kouponly_redeem_coupon('concurrent-{alice}','{round_id}','{uuid.uuid4()}',250.00)")
     with concurrent.futures.ThreadPoolExecutor(max_workers=8) as pool:
         results = list(pool.map(redeem, range(8)))
     assert sum(r.returncode == 0 for r in results) == 1, [(r.returncode,r.stderr) for r in results]
-    assert all(r.returncode == 0 or 'VENDOR_ALREADY_USED' in r.stderr for r in results)
+    assert all(r.returncode == 0 or 'OFFER_ALREADY_USED' in r.stderr for r in results)
     assert sql(f"select count(*) from redemptions where user_id='{alice}'").stdout.strip() == '1'
     print('PASS: eight simultaneous redemptions consume exactly one coupon')
 
@@ -57,7 +57,7 @@ try:
         sql(f"select kouponly_open_reward_round('{alice}','{period}','voucher','concurrency-test-refresh')")
         new_round=sql(f"select id from kouponly_coupon_rounds where user_id='{alice}' and closed_at is null").stdout.strip()
     with concurrent.futures.ThreadPoolExecutor(max_workers=5) as pool:
-        results=list(pool.map(lambda _: rpc(alice,f"select kouponly_redeem_coupon('concurrent-{alice}','{new_round}','{same_mutation}')"),range(5)))
+        results=list(pool.map(lambda _: rpc(alice,f"select kouponly_redeem_coupon('concurrent-{alice}','{new_round}','{same_mutation}',250.00)"),range(5)))
     assert all(r.returncode == 0 for r in results)
     assert len({r.stdout for r in results}) == 1
     assert sql(f"select count(*) from redemptions where user_id='{alice}'").stdout.strip() == '2'

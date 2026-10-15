@@ -1,6 +1,6 @@
 import React from 'react';
 import { act, cleanup, fireEvent, render, waitFor } from '@testing-library/react-native';
-import { Text, View } from 'react-native';
+import { Text } from 'react-native';
 import { CatalogueProvider, CatalogueNotice, useCatalogue } from '../lib/catalogue';
 import { ThemeProvider } from '../lib/theme';
 import { fetchCloudCatalogue } from '../lib/backend';

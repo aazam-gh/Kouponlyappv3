@@ -34,7 +34,7 @@ function StudentProfile() {
         </CardContent></Card>
         <Card><CardHeader><CardTitle>Monthly coupons</CardTitle></CardHeader><CardContent className="space-y-2 text-sm">
           <p><strong>{student.consumedThisMonth}</strong> consumed this month, across all rounds.</p>
-          {student.couponMonth ? <><p>Current round: {student.couponMonth.roundNumber + 1}</p><p>{student.couponMonth.usedVendors} vendors used in this round.</p><p>Month ends: {date(student.couponMonth.endsAt)}</p></> : <p>{student.eligible ? 'The month is allocated when this student next opens their coupons.' : 'Verified @rajagiri.edu.in email required.'}</p>}
+          {student.couponMonth ? <><p>Current round: {student.couponMonth.roundNumber + 1}</p><p>{student.couponMonth.usedOffers} offers redeemed in this round.</p><p>Month ends: {date(student.couponMonth.endsAt)}</p></> : <p>{student.eligible ? 'The month is allocated when this student next opens their coupons.' : 'Verified email required.'}</p>}
         </CardContent></Card>
         <Card><CardHeader><CardTitle>Personal invite</CardTitle></CardHeader><CardContent className="space-y-2 text-sm">
           <p className="font-mono text-2xl font-semibold">{student.inviteCode ?? 'Not allocated'}</p>

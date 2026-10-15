@@ -1,5 +1,6 @@
 import React from 'react';
 import { cleanup, fireEvent, render, waitFor } from '@testing-library/react-native';
+import { Share } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import EnterCodeScreen from '../app/enter-code';
@@ -10,7 +11,7 @@ import * as Clipboard from 'expo-clipboard';
 
 const mockRefresh = jest.fn(async () => {}); const mockClaim = jest.fn();
 const mockRetry = jest.fn(async () => {});
-const mockBenefits = { usedVendorIds: [], inviteCode: 'AB234', referralLimit: 3, rewardedReferrals: 1, subscription: { planName: 'Free Rajagiri membership', endsAt: '2026-11-08T10:00:00Z', roundNumber: 1, cancelAtPeriodEnd: false } };
+const mockBenefits = { usedVendorIds: [], inviteCode: 'AB234', referralLimit: 3, rewardedReferrals: 1, subscription: { planName: 'Free Kouponly membership', endsAt: '2026-11-08T10:00:00Z', roundNumber: 1, cancelAtPeriodEnd: false } };
 let mockError = ''; let mockUser: { id: string } | null = { id: 'alice' };
 jest.mock('../lib/benefits', () => ({useBenefits: () => ({benefits: mockBenefits, loading: false, error: mockError, refresh: mockRefresh, claim: mockClaim}), makeMutationId: () => '11111111-1111-4111-8111-111111111111'}));
 jest.mock('../lib/auth', () => ({useAuth: () => ({user: mockUser})}));
@@ -47,4 +48,13 @@ it('routes guests to authentication instead of claiming', async () => {
   mockUser=null; const view = await wrap(<EnterCodeScreen />);
   await fireEvent.changeText(view.getByLabelText('Friend’s invite code'), 'AB234'); await fireEvent.press(view.getByText('Sign in to apply code'));
   expect(mockClaim).not.toHaveBeenCalled(); expect(router.push).toHaveBeenCalledWith({pathname:'/realx/onboarding',params:{flow:'login'}});
+});
+
+it('shares an invite that welcomes every verified email domain', async () => {
+  const share=jest.spyOn(Share,'share').mockResolvedValue({action:Share.sharedAction});
+  const view=await wrap(<InviteCodeCard />);
+  expect(view.getByText(/friends using any email address/)).toBeTruthy();
+  await fireEvent.press(view.getByText('Share code'));
+  expect(share).toHaveBeenCalledWith({message:'Join me on Kouponly! Enter my invite code AB234. Free coupons with any verified email address.'});
+  share.mockRestore();
 });

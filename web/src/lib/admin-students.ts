@@ -6,7 +6,7 @@ export type AdminStudent = {
   createdAt: string; emailVerifiedAt: string | null; eligible: boolean
   inviteCode: string | null; referralRefreshes: number; referralLimit: number
   invitedFriends: number; consumedThisMonth: number
-  couponMonth: { startsAt: string; endsAt: string; roundNumber: number; usedVendors: number } | null
+  couponMonth: { startsAt: string; endsAt: string; roundNumber: number; usedOffers: number } | null
 }
 type Result = {
   total: number; students: AdminStudent[]

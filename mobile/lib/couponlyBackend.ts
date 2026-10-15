@@ -1,4 +1,4 @@
-import { canCreateMobileAccount, isSchoolEmail, SCHOOL_EMAIL_MESSAGE } from './school-email';
+import { isSchoolEmail, SCHOOL_EMAIL_MESSAGE } from './school-email';
 import { getSupabase, supabaseConfigured } from '@/lib/supabase';
 
 export type VerificationRole = 'student' | 'creator';
@@ -26,7 +26,6 @@ export const checkCouponlyStudentLogin = (email: string) =>
   invoke<{ exists: boolean }>('checkStudentExistsLogin', { email });
 
 export async function sendCouponlyEmailCode(email: string, purpose: 'signup'|'login'|'verification') {
-  if (purpose === 'signup' && !canCreateMobileAccount(email)) throw new Error(SCHOOL_EMAIL_MESSAGE);
   if (purpose === 'verification' && !isSchoolEmail(email)) throw new Error(SCHOOL_EMAIL_MESSAGE);
   return invoke<{ success: true; expiresIn: number }>('sendOtp', { email, purpose });
 }
@@ -78,15 +77,6 @@ export async function getCouponlyOnlineVendorOffer(vendorId: string) {
 }
 export async function trackCouponlyOutboundClick(input: { vendorId: string; platform: 'ios'|'android'|'web'; requestId: string }) {
   return invoke<{ clickId: string; vendorId: string; clickedAt: string; purchaseUrl?: string }>('recordOnlineVendorOutboundClick', input);
-}
-export async function getCouponlyOpportunityAction(opportunityId:string,requestId:string) {
-  return invoke<{actionUrl:string;tracked:boolean}>('getOpportunityAction',{opportunityId,requestId});
-}
-export async function trackCouponlyOpportunityEvent(opportunityId:string,event:'view'|'save'|'unsave'|'share',payload:Record<string,unknown>={}) {
-  return invoke<{success:true}>('trackOpportunityEvent',{opportunityId,event,payload});
-}
-export async function checkCouponlyWaktiStudent(email:string) {
-  return invoke<{isStudent:boolean}>('verifyWaktiStudent',{email});
 }
 export async function registerCouponlyPushToken(token: string, platform: 'ios'|'android'|'web') {
   return invoke<{ success: true }>('registerPushToken', { token, platform });

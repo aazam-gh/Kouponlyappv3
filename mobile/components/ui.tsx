@@ -13,7 +13,6 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import type { Deal, DirectoryItem } from "@/lib/data";
 import { F,layout,shadow,typography,type ThemeColors,type TypographyVariant,useAppTheme } from "@/lib/theme";
 import { useStore } from "@/lib/store";
-import { useAppLocale } from "@/context/LocaleContext";
 import { formatKouponlyCurrencyText } from "@/utils/numbers";
 import { useNearbyDistances } from '@/lib/nearby';
 import AppIcon from './AppIcon';
@@ -44,7 +43,7 @@ export function AccessiblePressable({style,onPress,haptic="light",accessibilityR
   ]}/>;
 }
 
-export function Screen({children,scroll=true,style,testID,includeTopInset=false}:{children:React.ReactNode;scroll?:boolean;style?:StyleProp<ViewStyle>;testID?:string;includeTopInset?:boolean}) {
+export function Screen({children,scroll=true,style,testID}:{children:React.ReactNode;scroll?:boolean;style?:StyleProp<ViewStyle>;testID?:string}) {
   const insets=useSafeAreaInsets(); const {width}=useWindowDimensions(); const {colors:C}=useAppTheme();
   // Scrollable iOS screens receive the top safe-area inset from the ScrollView.
   // Applying it here as well creates a blank band above the screen title.
@@ -69,7 +68,7 @@ export function SectionTitle({eyebrow,title,action,onAction}:{eyebrow:string;tit
 }
 
 export function DealCard({deal,compact=false,playful=false,minimal=false}:{deal:Deal;compact?:boolean;playful?:boolean;minimal?:boolean}) {
-  const {state,toggleSaved,notify}=useStore(); const theme=useAppTheme(); const {colors:C}=theme; const {isRTL}=useAppLocale(); const saving=formatKouponlyCurrencyText(deal.saving); const styles=useMemo(()=>makeStyles(C),[theme.mode,theme.highContrast]); const saved=state.saved.includes(deal.id); const {distanceByVendor}=useNearbyDistances(); const distance=distanceByVendor.get(String(deal.vendorId||deal.id))?.label;
+  const {state,toggleSaved,notify}=useStore(); const theme=useAppTheme(); const {colors:C}=theme; const saving=formatKouponlyCurrencyText(deal.saving); const styles=useMemo(()=>makeStyles(C),[theme.mode,theme.highContrast]); const saved=state.saved.includes(deal.id); const {distanceByVendor}=useNearbyDistances(); const distance=distanceByVendor.get(String(deal.vendorId||deal.id))?.label;
   return <View style={[styles.dealCard,compact&&styles.dealCompact,playful&&styles.dealPlayful]}>
     <AccessiblePressable testID={`deal-${deal.id}`} accessibilityLabel={[deal.name,...(minimal||playful?[]:[deal.offer]),...(playful?[]:[saving]),distance].filter(Boolean).join('. ')} accessibilityHint="Opens partner details" onPress={()=>router.push(`/deal/${deal.id}`)} style={[styles.dealLink,compact&&styles.dealLinkCompact]}>
       <View style={playful?styles.playfulPhoto:undefined}>

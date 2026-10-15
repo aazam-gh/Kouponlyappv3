@@ -72,7 +72,7 @@ export default function CategoryGrid({ categories: propCategories, onCategoryPre
     );
 
     if (!propCategories && isLoading) {
-        return <ZigzagSection width={width} cutoutColor={theme.background} contentStyle={styles.sectionContent}>
+        return <ZigzagSection width={width} cutoutColor={theme.background} contentStyle={styles.sectionContent} collapseCompletely>
             <View style={[styles.container, styles.grid]}>
                 {Array.from({ length: 10 }, (_, index) => (
                     <View key={`category-skeleton-${index}`} style={[styles.categoryItem, { width: columnWidth }]}>
@@ -96,7 +96,7 @@ export default function CategoryGrid({ categories: propCategories, onCategoryPre
     }, []);
 
     return <>
-        <ZigzagSection width={width} cutoutColor={theme.background} contentStyle={styles.sectionContent}>
+        <ZigzagSection width={width} cutoutColor={theme.background} contentStyle={styles.sectionContent} collapseCompletely>
             <View style={[styles.container, { minHeight: rowHeight }]}>
                 <View style={styles.homeRow}>
                     {visibleCategories.map(item => renderCategory(item, columnWidth, '#FFFFFF'))}
@@ -131,7 +131,7 @@ export default function CategoryGrid({ categories: propCategories, onCategoryPre
 }
 
 const styles = StyleSheet.create({
-    sectionContent: { paddingTop: 0, paddingBottom: 0 },
+    sectionContent: { paddingTop: 0, paddingBottom: 8 },
     container: { paddingHorizontal: 4, paddingTop: 6 },
     grid: { flexDirection: 'row', flexWrap: 'wrap' },
     homeRow: { flexDirection: 'row', justifyContent: 'space-between' },

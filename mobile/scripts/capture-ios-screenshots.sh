@@ -23,7 +23,6 @@ routes=(
   "vendor:/realx/vendor/catalogue-vendor-1"
   "welcome:/realx/welcome"
   "login:/realx/onboarding?flow=login"
-  "opportunity:/realx/opportunity/capture-unavailable"
 )
 
 for item in "${routes[@]}"; do

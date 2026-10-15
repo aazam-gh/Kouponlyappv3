@@ -1,4 +1,3 @@
-import { Colors as BorderPalette } from '@/constants/Colors';
 import ScalePressable from '@/components/ScalePressable';
 import { useMemo } from 'react';
 import { useRouter } from 'expo-router';

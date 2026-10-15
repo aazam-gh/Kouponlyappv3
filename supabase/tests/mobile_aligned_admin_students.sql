@@ -1,7 +1,7 @@
 begin;
 insert into auth.users(id,email,email_confirmed_at,created_at,raw_user_meta_data) values
- ('aaaaaaaa-0000-0000-0000-000000000015','admin-align-student@rajagiri.edu.in',now(),now(),'{}'),
- ('bbbbbbbb-0000-0000-0000-000000000015','admin-align-pending@rajagiri.edu.in',null,now(),'{}'),
+ ('aaaaaaaa-0000-0000-0000-000000000015','admin-align-student@gmail.com',now(),now(),'{}'),
+ ('bbbbbbbb-0000-0000-0000-000000000015','admin-align-pending@outlook.com',null,now(),'{}'),
  ('dddddddd-0000-0000-0000-000000000015','admin-align-admin@rajagiri.edu.in',now(),now(),'{}');
 insert into public.couponly_user_roles(user_id,role) values('dddddddd-0000-0000-0000-000000000015','admin');
 update public.profiles set full_name='Admin alignment mobile profile',city='Kochi',mobile='12345' where user_id='aaaaaaaa-0000-0000-0000-000000000015';
@@ -40,7 +40,7 @@ begin
   b:=public.kouponly_account_benefits();
   perform set_config('request.jwt.claim.sub',pending::text,true);
   result:=public.kouponly_claim_code(b->>'inviteCode',gen_random_uuid());
-  assert result->>'error'='Verified @rajagiri.edu.in email required','unverified referral claim denied';
+  assert result->>'error'='Verified email required','unverified referral claim denied';
   -- Attach the attribution the signup trigger records before email verification.
   insert into public.referral_uses(referred_user_id,inviter_user_id,status) values(pending,student,'attached');
 end $$;
