@@ -1,3 +1,4 @@
+import { getCmsDocument, saveCmsDocument } from '@/lib/admin-cms'
 import { useState, useEffect, useRef } from 'react'
 import { createLazyFileRoute, useNavigate } from '@tanstack/react-router'
 import {
@@ -10,20 +11,13 @@ import {
     Loader2,
     Type
 } from 'lucide-react'
-import { db, storage } from '@/firebase/config'
-import {
-    getDoc,
-    doc,
-    setDoc
-} from 'firebase/firestore'
-import { ref, deleteObject } from 'firebase/storage'
 import { Button } from '@/components/ui/button'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 import { Link } from '@tanstack/react-router'
 import type { BrandItem } from '@/types/brands'
 import { getVendorList, type VendorOption } from '@/lib/vendorList'
-import { uploadImage } from '@/lib/upload'
+import { uploadImage, deletePublicMedia } from '@/lib/upload'
 
 export const Route = createLazyFileRoute('/admin/cms/brands/')({
     component: BrandsManagement,
@@ -49,11 +43,10 @@ function BrandsManagement() {
     const fetchData = async () => {
         setLoading(true)
         try {
-            const cmsRef = doc(db, 'cms', 'brand')
-            const cmsSnap = await getDoc(cmsRef)
+            const cmsSnap = await getCmsDocument('brand')
 
-            if (cmsSnap.exists()) {
-                const data = cmsSnap.data()
+            if (cmsSnap) {
+                const data = cmsSnap
                 setBrands(data.brands || [])
                 setLastUpdated(data.lastUpdated || '')
             } else {
@@ -70,10 +63,9 @@ function BrandsManagement() {
 
     const saveBrands = async (updatedBrands: BrandItem[]) => {
         try {
-            const cmsRef = doc(db, 'cms', 'brand')
             const lastUpdated = new Date().toISOString()
 
-            await setDoc(cmsRef, {
+            await saveCmsDocument('brand', {
                 brands: updatedBrands,
                 lastUpdated: lastUpdated
             })
@@ -81,8 +73,7 @@ function BrandsManagement() {
             if (pendingDeletions.length > 0) {
                 await Promise.all(pendingDeletions.map(async (url) => {
                     try {
-                        const imageRef = ref(storage, url)
-                        await deleteObject(imageRef)
+                        await deletePublicMedia(url)
                     } catch (err) {
                         console.error('Failed to delete storage object:', url, err)
                     }
@@ -141,16 +132,14 @@ function BrandsManagement() {
             const remainingBrands = brands.filter(b => b.id !== brandId)
 
             if (brandToDelete) {
-                const cmsRef = doc(db, 'cms', 'brand')
-                await setDoc(cmsRef, {
+                await saveCmsDocument('brand', {
                     brands: remainingBrands,
                     lastUpdated: new Date().toISOString()
                 })
 
                 if (brandToDelete.logoUrl) {
                     try {
-                        const imageRef = ref(storage, brandToDelete.logoUrl)
-                        await deleteObject(imageRef)
+                        await deletePublicMedia(brandToDelete.logoUrl)
                     } catch (err) {
                         console.error('Failed to delete storage object:', brandToDelete.logoUrl, err)
                     }

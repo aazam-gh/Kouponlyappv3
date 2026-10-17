@@ -1,4 +1,3 @@
-import type { Timestamp } from 'firebase/firestore'
 
 export interface StudentEvent {
     id: string
@@ -7,7 +6,7 @@ export interface StudentEvent {
     locationEn?: string
     imageUrl?: string
     link?: string
-    startsAt?: Timestamp | Date | string | null
+    startsAt?: Date | string | null
     isActive: boolean
     createdAt?: string
     updatedAt?: string

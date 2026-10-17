@@ -14,15 +14,6 @@ import { useNearbyDistances } from '@/lib/nearby';
 import { isCouponOfferUsed, useBenefits } from '@/lib/benefits';
 import { sortVendors, type VendorSortMode } from '@/lib/vendor-sorting';
 
-const sampleImages: Record<string, number> = {
-  beauty: require('../../../assets/subcategories/beauty.png'),
-  shopping: require('../../../assets/subcategories/shopping.png'),
-  fitness: require('../../../assets/subcategories/fitness.png'),
-  travel: require('../../../assets/subcategories/travel.png'),
-  stays: require('../../../assets/subcategories/stays.png'),
-  entertainment: require('../../../assets/subcategories/entertainment.png'),
-};
-
 export default function RealXCategoryScreen() {
   const { id, name, englishName } = useLocalSearchParams<{ id: string; name?: string; englishName?: string }>();
   const { t } = useTranslation();
@@ -42,7 +33,7 @@ export default function RealXCategoryScreen() {
   const isCategoryActive = Boolean(category);
   const subcategories = React.useMemo(() => [
     { id: 'all', name: t('all'), icon: 'apps-outline' },
-    ...(category?.subcategories.filter(item => item.id).map(item => ({ id: item.id!, name: item.label, icon: item.image || '', sampleImage: sampleImages[item.label.toLowerCase()] || sampleImages[category.slug || ''] || sampleImages.shopping })) || []),
+    ...(category?.subcategories.filter(item => item.id).map(item => ({ id: item.id!, name: item.label, icon: item.image || '' })) || []),
   ], [category, t]);
   const rows = React.useMemo(() => {
     const matching = deals.filter(deal => {

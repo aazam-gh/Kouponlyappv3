@@ -117,7 +117,7 @@ export async function fetchCloudCatalogue(): Promise<CloudCatalogue> {
   return {
     ...projected,
     nextValidityChangeAt,
-    homeSectionOrder: normalizeHomeSectionOrder(layoutDocument?.payload?.sectionOrder),
+    homeSectionOrder: normalizeHomeSectionOrder(layoutDocument?.payload?.enabledSections ?? layoutDocument?.payload?.sectionOrder),
     heroSlides: bannerSlides.length ? bannerSlides : projected.deals.filter(deal => featured.has(deal.vendorId)).map(deal => ({
       brand: deal.name, kicker: deal.category, title: deal.offer, copy: deal.description,
       cta: 'View offers', image: deal.image, logo: deal.logo, dealId: deal.id,

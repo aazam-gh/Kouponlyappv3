@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button'
 
 export const Route = createFileRoute('/admin/cms/')({ component: HomeContent })
 const sections = [
-  { title: 'Home section order', description: 'Rearrange every Home section, from partner banners to Top Brands.', icon: ListOrdered, href: '/admin/cms/home-layout' },
+  { title: 'Home screen layout', description: 'Choose which Home sections appear and arrange their order.', icon: ListOrdered, href: '/admin/cms/home-layout' },
   { title: 'Partner banners', description: 'The carousel at the top of Home. Link each mobile image to a vendor.', icon: Image, href: '/admin/cms/banners' },
   { title: 'Categories & subcategories', description: 'The Home category grid and category filters. Vendors have one main category and multiple subcategories.', icon: FolderOpen, href: '/admin/cms/categories' },
   { title: 'Featured showcase', description: 'The large promotional carousel below new deals. Set images, linked vendors and slide order.', icon: Sparkles, href: '/admin/cms/featured-brand-showcase' },

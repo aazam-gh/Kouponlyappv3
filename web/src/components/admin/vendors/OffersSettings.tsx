@@ -2,8 +2,6 @@ import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { SquarePen, Plus, Loader2, ArrowLeft, ArrowUp, ArrowDown, Check, Trash2, GripVertical } from 'lucide-react'
 import { useMutation, useQueryClient, useSuspenseQuery } from '@tanstack/react-query'
-import { db } from '@/firebase/config'
-import { doc, updateDoc } from 'firebase/firestore'
 import { toast } from 'sonner'
 import { useState, useEffect, type ReactNode } from 'react'
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, type DragEndEvent } from '@dnd-kit/core'
@@ -15,8 +13,8 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { vendorQueryOptions, type EmbeddedOffer } from '@/queries'
-import { refreshVendorList } from '@/lib/vendorList'
 import { Link } from '@tanstack/react-router'
+import { updateVendor } from '@/lib/vendor-directory'
 
 function toDateTimeLocal(value?: string) {
     if (!value) return ''
@@ -132,7 +130,7 @@ export function OffersSettings({ vendorId }: OffersSettingsProps) {
     const reorderMutation = useMutation({
         mutationFn: async (updatedOffers: EmbeddedOffer[]) => {
             if (!vendorId) throw new Error('Vendor ID is missing')
-            await updateDoc(doc(db, 'vendors', vendorId), { offers: updatedOffers })
+            await updateVendor(vendorId, { offers: updatedOffers })
             return updatedOffers
         },
         onMutate: async updatedOffers => {
@@ -143,7 +141,6 @@ export function OffersSettings({ vendorId }: OffersSettingsProps) {
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['vendor', vendorId] })
-            void refreshVendorList()
             toast.success('Offer order saved')
         },
         onError: (error, _offers, context) => {
@@ -202,7 +199,7 @@ export function OffersSettings({ vendorId }: OffersSettingsProps) {
 
             const allTitles = updatedOffers.map(o => o.titleEn).filter(Boolean) as string[]
 
-            await updateDoc(doc(db, 'vendors', vendorId), {
+            await updateVendor(vendorId, {
                 status: 'Active',
                 offers: updatedOffers,
                 searchTokens: generateSearchTokens({
@@ -218,7 +215,6 @@ export function OffersSettings({ vendorId }: OffersSettingsProps) {
             toast.success(editingIndex !== null ? 'Offer updated' : 'Offer created')
             setIsCreating(false)
             setEditingIndex(null)
-            void refreshVendorList()
         },
         onError: (error) => {
             toast.error(error instanceof Error ? error.message : 'Failed to save offer')
@@ -232,7 +228,7 @@ export function OffersSettings({ vendorId }: OffersSettingsProps) {
             const updatedOffers = offers.filter((_, i) => i !== index)
             const allTitles = updatedOffers.map(o => o.titleEn).filter(Boolean) as string[]
 
-            await updateDoc(doc(db, 'vendors', vendorId), {
+            await updateVendor(vendorId, {
                 offers: updatedOffers,
                 searchTokens: generateSearchTokens({
                     name: vendor?.name,
@@ -246,7 +242,6 @@ export function OffersSettings({ vendorId }: OffersSettingsProps) {
             queryClient.invalidateQueries({ queryKey: ['vendor', vendorId] })
             toast.success('Offer deleted')
             setEditingIndex(null)
-            void refreshVendorList()
         },
         onError: (error) => {
             toast.error(error instanceof Error ? error.message : 'Failed to delete offer')

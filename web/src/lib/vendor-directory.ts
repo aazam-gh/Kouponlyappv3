@@ -1,19 +1,7 @@
 import { z } from 'zod'
-import { db } from '@/firebase/config'
-import {
-    collection,
-    getCountFromServer,
-    getDocs,
-    orderBy,
-    query,
-    where,
-    type DocumentData,
-    type QueryDocumentSnapshot,
-    type QueryConstraint,
-} from 'firebase/firestore'
+import { supabase } from '@/lib/supabase'
 import type { Vendor } from '@/queries'
 import { logAdminRead } from '@/lib/admin-read-logging'
-import { getCursorPage } from '@/lib/firestore-pagination'
 
 export const vendorsSearchSchema = z.object({
     page: z.coerce.number().int().min(1).catch(1),
@@ -24,104 +12,95 @@ export const vendorsSearchSchema = z.object({
 
 export type VendorsSearch = z.infer<typeof vendorsSearchSchema>
 export type VendorScope = 'all' | 'in_store'
+export interface VendorsPageResult { vendors: Vendor[]; totalCount: number }
 
-export interface VendorsPageResult {
-    vendors: Vendor[]
-    totalCount: number
-}
+type VendorRow = Record<string, any> & { id: string; payload?: Record<string, any> }
+const VENDOR_SELECT = '*,couponly_categories!couponly_vendors_category_id_fkey(name),couponly_vendor_subcategories(subcategory_id,couponly_subcategories(name))'
 
-function mapVendor(docSnap: QueryDocumentSnapshot<DocumentData>): Vendor {
-    const data = docSnap.data()
-
+export function mapVendor(row: VendorRow): Vendor {
+    const payload = row.payload || {}
     return {
-        id: docSnap.id,
-        name: data.name || 'Unnamed Vendor',
-        contact: data.contact || data.email || '',
-        profilePicture: data.profilePicture || '',
-        vendorType: data.vendorType || 'in_store',
-        status: data.status,
-        locations: data.locations || [],
-        categoryIds: data.categoryIds || [],
-        mainCategory: data.mainCategory,
-        subcategory: data.subcategory,
-        isTrending: data.isTrending,
-        latitude: data.latitude,
-        longitude: data.longitude,
-        lat: data.lat,
-        lng: data.lng,
-        offers: data.offers || [],
+        ...payload,
+        id: row.id,
+        name: row.name || payload.name || 'Unnamed Vendor',
+        contact: payload.contact || row.email || row.phone || '',
+        email: row.email || payload.email,
+        phoneNumber: row.phone || payload.phoneNumber,
+        website: row.website || payload.website,
+        profilePicture: row.logo_path || payload.profilePicture || '',
+        cardLabel: row.card_label ?? payload.cardLabel ?? null,
+        vendorType: row.vendor_type || 'in_store',
+        status: row.status,
+        locations: row.locations || payload.locations || [],
+        categoryId: row.category_id,
+        categoryIds: payload.categoryIds?.length ? payload.categoryIds : [row.category_id].filter(Boolean),
+        mainCategory: row.couponly_categories?.name || payload.mainCategory,
+        subcategory: row.couponly_vendor_subcategories?.map((link: any) => link.couponly_subcategories?.name).filter(Boolean) || payload.subcategory || [],
+        isTrending: Number(row.trend) > 0,
+        sortOrder: row.sort_order,
+        offers: payload.offers || [],
+        shortDescription: row.description || payload.shortDescription,
+        place: row.place_label || payload.place,
+        coverImage: row.cover_image_url || payload.coverImage,
+        galleryImages: row.gallery_images || payload.galleryImages || [],
     } as Vendor
 }
 
-function vendorMatchesSearch(docSnap: QueryDocumentSnapshot<DocumentData>, searchTerm: string): boolean {
-    const data = docSnap.data()
-    const searchableValues = [
-        data.name,
-        data.contact,
-        data.email,
-        data.mainCategory,
-        ...(Array.isArray(data.categoryIds) ? data.categoryIds : []),
-        ...(Array.isArray(data.subcategory) ? data.subcategory : []),
-    ]
-
-    return searchableValues.some((value) => (
-        typeof value === 'string' && value.toLowerCase().includes(searchTerm)
-    ))
+function matches(row: VendorRow, search: string) {
+    const vendor = mapVendor(row)
+    return [vendor.name, vendor.email, vendor.contact, vendor.mainCategory, ...(vendor.categoryIds || []), ...(vendor.subcategory || [])]
+        .some(value => typeof value === 'string' && value.toLowerCase().includes(search))
 }
 
 export async function fetchVendorsPage(search: VendorsSearch, vendorScope: VendorScope): Promise<VendorsPageResult> {
-    const collRef = collection(db, 'vendors')
-    const trimmedSearch = search.search.trim().toLowerCase()
-    const constraints: QueryConstraint[] = []
-
-    if (vendorScope !== 'all') {
-        constraints.push(where('vendorType', '==', vendorScope))
+    const term = search.search.trim().toLowerCase()
+    let request = supabase.from('couponly_vendors').select(VENDOR_SELECT, { count: 'exact' })
+    if (vendorScope !== 'all') request = request.eq('vendor_type', vendorScope)
+    request = request.order('name', { ascending: search.sort === 'name-asc', nullsFirst: false }).order('id')
+    if (term) {
+        const { data, error } = await request
+        if (error) throw error
+        const rows = ((data || []) as VendorRow[]).filter(row => matches(row, term))
+        const start = (search.page - 1) * search.pageSize
+        return { vendors: rows.slice(start, start + search.pageSize).map(mapVendor), totalCount: rows.length }
     }
-
-    const sortConstraint = orderBy('name', search.sort === 'name-desc' ? 'desc' : 'asc')
-
-    if (trimmedSearch) {
-        const snapshot = await getDocs(query(collRef, ...constraints, sortConstraint))
-        const matchedDocs = snapshot.docs.filter((docSnap) => vendorMatchesSearch(docSnap, trimmedSearch))
-        const pageDocs = matchedDocs.slice((search.page - 1) * search.pageSize, search.page * search.pageSize)
-
-        return {
-            vendors: pageDocs.map(mapVendor),
-            totalCount: matchedDocs.length,
-        }
-    }
-
-    const countQuery = query(collRef, ...constraints)
-    const cursorKey = `vendors:${vendorScope}:${trimmedSearch}:${search.sort}`
-
-    const [countSnapshot, pageResult] = await Promise.all([
-        getCountFromServer(countQuery),
-        getCursorPage(collRef, [...constraints, sortConstraint], search.page, search.pageSize, cursorKey),
-    ])
-    const vendors = pageResult.docs.map(mapVendor)
-    const totalCount = countSnapshot.data().count
-
-    logAdminRead('vendors-page', {
-        scope: vendorScope,
-        page: search.page,
-        pageSize: search.pageSize,
-        docsFetched: pageResult.docsFetched,
-        docsDisplayed: vendors.length,
-        totalCount,
-        hasSearch: !!trimmedSearch,
-        sort: search.sort,
-    })
-
-    return {
-        vendors,
-        totalCount,
-    }
+    const start = (search.page - 1) * search.pageSize
+    const { data, error, count } = await request.range(start, start + search.pageSize - 1)
+    if (error) throw error
+    const vendors = ((data || []) as VendorRow[]).map(mapVendor)
+    logAdminRead('vendors-page', { scope: vendorScope, page: search.page, pageSize: search.pageSize, docsFetched: vendors.length, docsDisplayed: vendors.length, totalCount: count || 0, hasSearch: false, sort: search.sort })
+    return { vendors, totalCount: count || 0 }
 }
 
 export async function fetchAllVendors(): Promise<Vendor[]> {
-    const collRef = collection(db, 'vendors')
-    const q = query(collRef, orderBy('name', 'asc'))
-    const snapshot = await getDocs(q)
+    const { data, error } = await supabase.from('couponly_vendors').select(VENDOR_SELECT).order('name').order('id')
+    if (error) throw error
+    return ((data || []) as VendorRow[]).map(mapVendor)
+}
 
-    return snapshot.docs.map(mapVendor)
+export async function updateVendor(vendorId: string, updates: Record<string, unknown>): Promise<void> {
+    const { data: current, error: readError } = await supabase.from('couponly_vendors').select('payload').eq('id', vendorId).single()
+    if (readError) throw readError
+    const payload = { ...(current.payload || {}), ...updates }
+    for (const field of ['newest', 'sortOrder']) {
+        const value = updates[field]
+        if (value != null && (!Number.isSafeInteger(value) || Number(value) < 0)) throw new Error('Vendor ordering must use non-negative whole numbers.')
+    }
+    if (updates.cardLabel != null && (typeof updates.cardLabel !== 'string' || updates.cardLabel.trim().length > 32)) throw new Error('Vendor card label must be 32 characters or fewer.')
+    if (typeof updates.cardLabel === 'string') payload.cardLabel = updates.cardLabel.trim() || null
+    const row: Record<string, unknown> = { payload }
+    const fields: Record<string, string> = {
+        name: 'name', status: 'status', vendorType: 'vendor_type', categoryId: 'category_id',
+        website: 'website', profilePicture: 'logo_path', shortDescription: 'description',
+        place: 'place_label', imageUrl: 'image_url', coverImage: 'cover_image_url',
+        savingLabel: 'saving_label', offerValue: 'offer_value', sortOrder: 'sort_order', newest: 'newest',
+        phoneNumber: 'phone', galleryImages: 'gallery_images',
+        businessHours: 'business_hours', locations: 'locations', rating: 'rating',
+    }
+    if (Array.isArray(updates.categoryIds) && updates.categoryIds.length) row.category_id = updates.categoryIds[0]
+    if ('cardLabel' in updates) row.card_label = typeof updates.cardLabel === 'string' ? updates.cardLabel.trim() || null : null
+    for (const [key, column] of Object.entries(fields)) if (key in updates) row[column] = updates[key] ?? null
+    if ('isTrending' in updates) { row.trend = updates.isTrending ? 1 : 0; row.featured = updates.isTrending }
+    const { error } = await supabase.from('couponly_vendors').update(row).eq('id', vendorId)
+    if (error) throw error
 }

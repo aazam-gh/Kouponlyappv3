@@ -161,6 +161,7 @@ export default function DealDetail({ dealId }: { dealId?: string } = {}) {
                   <OfferDisclosureArrow expanded={showDetails} reduceMotion={reduceMotion} color={C.ink}/>
                 </ScalePressable>
                 <View style={[s.offerTags, isRTL && s.rowReverse]}>
+                  {offer.saving ? <View style={s.offerTag}><Text style={s.offerTagText}>{offer.saving}</Text></View> : null}
                   <View style={s.offerTag}><Ionicons name={offer.redemption === 'online' ? 'globe-outline' : 'storefront-outline'} size={15} color={C.muted}/><Text style={s.offerTagText}>{offer.redemption === 'online' ? 'Online' : 'In-store'}</Text></View>
                   {deal.locations?.length ? <View style={s.offerTag}><Ionicons name="location-outline" size={15} color={C.muted}/><Text style={s.offerTagText}>{deal.locations.length === 1 ? '1 branch' : `${deal.locations.length} branches`}</Text></View> : null}
                   {deal.xcard ? <View style={s.offerTag}><Ionicons name="cash-outline" size={14} color={C.success}/><Text style={s.offerTagText}>Cashback</Text></View> : null}
@@ -255,7 +256,7 @@ const styles = (C: ThemeColors) => {
   rowReverse: { flexDirection: 'row-reverse' },
   textRtl: { textAlign: 'right', writingDirection: 'rtl' },
   content: { paddingHorizontal: 20, paddingBottom: 28 },
-  vendorNameRow: { flexDirection: 'row', alignItems: 'center', gap: 16, minHeight: 128, paddingVertical: 14, borderTopWidth: StyleSheet.hairlineWidth, borderBottomWidth: StyleSheet.hairlineWidth, borderColor: outline },
+  vendorNameRow: { flexDirection: 'row', alignItems: 'center', gap: 16, minHeight: 128, paddingVertical: 14 },
   title: { flex: 1, minWidth: 0, fontFamily: F.heading, fontSize: 28, lineHeight: 34, letterSpacing: -.4, color: C.ink },
   actionMetaRow:{flexDirection:'row',alignItems:'center',gap:8,marginTop:16}, actionPill:{flex:1,minWidth:0,minHeight:44,flexDirection:'row',alignItems:'center',justifyContent:'center',gap:5,paddingHorizontal:8,borderRadius:22,borderWidth:1,borderColor:outline,backgroundColor:C.soft}, infoPill:{backgroundColor:Colors.brandGreen,borderColor:Colors.brandGreen}, callPillText:{flexShrink:1,textAlign:'center',fontFamily:F.bodySemi,fontSize:13,color:C.ink}, infoPillText:{flexShrink:1,textAlign:'center',fontFamily:F.bodySemi,fontSize:13,color:'#FFFFFF'},
   promosHeader: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginTop: 20, marginBottom: 14 },

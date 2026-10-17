@@ -302,8 +302,10 @@ Deno.serve(async (request) => {
         requireAdmin();
         const title=String(data.title||"").trim(), message=String(data.body||"").trim();
         const topic=String(data.topic||"all-users"),imageUrl=String(data.imageUrl||"").trim();
+        const vendorId=String(data.vendorId||"").trim();
         if(!title||!message||title.length>100||message.length>500)fail("Title and body are required and must be within length limits");
         if(topic!=="all-users")fail("Only the all-users audience is currently supported");
+        if(vendorId){const {data:vendor,error:vendorError}=await service.from("couponly_vendors").select("id,status").eq("id",vendorId).maybeSingle();if(vendorError)throw vendorError;if(!vendor||vendor.status!=="Active")fail("Choose an active vendor for this notification",400);}
         if(imageUrl){try{if(new URL(imageUrl).protocol!=="https:")throw new Error("HTTPS required");}catch{fail("Image URL must be a valid HTTPS URL");}}
         const dateKey=new Intl.DateTimeFormat("en-CA",{timeZone:"Asia/Qatar",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date());
         const entries:any[]=[];
@@ -312,7 +314,8 @@ Deno.serve(async (request) => {
         const {data:quota,error:quotaError}=await service.rpc("couponly_consume_notification_quota",{p_date_key:dateKey,p_daily_limit:2});
         if(quotaError)throw quotaError;
         if(!quota)fail("Daily notification limit reached (2 per Qatar day).",429);
-        const {data:record,error}=await service.from("couponly_notifications").insert({title,body:message,data:{imageUrl:imageUrl||null,topic},status:"queued",sent_by:user.id,date_key:dateKey}).select("id").single();
+        const destination=vendorId?{vendorId,path:`/realx/vendor/${encodeURIComponent(vendorId)}`}:{path:"/notifications"};
+        const {data:record,error}=await service.from("couponly_notifications").insert({title,body:message,data:{imageUrl:imageUrl||null,topic,...destination},status:"queued",sent_by:user.id,date_key:dateKey}).select("id").single();
         if(error)throw error;
         let sentCount=0,failedCount=0,invalidTokenCount=0;
         const successfulUsers=new Set<string>();
@@ -324,7 +327,7 @@ Deno.serve(async (request) => {
             const push=await fetch("https://exp.host/--/api/v2/push/send",{
               method:"POST",headers:{"Content-Type":"application/json",Accept:"application/json"},
               signal:AbortSignal.timeout(15000),
-              body:JSON.stringify(chunk.map((item:any)=>({to:item.token,title,body:message,priority:"high",channelId:"reelx_general_v2",...(imageUrl?{richContent:{image:imageUrl}}:{}),data:{type:"admin_broadcast",campaignId:record.id,imageUrl:imageUrl||null,path:"/notifications"}})))
+              body:JSON.stringify(chunk.map((item:any)=>({to:item.token,title,body:message,priority:"high",channelId:"reelx_general_v2",...(imageUrl?{richContent:{image:imageUrl}}:{}),data:{type:"admin_broadcast",campaignId:record.id,imageUrl:imageUrl||null,...destination}})))
             });
             payload=await push.json();
             if(!push.ok)payload={errors:payload.errors||[{message:`Expo rejected the request (${push.status})`}]};
@@ -344,11 +347,11 @@ Deno.serve(async (request) => {
           if(receipts.length){const {error}=await service.from("couponly_notification_deliveries").insert(receipts);if(error)throw error;}
           if(invalidTokens.length){const {error}=await service.from("couponly_push_tokens").delete().in("token",invalidTokens);if(error)throw error;}
         }
-        const historyRows=[...successfulUsers].map(user_id=>({user_id,kind:"admin_broadcast",title,body:message,data:{campaignId:record.id,imageUrl:imageUrl||null}}));
+        const historyRows=[...successfulUsers].map(user_id=>({user_id,kind:"admin_broadcast",title,body:message,data:{campaignId:record.id,imageUrl:imageUrl||null,...destination}}));
         for(let offset=0;offset<historyRows.length;offset+=500){const {error}=await service.from("notifications").insert(historyRows.slice(offset,offset+500));if(error)throw error;}
         const deliveryStatus=sentCount?"processing":"failed";
         const deliveryErrors=[...new Set(errors)].slice(0,10);
-        const {error:updateError}=await service.from("couponly_notifications").update({status:deliveryStatus,sent_count:sentCount,failed_count:failedCount,invalid_token_count:invalidTokenCount,total_registered:entries.length,data:{imageUrl:imageUrl||null,topic,errors:deliveryErrors},completed_at:sentCount?null:new Date().toISOString()}).eq("id",record.id);
+        const {error:updateError}=await service.from("couponly_notifications").update({status:deliveryStatus,sent_count:sentCount,failed_count:failedCount,invalid_token_count:invalidTokenCount,total_registered:entries.length,data:{imageUrl:imageUrl||null,topic,...destination,errors:deliveryErrors},completed_at:sentCount?null:new Date().toISOString()}).eq("id",record.id);
         if(updateError)throw updateError;
         await insertAudit(service,user.id,action,"notification",record.id,{recipientCount:entries.length,sentCount,failedCount,invalidTokenCount});
         return response({success:sentCount>0,campaignId:record.id,status:deliveryStatus,sentCount,failedCount,totalRegistered:entries.length,errors:deliveryErrors});

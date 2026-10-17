@@ -1,5 +1,4 @@
-import { deleteObject, ref } from 'firebase/storage'
-import { storage } from '@/firebase/config'
+import { deletePublicMedia } from '@/lib/upload'
 
 export const VENDOR_GALLERY_LIMIT = 12
 
@@ -13,7 +12,7 @@ export function getRemovedGalleryImages(
 
 export async function deleteGalleryImages(imageUrls: string[]) {
     const results = await Promise.allSettled(
-        imageUrls.map((imageUrl) => deleteObject(ref(storage, imageUrl))),
+        imageUrls.map(deletePublicMedia),
     )
 
     results.forEach((result, index) => {

@@ -4,7 +4,7 @@ export const Route = createFileRoute('/admin')({
     beforeLoad: ({ context, location }) => {
         const { auth } = context
 
-        // Wait until Firebase auth has resolved
+        // Wait until Supabase auth has resolved
         if (auth.isInitialLoading) {
             return
         }

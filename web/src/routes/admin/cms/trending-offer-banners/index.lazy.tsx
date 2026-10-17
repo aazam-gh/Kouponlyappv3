@@ -1,3 +1,4 @@
+import { getCmsDocument, saveCmsDocument } from '@/lib/admin-cms'
 import { useEffect, useRef, useState } from 'react'
 import { createLazyFileRoute, useNavigate } from '@tanstack/react-router'
 import {
@@ -10,13 +11,10 @@ import {
     Plus,
     Trash2,
 } from 'lucide-react'
-import { doc, getDoc, setDoc } from 'firebase/firestore'
-import { deleteObject, ref } from 'firebase/storage'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
-import { db, storage } from '@/firebase/config'
 import { getVendorList, type VendorOption } from '@/lib/vendorList'
-import { uploadImage } from '@/lib/upload'
+import { uploadImage, deletePublicMedia } from '@/lib/upload'
 import { cn } from '@/lib/utils'
 import type { TrendingOfferBannerItem, TrendingOfferBannersConfig } from '@/types/trending-offer-banners'
 
@@ -59,12 +57,12 @@ function TrendingOfferBannersManagement() {
         setLoading(true)
         try {
             const [cmsSnap, vendorOptions] = await Promise.all([
-                getDoc(doc(db, 'cms', CMS_DOC_ID)),
+                getCmsDocument(CMS_DOC_ID),
                 getVendorList(),
             ])
 
-            if (cmsSnap.exists()) {
-                const data = cmsSnap.data() as TrendingOfferBannersConfig
+            if (cmsSnap) {
+                const data = cmsSnap as TrendingOfferBannersConfig
                 setItems(data.items || [])
                 setLastUpdated(data.lastUpdated || '')
             } else {
@@ -86,7 +84,7 @@ function TrendingOfferBannersManagement() {
         try {
             const now = new Date().toISOString()
 
-            await setDoc(doc(db, 'cms', CMS_DOC_ID), {
+            await saveCmsDocument(CMS_DOC_ID, {
                 items,
                 lastUpdated: now,
             })
@@ -94,7 +92,7 @@ function TrendingOfferBannersManagement() {
             if (pendingDeletions.length > 0) {
                 await Promise.all(pendingDeletions.map(async (url) => {
                     try {
-                        await deleteObject(ref(storage, url))
+                        await deletePublicMedia(url)
                     } catch (error) {
                         console.error('Failed to delete storage object:', url, error)
                     }

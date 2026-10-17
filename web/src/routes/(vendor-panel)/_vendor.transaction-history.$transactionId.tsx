@@ -56,7 +56,7 @@ function TransactionDetail() {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <DetailCard title="Transaction Info">
           <DetailRow label="Transaction ID" value={tx.id} mono />
-          <DetailRow label="Date" value={tx.createdAt?.toDate().toLocaleString() || 'N/A'} />
+          <DetailRow label="Date" value={tx.createdAt ? new Date(tx.createdAt).toLocaleString() : 'N/A'} />
           <DetailRow label="Type" value={tx.type ? tx.type.charAt(0).toUpperCase() + tx.type.slice(1) : 'N/A'} />
           <DetailRow label="Status" value={tx.status} badge={statusColor} />
         </DetailCard>

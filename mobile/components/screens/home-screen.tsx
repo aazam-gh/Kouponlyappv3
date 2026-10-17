@@ -8,10 +8,8 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useTranslation } from 'react-i18next';
 import { BrandGrid, CategoryGrid, HomeBannerCarousel, NewDeals, NewDealsSection, PartnerBannerCarousel, TrendingOffers } from '@/components/home';
 import ScalePressable from '@/components/ScalePressable';
-import { RemoteImage } from '@/components/RemoteImage';
 import { searchVendors } from '@/lib/vendor-search';
 import { Typography } from '@/constants/Typography';
-import HomeSectionHeading from '@/components/home/HomeSectionHeading';
 import VerificationStatusBanner from '@/components/onboarding/VerificationStatusBanner';
 import GreetingHeader from '@/components/home/GreetingHeader';
 import { useAuth } from '@/lib/auth';
@@ -22,6 +20,7 @@ import { useAppTheme } from '@/context/AppThemeContext';
 import { useTabBarScrollVisibility } from '@/components/TabBarScrollVisibility';
 import { queryClient } from '@/utils/queryClient';
 import { triggerSubtleHaptic } from '@/utils/haptics';
+import type { HomeSectionId } from '@/lib/home-layout';
 
 const VENDOR_PAGE_SIZE = 10;
 
@@ -73,7 +72,7 @@ export default function HomeScreen() {
     if (vendorId) router.push({ pathname: '/realx/vendor/[id]', params: { id: vendorId } });
   };
 
-  const sections = {
+  const sections: Record<HomeSectionId, React.ReactNode> = {
     'partner-banners': <PartnerBannerCarousel onBannerPress={banner => openVendor(banner.vendorId)} />,
     'categories': <ScrollCrunchSection testID="category-scroll-crunch" scrollY={scrollY} viewportHeight={viewportHeight} bottomInset={64 + insets.bottom} pinBelowHeader={searchHeaderHeight}><CategoryGrid /></ScrollCrunchSection>,
     'nearby-vendors': <NewDeals onVendorPress={vendor => openVendor(vendor.vendorId || String(vendor.id))} />,
@@ -81,12 +80,6 @@ export default function HomeScreen() {
     'featured-showcase': <HomeBannerCarousel />,
     'trending-offers': <TrendingOffers onVendorPress={vendor => openVendor(vendor.vendorId || vendor.id)} />,
     'brand-logos': <BrandGrid />,
-    'top-brands': <View testID="home-section-top-brands">{vendors.length > 0 ? <View style={s.vendorHeading}><HomeSectionHeading prefix="Top Brands" highlight="" onSeeMore={() => router.push('/vendors' as any)} /></View> : null}
-      <View style={{ flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: 16 }}>{visibleVendors.map(vendor => <ScalePressable key={vendor.vendorId || vendor.id} accessibilityRole="button" accessibilityLabel={vendor.name} onPress={() => openVendor(String(vendor.vendorId || vendor.id))} style={{ width: '20%', paddingHorizontal: 4, marginBottom: 16 }}>
-        <View style={{ width: '100%', aspectRatio: 1, backgroundColor: theme.logoTile, borderRadius: 18, overflow: 'hidden', borderWidth: 1, borderColor: theme.border, alignItems: 'center', justifyContent: 'center' }}>
-          {vendor.logo ? <RemoteImage source={{ uri: vendor.logo }} style={{ width: '100%', height: '100%' }} contentFit="cover" /> : <Text style={{ color: theme.brandText, fontSize: 28, ...Typography.getTextVariantStyle('bodyStrong') }}>{vendor.name.charAt(0)}</Text>}
-        </View>
-      </ScalePressable>)}</View></View>,
   };
 
 
@@ -116,7 +109,6 @@ const s = StyleSheet.create({
   screen: { flex: 1 },
   wrapper: { flex: 1, position: 'relative' },
   content: { paddingTop: 68 },
-  refreshing: { position: 'absolute', top: 112, left: 0, right: 0, zIndex: 11, alignItems: 'center', justifyContent: 'center' },
-  vendorHeading: { paddingTop: 16 },
+  refreshing: { position: 'absolute', top: 100, left: 0, right: 0, zIndex: 11, alignItems: 'center', justifyContent: 'center' },
   header: { position: 'absolute', top: 0, left: 0, right: 0, zIndex: 10, paddingVertical: 7 },
 });

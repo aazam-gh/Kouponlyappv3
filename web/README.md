@@ -16,7 +16,7 @@ This is Kouponly's web administration dashboard. It lives alongside the Kouponly
 
 ## Connect a Supabase project
 
-1. Apply every SQL file in `../supabase/migrations/` in timestamp order to the Supabase project configured in `web/.env.local`. The database uses `couponly_*` base tables and retains `realx_*` views for existing clients. Confirm the result before continuing:
+1. Apply every SQL file in `../supabase/migrations/` in timestamp order to the Supabase project configured in `web/.env.local`. Confirm the canonical tables are present before continuing:
 
    ```sql
    select to_regclass('public.couponly_user_roles');
@@ -39,8 +39,8 @@ This is Kouponly's web administration dashboard. It lives alongside the Kouponly
 
 6. To run the scheduled cleanup and Expo receipt reconciliation, enable `pg_cron`, `pg_net`, and Vault in the Supabase project, then add Vault secrets named `couponly_project_url` and `couponly_service_role_key`. The migration schedules daily cleanup at 23:00 UTC and receipt checks every 15 minutes when those extensions and Vault are available. Otherwise, call `kouponly-maintenance` from a trusted scheduler with `dailyMaintenance` or `processNotificationReceipts` and a service-role bearer token.
 
-Only public Supabase keys belong in either app. The service role key belongs in Edge Function secrets and Vault; never put it in a Vite or Expo environment file.
+The admin dashboard uses Supabase Auth, Postgres, Storage, and Edge Functions directly. Only public Supabase keys belong in either app. The service role key belongs in Edge Function secrets and Vault; never put it in a Vite or Expo environment file.
 
-Use a Supabase CLI version compatible with `supabase/config.toml`. Verify the linked project before running `supabase db push`; a dry run shows pending migrations. Firebase records are not imported automatically; map legacy Auth users to Supabase UUIDs before importing foreign-keyed data.
+Use a Supabase CLI version compatible with `supabase/config.toml`. Verify the linked project before running `supabase db push`; a dry run shows pending migrations.
 
-Run `npm run check`, `npm run build`, `node scripts/check-vendor-bridge.cjs`, `node scripts/check-image-lifecycle.cjs`, and `node scripts/check-subscription-lifecycle.cjs` to verify admin changes.
+Run `npm run check`, `npm run build`, `node scripts/check-vendor-writes.cjs`, `node scripts/check-image-lifecycle.cjs` to verify admin changes.

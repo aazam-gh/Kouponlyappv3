@@ -10,12 +10,6 @@ import {
     Image as ImageIcon,
     FolderOpen
 } from 'lucide-react'
-import { db } from '@/firebase/config'
-import {
-    doc,
-    getDoc,
-    updateDoc
-} from 'firebase/firestore'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
@@ -23,6 +17,7 @@ import { toast } from 'sonner'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import type { Category, SubCategory } from '@/types/categories'
 import { uploadImage } from '@/lib/upload'
+import { supabase } from '@/lib/supabase'
 
 interface SubCategoryItemProps {
     sub: SubCategory
@@ -148,12 +143,11 @@ function ManageCategory() {
     const categoryQuery = useQuery({
         queryKey: ['category', categoryId],
         queryFn: async () => {
-            const docRef = doc(db, 'categories', categoryId)
-            const docSnap = await getDoc(docRef)
-            if (docSnap.exists()) {
-                return { id: docSnap.id, ...docSnap.data() } as Category
-            }
-            throw new Error('Category not found')
+            const { data, error } = await supabase.from('couponly_categories').select('*,couponly_subcategories(*)').eq('id', categoryId).maybeSingle()
+            if (error) throw error
+            if (!data) throw new Error('Category not found')
+            const subcategories = (data.couponly_subcategories || []) as Array<{ id: string; name: string; image_path: string | null; sort_order: number }>
+            return { id: data.id, nameEnglish: data.name, imageUrl: data.image_path || '', order: Number(data.sort_order || 0), subcategories: subcategories.sort((a, b) => a.sort_order - b.sort_order).map(sub => ({ id: sub.id, nameEnglish: sub.name, imageUrl: sub.image_path || '' })) } as Category
         },
         staleTime: 1000 * 60 * 5,
     })
@@ -172,8 +166,26 @@ function ManageCategory() {
 
     const updateCategoryMutation = useMutation({
         mutationFn: async (updates: Partial<Category>) => {
-            const docRef = doc(db, 'categories', categoryId)
-            await updateDoc(docRef, updates)
+            const { subcategories, ...category } = updates
+            const categoryUpdate = { ...(category.nameEnglish !== undefined ? { name: category.nameEnglish, slug: category.nameEnglish.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || null } : {}), ...(category.imageUrl !== undefined ? { image_path: category.imageUrl || null } : {}), ...(category.order !== undefined ? { sort_order: category.order } : {}) }
+            let payload: Record<string, unknown> | undefined
+            if (subcategories) {
+                const { data, error } = await supabase.from('couponly_categories').select('payload').eq('id', categoryId).single()
+                if (error) throw error
+                payload = {
+                    ...(data.payload || {}),
+                    subcategories: subcategories.map(sub => ({
+                        id: sub.id || crypto.randomUUID(),
+                        nameEnglish: sub.nameEnglish,
+                        imageUrl: sub.imageUrl,
+                        slug: sub.nameEnglish.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || crypto.randomUUID(),
+                    })),
+                }
+            }
+            if (Object.keys(categoryUpdate).length || payload) {
+                const { error } = await supabase.from('couponly_categories').update({ ...categoryUpdate, ...(payload ? { payload } : {}) }).eq('id', categoryId)
+                if (error) throw error
+            }
         },
         onSuccess: (_, variables) => {
             queryClient.invalidateQueries({ queryKey: ['category', categoryId] })
@@ -223,6 +235,7 @@ function ManageCategory() {
     const handleAddSubCategory = async () => {
         if (!category) return
         const newSub: SubCategory = {
+            id: crypto.randomUUID(),
             nameEnglish: 'New Sub-Category',
             imageUrl: ''
         }

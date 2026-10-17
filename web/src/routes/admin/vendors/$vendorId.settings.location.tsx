@@ -1,14 +1,12 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { LocationSettings } from '@/components/admin/vendors/LocationSettings'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { db } from '@/firebase/config'
-import { doc, updateDoc } from 'firebase/firestore'
 import { useState, useEffect } from 'react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Loader2, Save } from 'lucide-react'
-import { refreshVendorList } from '@/lib/vendorList'
 import { vendorQueryOptions, type Vendor } from '@/queries'
+import { updateVendor } from '@/lib/vendor-directory'
 
 function stripUndefined<T>(value: T): T {
     if (Array.isArray(value)) {
@@ -50,8 +48,7 @@ function LocationSettingsComponent() {
             const { id, ...dataToUpdate } = updatedData
             if (typeof dataToUpdate.latitude === 'number') dataToUpdate.lat = dataToUpdate.latitude
             if (typeof dataToUpdate.longitude === 'number') dataToUpdate.lng = dataToUpdate.longitude
-            const vendorRef = doc(db, 'vendors', vendorId)
-            await updateDoc(vendorRef, stripUndefined(dataToUpdate))
+            await updateVendor(vendorId, stripUndefined(dataToUpdate))
         },
         onMutate: async (updatedData) => {
             await queryClient.cancelQueries({ queryKey: ['vendor', vendorId] })
@@ -63,7 +60,6 @@ function LocationSettingsComponent() {
             return { previousVendor }
         },
         onSuccess: async () => {
-            await refreshVendorList()
             await queryClient.invalidateQueries({ queryKey: ['vendor', vendorId] })
             toast.success('Location updated successfully!', {
                 description: 'The vendor location has been synchronized with the database.',

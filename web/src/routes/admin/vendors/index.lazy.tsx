@@ -28,13 +28,10 @@ import {
     DialogDescription,
 } from '@/components/ui/dialog'
 import { Label } from '@/components/ui/label'
-import { functions } from '@/firebase/config'
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query'
-import { httpsCallable } from 'firebase/functions'
+import { invokeAdminAction } from '@/lib/admin-actions'
 import { fetchAllVendors, fetchVendorsPage } from '@/lib/vendor-directory'
 import { categoriesQueryOptions, type Vendor } from '@/queries'
-import { refreshVendorList } from '@/lib/vendorList'
-import { resetFirestorePaginationCursors } from '@/lib/firestore-pagination'
 
 export const Route = createLazyFileRoute('/admin/vendors/')({
     component: RouteComponent,
@@ -80,22 +77,18 @@ function RouteComponent() {
 
     const addVendorMutation = useMutation({
         mutationFn: async (formData: typeof form) => {
-            const createVendorUser = httpsCallable(functions, 'createVendorUser')
-            const result = await createVendorUser({
+            return invokeAdminAction('createVendorUser', {
                 name: formData.name,
                 email: formData.email,
                 password: formData.password,
                 categoryId: formData.categoryIds[0],
                 categoryIds: formData.categoryIds,
             })
-            return result.data
         },
         onSuccess: () => {
-            resetFirestorePaginationCursors('vendors:')
             queryClient.invalidateQueries({ queryKey: ['vendors-page'] })
             setForm({ name: '', email: '', password: '', categoryIds: [] })
             setOpen(false)
-            void refreshVendorList()
         },
         onError: (error) => {
             console.error('Error adding vendor: ', error)
@@ -105,15 +98,12 @@ function RouteComponent() {
 
     const deleteVendorMutation = useMutation({
         mutationFn: async (vendorId: string) => {
-            const deleteVendorUser = httpsCallable(functions, 'deleteVendorUser')
-            await deleteVendorUser({ uid: vendorId })
+            await invokeAdminAction('deleteVendorUser', { uid: vendorId })
         },
         onSuccess: () => {
-            resetFirestorePaginationCursors('vendors:')
             queryClient.invalidateQueries({ queryKey: ['vendors-page'] })
             setDeleteConfirmOpen(false)
             setVendorToDelete(null)
-            void refreshVendorList()
         },
         onError: (error) => {
             console.error('Error deleting vendor: ', error)

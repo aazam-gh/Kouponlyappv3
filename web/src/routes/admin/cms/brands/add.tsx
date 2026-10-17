@@ -1,3 +1,4 @@
+import { getCmsDocument, saveCmsDocument } from '@/lib/admin-cms'
 import { useState, useRef, useEffect } from 'react'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import {
@@ -6,12 +7,6 @@ import {
     Loader2,
     Save
 } from 'lucide-react'
-import { db } from '@/firebase/config'
-import {
-    doc,
-    getDoc,
-    setDoc
-} from 'firebase/firestore'
 import { Button } from '@/components/ui/button'
 import { toast } from 'sonner'
 import type { BrandItem } from '@/types/brands'
@@ -73,17 +68,16 @@ function AddBrandPage() {
 
         setLoading(true)
         try {
-            const cmsRef = doc(db, 'cms', 'brand')
-            const cmsSnap = await getDoc(cmsRef)
+            const cmsSnap = await getCmsDocument('brand')
 
             let brandsList: BrandItem[] = []
-            if (cmsSnap.exists()) {
-                brandsList = cmsSnap.data().brands || []
+            if (cmsSnap) {
+                brandsList = cmsSnap.brands || []
             }
 
             brandsList.push(brand)
 
-            await setDoc(cmsRef, {
+            await saveCmsDocument('brand', {
                 brands: brandsList,
                 lastUpdated: new Date().toISOString()
             }, { merge: true })

@@ -10,6 +10,7 @@ const numberValue = (value: unknown, fallback = 0) => {
 };
 
 function isOfferAvailable(offer: MarketplaceOfferRow, now: number) {
+  if (offer.active === false) return false;
   const start = offer.starts_at ? Date.parse(offer.starts_at) : Number.NEGATIVE_INFINITY;
   const end = offer.ends_at ? Date.parse(offer.ends_at) : Number.POSITIVE_INFINITY;
   return start <= now && end > now;
@@ -50,6 +51,7 @@ export function projectVendorCatalogue(
   const partners: DirectoryItem[] = [];
   const offerItems: DirectoryItem[] = [];
   for (const vendor of vendors) {
+    if (vendor.status && vendor.status.toLowerCase() !== 'active') continue;
     const vendorOffers = (activeOffers.get(vendor.id) ?? []).sort((a, b) =>
       numberValue(a.sort_order) - numberValue(b.sort_order) || String(a.id).localeCompare(String(b.id)),
     );

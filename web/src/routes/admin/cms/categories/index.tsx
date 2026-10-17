@@ -10,22 +10,14 @@ import {
     PackagePlus,
     FolderOpen
 } from 'lucide-react'
-import { db, storage } from '@/firebase/config'
-import {
-    collection,
-    doc,
-    deleteDoc,
-    addDoc,
-    updateDoc
-} from 'firebase/firestore'
-import { ref, deleteObject } from 'firebase/storage'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { toast } from 'sonner'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import type { Category } from '@/types/categories'
 import { categoriesQueryOptions } from '@/queries'
-import { uploadImage } from '@/lib/upload'
+import { deletePublicMedia, uploadImage } from '@/lib/upload'
+import { supabase } from '@/lib/supabase'
 
 export const Route = createFileRoute('/admin/cms/categories/')({
     component: CategoriesOverview,
@@ -50,8 +42,10 @@ function CategoriesOverview() {
         mutationFn: async (newCategories: Category[]) => {
             const batch: Promise<void>[] = []
             newCategories.forEach((cat, index) => {
-                const docRef = doc(db, 'categories', cat.id)
-                batch.push(updateDoc(docRef, { order: index + 1 }) as Promise<void>)
+                batch.push((async () => {
+                    const { error } = await supabase.from('couponly_categories').update({ sort_order: index + 1 }).eq('id', cat.id)
+                    if (error) throw error
+                })())
             })
             await Promise.all(batch)
         },
@@ -81,8 +75,10 @@ function CategoriesOverview() {
                 subcategories: []
             }
 
-            const docRef = await addDoc(collection(db, 'categories'), newCatData)
-            return { id: docRef.id, ...newCatData } as Category
+            const name = newCatData.nameEnglish
+            const { data, error } = await supabase.from('couponly_categories').insert({ name, slug: name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, ''), image_path: downloadURL, sort_order: newCatData.order, active: true }).select('id').single()
+            if (error) throw error
+            return { id: data.id, ...newCatData } as Category
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['categories'] })
@@ -100,10 +96,10 @@ function CategoriesOverview() {
 
     const deleteCategoryMutation = useMutation({
         mutationFn: async ({ id, imageUrl }: { id: string, imageUrl: string }) => {
-            await deleteDoc(doc(db, 'categories', id))
+            const { error } = await supabase.from('couponly_categories').delete().eq('id', id)
+            if (error) throw error
             try {
-                const imageRef = ref(storage, imageUrl)
-                await deleteObject(imageRef)
+                await deletePublicMedia(imageUrl)
             } catch (err) {
                 console.error('Failed to delete storage object:', err)
             }

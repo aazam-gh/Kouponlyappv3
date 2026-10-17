@@ -1,5 +1,4 @@
-import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage'
-import { storage } from '@/firebase/config'
+import { supabase } from '@/lib/supabase'
 
 export function compressImage(file: File, maxWidth: number, quality: number): Promise<File> {
     return new Promise((resolve, reject) => {
@@ -45,24 +44,23 @@ export async function uploadImage(
     const { maxWidth = 1920, quality = 0.8, cacheControl } = options ?? {}
     const compressed = await compressImage(file, maxWidth, quality)
 
-    const storageRef = ref(storage, path.replace(/\.[^.]+$/, '.webp'))
-    const uploadTask = uploadBytesResumable(storageRef, compressed, {
-        contentType: 'image/webp',
-        ...(cacheControl ? { cacheControl } : {}),
+    const objectPath = path.replace(/\.[^.]+$/, '.webp')
+    const { error } = await supabase.storage.from('realx-public-media').upload(objectPath, compressed, {
+        contentType: 'image/webp', cacheControl, upsert: true,
     })
+    if (error) throw error
+    const { data } = supabase.storage.from('realx-public-media').getPublicUrl(objectPath)
+    const published = new URL(data.publicUrl)
+    published.searchParams.set('v', String(Date.now()))
+    return published.toString()
+}
 
-    return new Promise<string>((resolve, reject) => {
-        uploadTask.on(
-            'state_changed',
-            null,
-            reject,
-            async () => {
-                const url = await getDownloadURL(uploadTask.snapshot.ref)
-                // A replacement at the same Storage path must invalidate image caches.
-                const published = new URL(url)
-                published.searchParams.set('v', String(Date.now()))
-                resolve(published.toString())
-            }
-        )
-    })
+export async function deletePublicMedia(url: string): Promise<void> {
+    const parsed = new URL(url)
+    const marker = '/storage/v1/object/public/realx-public-media/'
+    const index = parsed.pathname.indexOf(marker)
+    if (index < 0) throw new Error('Not a public media URL')
+    const path = parsed.pathname.slice(index + marker.length).split('/').map(decodeURIComponent).join('/')
+    const { error } = await supabase.storage.from('realx-public-media').remove([path])
+    if (error) throw error
 }

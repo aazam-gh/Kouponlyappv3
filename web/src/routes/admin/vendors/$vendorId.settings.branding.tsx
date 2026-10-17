@@ -1,15 +1,13 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { BrandingSettings, type VendorBrandingForm } from '@/components/admin/vendors/BrandingSettings'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { db } from '@/firebase/config'
-import { doc, updateDoc } from 'firebase/firestore'
 import { useState, useEffect } from 'react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Loader2, Save } from 'lucide-react'
-import { refreshVendorList } from '@/lib/vendorList'
 import { deleteGalleryImages, getRemovedGalleryImages } from '@/lib/vendor-gallery'
 import { vendorQueryOptions, type Vendor } from '@/queries'
+import { updateVendor } from '@/lib/vendor-directory'
 
 export const Route = createFileRoute('/admin/vendors/$vendorId/settings/branding')({
     component: BrandingSettingsComponent,
@@ -39,8 +37,7 @@ function BrandingSettingsComponent() {
             delete dataToUpdate.id
             dataToUpdate.status = 'Active'
 
-            const vendorRef = doc(db, 'vendors', vendorId)
-            await updateDoc(vendorRef, dataToUpdate)
+            await updateVendor(vendorId, dataToUpdate)
         },
         onMutate: async (vendorData) => {
             await queryClient.cancelQueries({ queryKey: ['vendor', vendorId] })
@@ -54,7 +51,6 @@ function BrandingSettingsComponent() {
         },
         onSuccess: (_result, vendorData) => {
             void deleteGalleryImages(getRemovedGalleryImages(vendor?.galleryImages, vendorData.galleryImages))
-            void refreshVendorList()
             toast.success('Settings updated successfully!', {
                 description: 'The vendor information has been synchronized with the database.',
                 duration: 3000,

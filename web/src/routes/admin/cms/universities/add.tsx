@@ -1,3 +1,4 @@
+import { getCmsDocument, saveCmsDocument } from '@/lib/admin-cms'
 import { useState, useRef } from 'react'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import {
@@ -8,12 +9,6 @@ import {
     Type,
     Link as LinkIcon
 } from 'lucide-react'
-import { db } from '@/firebase/config'
-import {
-    doc,
-    getDoc,
-    setDoc
-} from 'firebase/firestore'
 import { Button } from '@/components/ui/button'
 import { toast } from 'sonner'
 import type { UniversityItem } from '@/types/universities'
@@ -77,17 +72,16 @@ function AddUniversityPage() {
 
         setLoading(true)
         try {
-            const cmsRef = doc(db, 'cms', 'university')
-            const cmsSnap = await getDoc(cmsRef)
+            const cmsSnap = await getCmsDocument('university')
 
             let universitiesList: UniversityItem[] = []
-            if (cmsSnap.exists()) {
-                universitiesList = cmsSnap.data().universities || []
+            if (cmsSnap) {
+                universitiesList = cmsSnap.universities || []
             }
 
             universitiesList.push(university)
 
-            await setDoc(cmsRef, {
+            await saveCmsDocument('university', {
                 universities: universitiesList,
                 lastUpdated: new Date().toISOString()
             }, { merge: true })

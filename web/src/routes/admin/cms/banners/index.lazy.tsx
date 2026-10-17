@@ -1,3 +1,4 @@
+import { getCmsDocument, saveCmsDocument } from '@/lib/admin-cms'
 import { useState, useEffect, useRef } from 'react'
 import { createLazyFileRoute, useNavigate } from '@tanstack/react-router'
 import {
@@ -9,20 +10,14 @@ import {
     Trash2,
     Loader2
 } from 'lucide-react'
-import { db, storage } from '@/firebase/config'
-import {
-    getDoc,
-    doc,
-    setDoc
-} from 'firebase/firestore'
-import { ref, deleteObject } from 'firebase/storage'
 import { Button } from '@/components/ui/button'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 import { Link } from '@tanstack/react-router'
 import type { BannerItem } from '@/types/banners'
 import { getVendorList, type VendorOption } from '@/lib/vendorList'
-import { uploadImage } from '@/lib/upload'
+import { uploadImage, deletePublicMedia } from '@/lib/upload'
+import { CmsClickSummary } from '@/components/admin/cms/CmsClickSummary'
 
 export const Route = createLazyFileRoute('/admin/cms/banners/')({
     component: BannersManagement,
@@ -37,6 +32,7 @@ function BannersManagement() {
     const [activeBannerId, setActiveBannerId] = useState<string | null>(null)
     const [pendingDeletions, setPendingDeletions] = useState<string[]>([])
     const [vendors, setVendors] = useState<VendorOption[]>([])
+    const [vendorSearch, setVendorSearch] = useState<Record<string, string>>({})
 
     const fileInputRef = useRef<HTMLInputElement>(null)
 
@@ -48,11 +44,10 @@ function BannersManagement() {
     const fetchData = async () => {
         setLoading(true)
         try {
-            const cmsRef = doc(db, 'cms', 'banner')
-            const cmsSnap = await getDoc(cmsRef)
+            const cmsSnap = await getCmsDocument('banner')
 
-            if (cmsSnap.exists()) {
-                const data = cmsSnap.data()
+            if (cmsSnap) {
+                const data = cmsSnap
                 setBanners(data.banners || [])
                 setLastUpdated(data.lastUpdated || '')
             } else {
@@ -69,10 +64,9 @@ function BannersManagement() {
 
     const saveBanners = async (updatedBanners: BannerItem[]) => {
         try {
-            const cmsRef = doc(db, 'cms', 'banner')
             const lastUpdated = new Date().toISOString()
 
-            await setDoc(cmsRef, {
+            await saveCmsDocument('banner', {
                 banners: updatedBanners,
                 lastUpdated: lastUpdated
             })
@@ -80,8 +74,7 @@ function BannersManagement() {
             if (pendingDeletions.length > 0) {
                 await Promise.all(pendingDeletions.map(async (url) => {
                     try {
-                        const imageRef = ref(storage, url)
-                        await deleteObject(imageRef)
+                        await deletePublicMedia(url)
                     } catch (err) {
                         console.error('Failed to delete storage object:', url, err)
                     }
@@ -145,9 +138,7 @@ function BannersManagement() {
             if (bannerToDelete) {
                 const urls: string[] = []
                 if (bannerToDelete.images.mobile) urls.push(bannerToDelete.images.mobile)
-
-                const cmsRef = doc(db, 'cms', 'banner')
-                await setDoc(cmsRef, {
+                await saveCmsDocument('banner', {
                     banners: remainingBanners,
                     lastUpdated: new Date().toISOString()
                 })
@@ -155,8 +146,7 @@ function BannersManagement() {
                 if (urls.length > 0) {
                     await Promise.all(urls.map(async (url) => {
                         try {
-                            const imageRef = ref(storage, url)
-                            await deleteObject(imageRef)
+                        await deletePublicMedia(url)
                         } catch (err) {
                             console.error('Failed to delete storage object:', url, err)
                         }
@@ -288,8 +278,9 @@ function BannersManagement() {
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <div className="space-y-1.5">
                                         <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider ml-1">Assign to vendors</label>
+                                        <input aria-label={`Search vendors for banner ${index + 1}`} value={vendorSearch[banner.bannerId] || ''} onChange={event => setVendorSearch(current => ({ ...current, [banner.bannerId]: event.target.value }))} placeholder="Search vendors by name" className="h-9 w-full rounded-lg border px-3 text-sm" />
                                         <div className="max-h-40 space-y-2 overflow-auto rounded-xl border bg-white p-3">
-                                            {vendors.map(v => {
+                                            {vendors.filter(v => v.name.toLowerCase().includes((vendorSearch[banner.bannerId] || '').trim().toLowerCase())).map(v => {
                                                 const assigned = banner.vendorIds?.length ? banner.vendorIds : banner.vendorId ? [banner.vendorId] : []
                                                 return <label key={v.id} className="flex items-center gap-2 text-sm"><input type="checkbox" checked={assigned.includes(v.id)} onChange={e => {
                                                     const ids = new Set(assigned)
@@ -299,7 +290,8 @@ function BannersManagement() {
                                                 }} /><span>{v.name}</span></label>
                                             })}
                                         </div>
-                                        <p className="text-xs text-muted-foreground">Selected: {(banner.vendorIds?.length ? banner.vendorIds : banner.vendorId ? [banner.vendorId] : []).map(id => vendors.find(v => v.id === id)?.name || id).join(', ') || 'None'}</p>
+                                        <p className="text-xs text-muted-foreground">Selected ({(banner.vendorIds?.length ? banner.vendorIds : banner.vendorId ? [banner.vendorId] : []).length}): {(banner.vendorIds?.length ? banner.vendorIds : banner.vendorId ? [banner.vendorId] : []).map(id => vendors.find(v => v.id === id)?.name || 'Unavailable vendor').join(', ') || 'None'}</p>
+                                        <div className="flex flex-wrap gap-1">{(banner.vendorIds?.length ? banner.vendorIds : banner.vendorId ? [banner.vendorId] : []).map(id => <button key={id} type="button" aria-label={`Remove ${vendors.find(v => v.id === id)?.name || 'vendor'} assignment`} onClick={() => { const vendorIds = (banner.vendorIds?.length ? banner.vendorIds : banner.vendorId ? [banner.vendorId] : []).filter(value => value !== id); handleUpdateBanner(banner.bannerId, { vendorIds, vendorId: vendorIds[0] || '' }) }} className="rounded-full bg-muted px-2 py-1 text-xs">{vendors.find(v => v.id === id)?.name || 'Unavailable vendor'} ×</button>)}</div>
                                     </div>
                                     <div className="space-y-1.5">
                                         <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider ml-1">Alt Text</label>
@@ -312,6 +304,7 @@ function BannersManagement() {
                                         />
                                     </div>
                                 </div>
+                                <CmsClickSummary documentId="banner" itemId={banner.bannerId} />
 
                                 <div className="flex items-center justify-between pt-3 border-t border-gray-200/60">
                                     <div className="flex items-center gap-3">

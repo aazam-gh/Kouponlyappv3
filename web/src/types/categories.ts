@@ -1,4 +1,5 @@
 export interface SubCategory {
+    id?: string;
     nameEnglish: string;
     imageUrl: string;
 }

@@ -1,49 +1,42 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { db } from '@/firebase/config'
-import { doc, getDoc } from 'firebase/firestore'
+import { supabase } from '@/lib/supabase'
 import type { Transaction } from './index'
 
 export const Route = createFileRoute('/admin/transactions/$id')({
     loader: async ({ params: { id } }) => {
-        const docRef = doc(db, 'transactions', id)
-        const docSnap = await getDoc(docRef)
+        const { data, error } = await supabase.rpc('kouponly_admin_coupons', {
+            p_vendor_id: null,
+            p_user_id: null,
+            p_search: id,
+            p_offset: 0,
+            p_limit: 100,
+            p_from: null,
+            p_to: null,
+        })
+        if (error) throw error
+        const record = (data as { receipts: Array<Record<string, any>> }).receipts.find(row => row.id === id)
 
-        if (!docSnap.exists()) {
+        if (!record) {
             throw new Error('Transaction not found')
         }
 
-        const data = docSnap.data()
-
-        let formattedDate = ''
-        if (data.createdAt) {
-            if (typeof data.createdAt === 'string') {
-                formattedDate = new Date(data.createdAt).toLocaleString()
-            } else if (data.createdAt?.toDate) {
-                formattedDate = data.createdAt.toDate().toLocaleString()
-            }
-        }
+        const date = new Date(record.consumedAt)
 
         return {
             id,
-            ...data,
-            date: formattedDate || 'Unknown Date',
-            rawDate: data.createdAt?.toDate ? data.createdAt.toDate().toISOString() : null,
+            date: Number.isNaN(date.getTime()) ? 'Unknown Date' : date.toLocaleString(),
+            rawDate: Number.isNaN(date.getTime()) ? null : date.toISOString(),
             transactionId: id,
-            vendorName: data.vendorName || 'Unknown Vendor',
-            vendorId: data.vendorId || null,
-            userId: data.userId || null,
-            offerId: data.offerId || null,
-            totalAmountNum: data.totalAmount || 0,
-            totalAmount: data.totalAmount ? `QAR ${data.totalAmount}` : 'QAR 0',
-            finalAmount: data.finalAmount || null,
-            discountAmount: data.discountAmount || 0,
-            discountCode: data.discountCode || null,
-            type: data.type || 'N/A',
-            cashbackAmount: data.cashbackAmount || 0,
-            creatorCashbackAmount: data.creatorCashbackAmount || 0,
-            creatorCode: data.creatorCode || null,
-            creatorUid: data.creatorUid || null,
-            purchaseUrl: data.purchaseUrl || null,
+            vendorName: record.vendor || 'Unknown Vendor',
+            vendorId: record.vendorId || null,
+            userId: record.userId || null,
+            offerId: record.offerId || null,
+            totalAmountNum: record.billAmount || 0,
+            totalAmount: `${record.currency || 'INR'} ${record.billAmount || 0}`,
+            currency: record.currency || 'INR',
+            finalAmount: record.finalAmount ?? null,
+            discountAmount: record.discountAmount || 0,
+            type: record.source || 'N/A',
         } as Transaction
     },
 })

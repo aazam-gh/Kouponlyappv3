@@ -1,3 +1,4 @@
+import { getCmsDocument, saveCmsDocument } from '@/lib/admin-cms'
 import { useState, useRef, useEffect } from 'react'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import {
@@ -6,12 +7,6 @@ import {
     Loader2,
     Save
 } from 'lucide-react'
-import { db } from '@/firebase/config'
-import {
-    doc,
-    getDoc,
-    setDoc
-} from 'firebase/firestore'
 import { Button } from '@/components/ui/button'
 import { toast } from 'sonner'
 import type { BannerItem } from '@/types/banners'
@@ -27,6 +22,7 @@ function AddBannerPage() {
     const [loading, setLoading] = useState(false)
     const [uploading, setUploading] = useState<'mobile' | null>(null)
     const [vendors, setVendors] = useState<VendorOption[]>([])
+    const [vendorSearch, setVendorSearch] = useState('')
 
     useEffect(() => {
         getVendorList().then(setVendors).catch(err => console.error('Error fetching vendor list:', err))
@@ -80,17 +76,16 @@ function AddBannerPage() {
 
         setLoading(true)
         try {
-            const cmsRef = doc(db, 'cms', 'banner')
-            const cmsSnap = await getDoc(cmsRef)
+            const cmsSnap = await getCmsDocument('banner')
 
             let bannersList: BannerItem[] = []
-            if (cmsSnap.exists()) {
-                bannersList = cmsSnap.data().banners || []
+            if (cmsSnap) {
+                bannersList = cmsSnap.banners || []
             }
 
             bannersList.push(banner)
 
-            await setDoc(cmsRef, {
+            await saveCmsDocument('banner', {
                 banners: bannersList,
                 lastUpdated: new Date().toISOString()
             }, { merge: true })
@@ -190,8 +185,9 @@ function AddBannerPage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-4">
                     <div className="space-y-2">
                         <label className="text-sm font-bold text-gray-700 ml-1">Assign to vendors</label>
+                        <input aria-label="Search vendors" value={vendorSearch} onChange={event => setVendorSearch(event.target.value)} placeholder="Search vendors by name" className="h-10 w-full rounded-lg border px-3 text-sm" />
                         <div className="max-h-48 space-y-2 overflow-auto rounded-xl border bg-white p-3">
-                            {vendors.map(v => {
+                            {vendors.filter(v => v.name.toLowerCase().includes(vendorSearch.trim().toLowerCase())).map(v => {
                                 const selected = banner.vendorIds?.includes(v.id) ?? banner.vendorId === v.id
                                 return <label key={v.id} className="flex items-center gap-2 text-sm"><input type="checkbox" checked={selected} onChange={e => setBanner(prev => {
                                     const ids = new Set(prev.vendorIds?.length ? prev.vendorIds : prev.vendorId ? [prev.vendorId] : [])
@@ -202,7 +198,8 @@ function AddBannerPage() {
                             })}
                             {!vendors.length && <p className="text-sm text-muted-foreground">No vendors available.</p>}
                         </div>
-                        <p className="text-xs text-purple-500">Selected: {(banner.vendorIds ?? (banner.vendorId ? [banner.vendorId] : [])).map(id => vendors.find(v => v.id === id)?.name || id).join(', ') || 'None'}</p>
+                        <p className="text-xs text-muted-foreground">Selected ({(banner.vendorIds ?? []).length}): {(banner.vendorIds ?? []).map(id => vendors.find(v => v.id === id)?.name || 'Unavailable vendor').join(', ') || 'None'}</p>
+                        <div className="flex flex-wrap gap-1">{(banner.vendorIds ?? []).map(id => <button key={id} type="button" aria-label={`Remove ${vendors.find(v => v.id === id)?.name || 'vendor'} assignment`} onClick={() => setBanner(current => { const vendorIds = (current.vendorIds || []).filter(value => value !== id); return { ...current, vendorIds, vendorId: vendorIds[0] || '' } })} className="rounded-full bg-gray-100 px-2 py-1 text-xs">{vendors.find(v => v.id === id)?.name || 'Unavailable vendor'} ×</button>)}</div>
                     </div>
                     <div className="space-y-2">
                         <label className="text-sm font-bold text-gray-700 ml-1">Alt Text (Accessibility)</label>

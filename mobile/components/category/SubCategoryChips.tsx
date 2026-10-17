@@ -9,8 +9,7 @@ import { Typography } from '../../constants/Typography';
 type SubCategory = {
     id: string;
     name: string;
-    icon: string | number | { uri: string };
-    sampleImage?: number;
+    icon: string;
 };
 
 type Props = {
@@ -43,21 +42,8 @@ const SubCategoryChip = memo(({
 
         if (icon === 'apps-outline') return <Ionicons name="apps-outline" size={32} color={isSelected ? theme.brand : theme.icon} style={styles.vectorIcon} />;
 
-        // Handle Image sources (require/number or object with uri)
-        if (typeof icon === 'number' || (typeof icon === 'object' && icon !== null)) {
-            return <Image source={icon} style={styles.imageIcon} contentFit="contain" />;
-        }
-
-        // Published CMS artwork takes precedence over the bundled samples.
-        if (typeof icon === 'string') {
-            const isRemote = icon.startsWith('http') || icon.includes('/');
-            if (isRemote) {
-                return <Image source={{ uri: icon }} style={styles.imageIcon} contentFit="contain" />;
-            }
-        }
-
-        // Sample artwork until subcategory-specific CMS images are supplied.
-        return <Image source={item.sampleImage || require('../../assets/subcategories/shopping.png')} style={styles.imageIcon} contentFit="contain" />;
+        if (/^https?:\/\//i.test(icon)) return <Image source={{ uri: icon }} style={styles.imageIcon} contentFit="contain" />;
+        return <View style={[styles.imageIcon, { backgroundColor: theme.surface, borderRadius: 10 }]} />;
     };
 
     return (

@@ -79,7 +79,14 @@ function AppNavigation({ firstRunStatus }: { firstRunStatus: Exclude<FirstRunSta
   React.useEffect(()=>{
     const openNotification=(response:Notifications.NotificationResponse|null)=>{
       if(!response)return;
-      const path=response.notification.request.content.data?.path;
+      const data=response.notification.request.content.data;
+      const vendorId=data?.vendorId;
+      if(typeof vendorId==='string'&&/^[A-Za-z0-9_-]{1,160}$/.test(vendorId)){
+        router.push({pathname:'/realx/vendor/[id]',params:{id:vendorId}} as any);
+        void Notifications.clearLastNotificationResponseAsync().catch(()=>{});
+        return;
+      }
+      const path=data?.path;
       const supported=new Set(['/realx','/realx/history','/realx/map','/realx/opportunities','/realx/saved','/realx/search','/notifications']);
       if(typeof path==='string'&&supported.has(path)){
         router.push(path as any);

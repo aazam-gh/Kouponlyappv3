@@ -1,14 +1,16 @@
 import React from 'react';
 import { fireEvent, render, waitFor } from '@testing-library/react-native';
+import { Linking } from 'react-native';
 import { router } from 'expo-router';
 import AppLaunchPosterModal from '@/components/AppLaunchPosterModal';
 
 const mockMaybeSingle = jest.fn();
+const mockRpc = jest.fn();
 jest.mock('@/lib/supabase', () => ({
-  getSupabase: () => ({ from: () => ({ select: () => ({ eq: () => ({ maybeSingle: mockMaybeSingle }) }) }) }),
+  getSupabase: () => ({ from: () => ({ select: () => ({ eq: () => ({ maybeSingle: mockMaybeSingle }) }) }), rpc: mockRpc }),
 }));
 
-beforeEach(() => { mockMaybeSingle.mockReset(); jest.clearAllMocks(); });
+beforeEach(() => { mockMaybeSingle.mockReset(); mockRpc.mockReset().mockResolvedValue({ error: null }); jest.clearAllMocks(); });
 
 it('shows an active poster once for a signed-in user and opens its configured vendor', async () => {
   mockMaybeSingle.mockResolvedValue({ data: { payload: { active: true, imageUrl: 'https://cdn.example.test/poster.webp', vendorId: 'vendor-123' } }, error: null });
@@ -24,9 +26,20 @@ it('shows an active poster once for a signed-in user and opens its configured ve
   const reopened = await render(<AppLaunchPosterModal userId="student-1" enabled />);
   const reopenedPoster = await reopened.findByLabelText('Open featured vendor');
   fireEvent.press(reopenedPoster);
-  expect(router.push).toHaveBeenCalledWith('/realx/vendor/vendor-123');
+  await waitFor(() => expect(router.push).toHaveBeenCalledWith('/realx/vendor/vendor-123'));
+  expect(mockRpc).toHaveBeenCalledWith('couponly_record_cms_click', { p_document_id: 'appLaunchPoster', p_item_id: 'appLaunchPoster' });
   await waitFor(() => expect(reopened.queryByLabelText('Open featured vendor')).toBeNull());
   expect(mockMaybeSingle).toHaveBeenCalledTimes(2);
+});
+
+it('records an external poster tap before opening its HTTPS destination', async () => {
+  mockMaybeSingle.mockResolvedValue({ data: { payload: { active: true, imageUrl: 'https://cdn.example.test/poster.webp', destinationType: 'external', externalUrl: 'https://shop.example.test/deals' } }, error: null });
+  const openUrl = jest.spyOn(Linking, 'openURL').mockResolvedValue(undefined as never);
+  const screen = await render(<AppLaunchPosterModal userId="student-1" enabled />);
+  fireEvent.press(await screen.findByLabelText('Open featured website'));
+  await waitFor(() => expect(openUrl).toHaveBeenCalledWith('https://shop.example.test/deals'));
+  expect(mockRpc).toHaveBeenCalledWith('couponly_record_cms_click', { p_document_id: 'appLaunchPoster', p_item_id: 'appLaunchPoster' });
+  openUrl.mockRestore();
 });
 
 it('does not fetch for signed-out users or display an inactive poster', async () => {

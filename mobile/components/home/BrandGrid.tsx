@@ -7,7 +7,6 @@ import { useEffect, useMemo } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, View } from 'react-native';
 import { StateSurface } from '../StateSurface';
 import { triggerSubtleHaptic } from '../../utils/haptics';
-import { useTranslation } from 'react-i18next';
 import { logger } from '../../utils/logger';
 import { useAppTheme } from '../../context/AppThemeContext';
 import { useAppLocale } from '../../context/LocaleContext';
@@ -79,7 +78,6 @@ function BrandRow({
 }
 
 export default function BrandGrid() {
-    const { t } = useTranslation();
     const { theme } = useAppTheme();
     const { isRTL } = useAppLocale();
     const {
@@ -90,8 +88,6 @@ export default function BrandGrid() {
     } = useQuery(homeQueryOptions.brands());
     const router = useRouter();
     const displayedBrands = useMemo(() => (isRTL ? [...brands].reverse() : brands), [brands, isRTL]);
-    const brandLabelPrefix = t('brand_header_prefix');
-    const brandLabelHighlight = t('brand_header_highlight');
 
     useEffect(() => {
         if (error) logger.error('Error fetching brands:', error);
@@ -146,7 +142,7 @@ export default function BrandGrid() {
 
     return (
         <View style={styles.container}>
-            <HomeSectionHeading prefix={brandLabelPrefix} highlight={brandLabelHighlight} onSeeMore={() => router.push({ pathname: '/vendors', params: { section: 'brands' } } as any)} />
+            <HomeSectionHeading prefix="Top " highlight="Brands" onSeeMore={() => router.push({ pathname: '/vendors', params: { section: 'brands' } } as any)} />
             <BrandRow items={row1} onPressBrand={handlePress} />
             {!isSingleRow && (
                 <View style={styles.rowSpacing}>

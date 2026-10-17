@@ -1,5 +1,5 @@
 export const homeContentLinks = [
-  { title: 'Section order', url: '/admin/cms/home-layout' },
+  { title: 'Home screen layout', url: '/admin/cms/home-layout' },
   { title: 'Partner banners', url: '/admin/cms/banners' },
   { title: 'Featured showcase', url: '/admin/cms/featured-brand-showcase' },
   { title: 'New Deals', url: '/admin/cms/new-deals' },

@@ -1,38 +1,49 @@
+import { getCmsDocument, saveCmsDocument } from '@/lib/admin-cms'
 import { useEffect, useRef, useState } from 'react'
 import { createLazyFileRoute, useNavigate } from '@tanstack/react-router'
 import { ArrowLeft, Image as ImageIcon, Loader2, Save, Upload } from 'lucide-react'
-import { doc, getDoc, setDoc } from 'firebase/firestore'
-import { db } from '@/firebase/config'
 import { uploadImage } from '@/lib/upload'
 import { fetchAllVendors } from '@/lib/vendor-directory'
 import { Button } from '@/components/ui/button'
 import { toast } from 'sonner'
+import { CmsClickSummary } from '@/components/admin/cms/CmsClickSummary'
+import { safeWebUrl } from '@/lib/safe-web-url'
 
 const CMS_DOC_ID = 'appLaunchPoster'
-type PosterConfig = { active: boolean; imageUrl: string; vendorId: string; lastUpdated: string }
+type PosterConfig = { active: boolean; imageUrl: string; destinationType: 'vendor' | 'external'; vendorId: string; externalUrl: string; lastUpdated: string }
 
 export const Route = createLazyFileRoute('/admin/cms/app-launch-poster/')({ component: AppLaunchPosterManagement })
 
 function AppLaunchPosterManagement() {
   const navigate = useNavigate()
   const fileInput = useRef<HTMLInputElement>(null)
-  const [poster, setPoster] = useState<PosterConfig>({ active: false, imageUrl: '', vendorId: '', lastUpdated: '' })
+  const [poster, setPoster] = useState<PosterConfig>({ active: false, imageUrl: '', destinationType: 'vendor', vendorId: '', externalUrl: '', lastUpdated: '' })
   const [vendors, setVendors] = useState<{ id: string; name: string }[]>([])
   const [loading, setLoading] = useState(true)
   const [uploading, setUploading] = useState(false)
   const [saving, setSaving] = useState(false)
 
   useEffect(() => {
-    void Promise.all([getDoc(doc(db, 'cms', CMS_DOC_ID)), fetchAllVendors()]).then(([snapshot, vendorRows]) => {
-      setVendors(vendorRows.map(vendor => ({ id: vendor.id, name: vendor.name || 'Unnamed Vendor' })))
-      if (snapshot.exists()) {
-        const data = snapshot.data()
-        setPoster({ active: data.active === true, imageUrl: data.imageUrl || '', vendorId: data.vendorId || '', lastUpdated: data.lastUpdated || '' })
+    let active = true
+    void Promise.allSettled([getCmsDocument(CMS_DOC_ID), fetchAllVendors()]).then(([posterResult, vendorsResult]) => {
+      if (!active) return
+      if (posterResult.status === 'fulfilled') {
+        const data = posterResult.value
+        if (data) {
+          const destinationType = data.destinationType === 'external' ? 'external' : 'vendor'
+          setPoster({ active: data.active === true, imageUrl: data.imageUrl || '', destinationType, vendorId: data.vendorId || '', externalUrl: data.externalUrl || '', lastUpdated: data.lastUpdated || '' })
+        }
+      } else {
+        console.error('Error loading app launch poster:', posterResult.reason)
+        toast.error(`Failed to load poster settings: ${posterResult.reason?.message || 'Unknown error'}`)
       }
-    }).catch(error => {
-      console.error('Error loading app launch poster:', error)
-      toast.error('Failed to load poster settings')
-    }).finally(() => setLoading(false))
+      if (vendorsResult.status === 'fulfilled') setVendors(vendorsResult.value.map(vendor => ({ id: vendor.id, name: vendor.name || 'Unnamed Vendor' })))
+      else {
+        console.error('Error loading poster vendors:', vendorsResult.reason)
+        toast.error(`Failed to load vendors: ${vendorsResult.reason?.message || 'Unknown error'}`)
+      }
+    }).finally(() => { if (active) setLoading(false) })
+    return () => { active = false }
   }, [])
 
   const handleUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -55,12 +66,13 @@ function AppLaunchPosterManagement() {
   const save = async () => {
     if (poster.active) {
       if (!/^https?:\/\//i.test(poster.imageUrl)) return toast.error('Upload a poster image before activating')
-      if (!vendors.some(vendor => vendor.id === poster.vendorId)) return toast.error('Choose a valid vendor before activating')
+      if (poster.destinationType === 'vendor' && !vendors.some(vendor => vendor.id === poster.vendorId)) return toast.error('Choose a valid vendor before activating')
+      if (poster.destinationType === 'external' && !safeWebUrl(poster.externalUrl)) return toast.error('Enter a valid HTTP or HTTPS website URL before activating')
     }
     setSaving(true)
     const lastUpdated = new Date().toISOString()
     try {
-      await setDoc(doc(db, 'cms', CMS_DOC_ID), { active: poster.active, imageUrl: poster.imageUrl, vendorId: poster.vendorId, lastUpdated } satisfies PosterConfig)
+      await saveCmsDocument(CMS_DOC_ID, { ...poster, externalUrl: poster.externalUrl.trim(), lastUpdated } satisfies PosterConfig)
       setPoster(current => ({ ...current, lastUpdated }))
       toast.success('App launch poster saved')
     } catch (error) {
@@ -95,13 +107,22 @@ function AppLaunchPosterManagement() {
           <input type="checkbox" checked={poster.active} onChange={event => setPoster(current => ({ ...current, active: event.target.checked }))} className="mt-1 size-4 accent-primary" />
           <span><span className="block font-medium">Show poster on app launch</span><span className="mt-1 block text-sm text-muted-foreground">Only shown to signed-in students, once per app launch.</span></span>
         </label>
-        <label className="block space-y-2 text-sm font-medium">Tap destination vendor
+        <label className="block space-y-2 text-sm font-medium">Destination type
+          <select value={poster.destinationType} onChange={event => setPoster(current => ({ ...current, destinationType: event.target.value as PosterConfig['destinationType'] }))} className="h-10 w-full rounded-md border bg-background px-3 font-normal">
+            <option value="vendor">Vendor in Kouponly</option><option value="external">External link</option>
+          </select>
+        </label>
+        {poster.destinationType === 'vendor' ? <label className="block space-y-2 text-sm font-medium">Tap destination vendor
           <select value={poster.vendorId} onChange={event => setPoster(current => ({ ...current, vendorId: event.target.value }))} className="h-10 w-full rounded-md border bg-background px-3 font-normal" disabled={!vendors.length}>
             <option value="">Choose a vendor</option>
             {vendors.map(vendor => <option key={vendor.id} value={vendor.id}>{vendor.name}</option>)}
           </select>
-        </label>
-        {!vendors.length && <p className="text-sm text-amber-700">No vendors are available in the admin vendor list yet.</p>}
+        </label> : <label className="block space-y-2 text-sm font-medium">External website URL
+          <input type="url" value={poster.externalUrl} onChange={event => setPoster(current => ({ ...current, externalUrl: event.target.value }))} placeholder="https://example.com" className="h-10 w-full rounded-md border bg-background px-3 font-normal" />
+          <span className="block text-xs text-muted-foreground">{safeWebUrl(poster.externalUrl) || 'Enter a complete HTTP or HTTPS website address.'}</span>
+        </label>}
+        {poster.destinationType === 'vendor' && !vendors.length && <p className="text-sm text-amber-700">No vendors are available in the admin vendor list yet.</p>}
+        {poster.imageUrl && <CmsClickSummary documentId="appLaunchPoster" itemId="appLaunchPoster" />}
         <p className="text-xs text-muted-foreground">Last updated: {poster.lastUpdated ? new Date(poster.lastUpdated).toLocaleString() : 'Never'}</p>
       </section>
     </div>

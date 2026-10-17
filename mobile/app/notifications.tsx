@@ -19,7 +19,7 @@ type NotificationRow = {
   title: string;
   body: string;
   kind: string;
-  data: { buttonLabel?: string; buttonUrl?: string } | null;
+  data: { buttonLabel?: string; buttonUrl?: string; vendorId?: string } | null;
   read_at: string | null;
   created_at: string;
 };
@@ -114,6 +114,7 @@ export default function NotificationsRoute() {
           </View>
           <Text style={[styles.body, { color: C.muted, textAlign: isRTL ? 'right' : 'left' }]}>{item.body}</Text>
           {item.kind === 'prelaunch_welcome' && safeWebUrl(item.data?.buttonUrl) ? <ScalePressable accessibilityRole="link" onPress={() => { const url = safeWebUrl(item.data?.buttonUrl); if (url) void Linking.openURL(url).catch(() => setMessage('Unable to open the website.')); }}><Text style={{ color: C.lime }}>{item.data?.buttonLabel || 'Visit Kouponly'}</Text></ScalePressable> : null}
+          {item.kind === 'admin_broadcast' && typeof item.data?.vendorId === 'string' && /^[A-Za-z0-9_-]{1,160}$/.test(item.data.vendorId) ? <ScalePressable accessibilityRole="link" onPress={() => router.push({ pathname: '/realx/vendor/[id]', params: { id: item.data!.vendorId! } } as any)}><Text style={{ color: C.lime }}>View vendor</Text></ScalePressable> : null}
           <View style={[styles.footer, isRTL && styles.rowReverse]}>
             <Text style={[styles.date, { color: C.muted, textAlign: isRTL ? 'right' : 'left' }]}>{date}</Text>
             <ScalePressable accessibilityRole="button" accessibilityLabel={t('clear')} disabled={clearingIds.includes(item.id)} onPress={() => void clearNotification(item.id)}>

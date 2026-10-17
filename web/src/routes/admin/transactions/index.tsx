@@ -1,7 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { httpsCallable } from 'firebase/functions'
 import { z } from 'zod'
-import { functions } from '@/firebase/config'
+import { invokeAdminAction } from '@/lib/admin-actions'
 
 const sortSchema = z.enum(['date_asc', 'date_desc', 'amount_asc', 'amount_desc', 'vendor_asc', 'vendor_desc'])
 
@@ -25,6 +24,7 @@ export interface Transaction {
     vendorName: string
     totalAmountNum?: number
     totalAmount: string
+    currency?: string
     type: string
     cashbackAmount?: number
     creatorCashbackAmount?: number
@@ -60,8 +60,7 @@ export async function fetchTransactions(
     if (sort) request.sort = sort
     if (cursor) request.cursor = cursor
 
-    const listTransactions = httpsCallable<typeof request, TransactionListResult>(functions, 'listAdminTransactions')
-    const { data } = await listTransactions(request)
+    const data = await invokeAdminAction<TransactionListResult>('listAdminTransactions', request)
 
     return {
         ...data,

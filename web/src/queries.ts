@@ -1,9 +1,8 @@
 import { queryOptions } from '@tanstack/react-query'
-import { db } from '@/firebase/config'
 import { supabase } from '@/lib/supabase'
-import { doc, getDoc, getDocs, query, collection, where, Timestamp, type DocumentReference } from 'firebase/firestore'
 import { STALE_TIME } from '@/lib/constants'
 import type { Category } from '@/types/categories'
+import { mapVendor } from '@/lib/vendor-directory'
 
 export interface EmbeddedOffer {
     id?: string
@@ -85,10 +84,8 @@ export interface Transaction {
     discountValue?: number
     finalAmount: number
     status: 'completed' | 'pending' | 'failed'
-    createdAt: Timestamp
+    createdAt: string
     // Optional fields
-    studentRef?: DocumentReference
-    vendorRef?: DocumentReference
     offerId?: string
     cashbackAmount?: number
     creatorCashbackAmount?: number
@@ -128,17 +125,10 @@ export const vendorQueryOptions = (vendorId: string) => queryOptions({
     queryKey: ['vendor', vendorId],
     queryFn: async () => {
         if (!vendorId) throw new Error('No vendor ID provided')
-        const docRef = doc(db, 'vendors', vendorId)
-        const snapshot = await getDoc(docRef)
-        if (!snapshot.exists()) {
-            throw new Error('Vendor not found')
-        }
-        const data = snapshot.data();
-        return {
-            id: snapshot.id,
-            ...data,
-            profilePicture: data.profilePicture || data.logo || data.logoUrl || ''
-        } as Vendor
+        const { data: row, error } = await supabase.from('couponly_vendors').select('*,couponly_categories(name),couponly_vendor_subcategories(subcategory_id,couponly_subcategories(name))').eq('id', vendorId).maybeSingle()
+        if (error) throw error
+        if (!row) throw new Error('Vendor not found')
+        return mapVendor(row as any)
     },
     staleTime: STALE_TIME.EXTENDED,
 })
@@ -160,10 +150,10 @@ export const transactionQueryOptions = (transactionId: string) => queryOptions({
     queryKey: ['transaction', transactionId],
     queryFn: async () => {
         if (!transactionId) throw new Error('No transaction ID provided')
-        const docRef = doc(db, 'transactions', transactionId)
-        const snapshot = await getDoc(docRef)
-        if (!snapshot.exists()) throw new Error('Transaction not found')
-        return { id: snapshot.id, ...snapshot.data() } as Transaction
+        const { data, error } = await supabase.from('couponly_transactions').select('*').eq('id', transactionId).maybeSingle()
+        if (error) throw error
+        if (!data) throw new Error('Transaction not found')
+        return { id: data.id, vendorName: data.vendor_name || 'Unknown Vendor', vendorId: data.vendor_id || '', type: data.transaction_type, totalAmount: Number(data.total_amount ?? data.amount ?? 0), discountAmount: Number(data.discount_amount || 0), discountType: data.discount_type || 'amount', discountValue: data.discount_value, finalAmount: Number(data.final_amount || 0), status: data.status, createdAt: data.created_at, offerId: data.offer_id, cashbackAmount: data.cashback_amount, creatorCashbackAmount: data.creator_cashback_amount, creatorCode: data.creator_code, creatorCodeOwnerId: data.creator_code_owner_id, creatorUid: data.creator_uid, redemptionCardAmount: data.redemption_card_amount, remainingAmount: data.remaining_amount } as Transaction
     },
     staleTime: STALE_TIME.MEDIUM,
 })
@@ -217,8 +207,9 @@ export const vendorChartDataQueryOptions = (vendorId: string, range: ChartRange,
 export const categoriesQueryOptions = () => queryOptions({
     queryKey: ['categories'],
     queryFn: async () => {
-        const snapshot = await getDocs(query(collection(db, 'categories'), where('active', '==', true)))
-        const cats = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Category))
+        const { data, error } = await supabase.from('couponly_categories').select('*,couponly_subcategories(*)').eq('active', true)
+        if (error) throw error
+        const cats = (data || []).map(row => ({ id: row.id, nameEnglish: row.name, imageUrl: row.image_path || '', subcategories: (row.couponly_subcategories || []).sort((a: any, b: any) => a.sort_order - b.sort_order).map((sub: any) => ({ nameEnglish: sub.name, imageUrl: sub.image_path || '' })), order: Number(row.sort_order || 0) } as Category))
         return cats.sort((a, b) => a.order - b.order)
     },
     staleTime: STALE_TIME.EXTENDED,

@@ -1,3 +1,4 @@
+import { getCmsDocument, saveCmsDocument } from '@/lib/admin-cms'
 import { useEffect, useState } from 'react'
 import { createLazyFileRoute, useNavigate } from '@tanstack/react-router'
 import {
@@ -8,12 +9,12 @@ import {
     Sparkles,
     Upload
 } from 'lucide-react'
-import { doc, getDoc, setDoc } from 'firebase/firestore'
-import { db } from '@/firebase/config'
 import { uploadImage } from '@/lib/upload'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { toast } from 'sonner'
+import { safeWebUrl } from '@/lib/safe-web-url'
+import { CmsClickSummary } from '@/components/admin/cms/CmsClickSummary'
 import type {
     FeaturedBrandShowcaseConfig,
     FeaturedBrandShowcaseItem
@@ -62,20 +63,11 @@ function getEditableItem(items: FeaturedBrandShowcaseItem[]) {
     return sortedItems.find(isRenderableItem) || sortedItems[0]
 }
 
-function isValidUrl(value: string) {
-    try {
-        new URL(value)
-        return true
-    } catch {
-        return false
-    }
-}
-
 function isRenderableItem(item: FeaturedBrandShowcaseItem) {
     return (
         item.isActive &&
         item.title.trim() &&
-        isValidUrl(item.orderUrl.trim()) &&
+        safeWebUrl(item.orderUrl.trim()) &&
         item.heroImageUrl &&
         item.tileImageUrls.filter(Boolean).length >= TILE_COUNT
     )
@@ -96,11 +88,10 @@ function FeaturedBrandShowcaseManagement() {
     const fetchData = async () => {
         setLoading(true)
         try {
-            const cmsRef = doc(db, 'cms', CMS_DOC_ID)
-            const cmsSnap = await getDoc(cmsRef)
+            const cmsSnap = await getCmsDocument(CMS_DOC_ID)
 
-            if (cmsSnap.exists()) {
-                const data = cmsSnap.data() as FeaturedBrandShowcaseConfig
+            if (cmsSnap) {
+                const data = cmsSnap as FeaturedBrandShowcaseConfig
                 setItem(getEditableItem(data.items || []))
                 setLastUpdated(data.lastUpdated || '')
             } else {
@@ -169,7 +160,7 @@ function FeaturedBrandShowcaseManagement() {
 
         if (!trimmedTitle) return 'Title is required'
         if (!trimmedOrderUrl) return 'Order URL is required'
-        if (!isValidUrl(trimmedOrderUrl)) return 'Order URL must be a valid URL'
+        if (!safeWebUrl(trimmedOrderUrl)) return 'Order URL must be a valid HTTP or HTTPS website URL without credentials'
         if (!draft.heroImageUrl) return 'Hero image is required'
         if (tileImages.length < TILE_COUNT) return 'Upload all 3 tile images before saving'
 
@@ -189,13 +180,13 @@ function FeaturedBrandShowcaseManagement() {
             const cleanedItem: FeaturedBrandShowcaseItem = {
                 ...item,
                 title: item.title.trim(),
-                orderUrl: item.orderUrl.trim(),
+                orderUrl: safeWebUrl(item.orderUrl.trim())!,
                 altText: item.altText?.trim() || '',
                 order: Number.isFinite(Number(item.order)) ? Number(item.order) : 0,
                 tileImageUrls: item.tileImageUrls.slice(0, TILE_COUNT),
             }
 
-            await setDoc(doc(db, 'cms', CMS_DOC_ID), {
+            await saveCmsDocument(CMS_DOC_ID, {
                 items: [cleanedItem],
                 lastUpdated: now,
             } satisfies FeaturedBrandShowcaseConfig)
@@ -336,6 +327,7 @@ function FeaturedBrandShowcaseManagement() {
                             className="w-full h-11 px-4 rounded-xl bg-white border border-gray-100 font-medium text-sm text-gray-900 outline-none focus:border-primary transition-all shadow-sm"
                         />
                     </Field>
+                    <CmsClickSummary documentId="featuredBrandShowcase" itemId={item.id} />
 
                     <Field label="Alt Text">
                         <input

@@ -15,10 +15,6 @@ export default defineConfig({
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
-      "firebase/firestore": path.resolve(__dirname, "./src/firebase/firestore.ts"),
-      "firebase/functions": path.resolve(__dirname, "./src/firebase/functions.ts"),
-      "firebase/storage": path.resolve(__dirname, "./src/firebase/storage.ts"),
-      "firebase/auth": path.resolve(__dirname, "./src/firebase/auth.ts"),
     },
   },
   build: {

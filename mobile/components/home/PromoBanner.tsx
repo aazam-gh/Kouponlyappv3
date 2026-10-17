@@ -3,8 +3,8 @@ import ScalePressable from '@/components/ScalePressable';
 import { useQuery } from '@tanstack/react-query';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
-import { useEffect, useRef } from 'react';
-import { ActivityIndicator, Animated, ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
+import { useEffect, useRef, useState } from 'react';
+import { ActivityIndicator, Alert, Animated, ScrollView, StyleSheet, useWindowDimensions, View, type AlertButton } from 'react-native';
 import type { NativeScrollEvent, NativeSyntheticEvent } from 'react-native';
 
 import { useAppTheme } from '../../context/AppThemeContext';
@@ -12,11 +12,13 @@ import { StateSurface } from '../StateSurface';
 import { triggerSubtleHaptic } from '../../utils/haptics';
 import { homeQueryOptions, type HomeBannerItem } from '../../utils/homeQueries';
 import { logger } from '../../utils/logger';
-import { HOME_CAROUSEL_GAP, HOME_HORIZONTAL_GUTTER } from './layout';
+import { HOME_HORIZONTAL_GUTTER } from './layout';
+import { recordCmsClick } from '@/lib/cms-clicks';
 
 const BANNER_HEIGHT = 240;
+const BANNER_RADIUS = 30;
 const BANNER_SIDE_PADDING = HOME_HORIZONTAL_GUTTER;
-const BANNER_GAP = HOME_CAROUSEL_GAP;
+const BANNER_GAP = BANNER_SIDE_PADDING;
 const BANNER_AUTO_SCROLL_MS = 4000;
 
 export type BannerItem = HomeBannerItem;
@@ -36,6 +38,7 @@ export default function PromoBanner({ banners: bannersOverride, onBannerPress }:
         refetch,
     } = useQuery({ ...homeQueryOptions.promoBanners(), enabled: !bannersOverride });
     const banners = bannersOverride ?? fetchedBanners;
+    const [imageRatios, setImageRatios] = useState<Record<string, number>>({});
     const currentIndexRef = useRef(1);
     const scrollViewRef = useRef<ScrollView | null>(null);
     const isUserInteractingRef = useRef(false);
@@ -71,10 +74,7 @@ export default function PromoBanner({ banners: bannersOverride, onBannerPress }:
         scrollViewRef.current?.scrollTo({ x: currentIndexRef.current * bannerScrollInterval, animated: false });
     }, [bannerScrollInterval, banners.length]);
 
-    const getBannerVendorId = (banner: BannerItem) => {
-        const vendorId = banner.vendorId?.trim() || banner.id?.trim();
-        return vendorId || null;
-    };
+    const getBannerVendorIds = (banner: BannerItem) => [...new Set((banner.vendorIds?.length ? banner.vendorIds : [banner.vendorId || banner.id || '']).map(id => id.trim()).filter(id => Boolean(id && banner.vendorNames?.[id])))];
 
     const handleScrollBegin = () => {
         isUserInteractingRef.current = true;
@@ -94,18 +94,19 @@ export default function PromoBanner({ banners: bannersOverride, onBannerPress }:
     };
 
     const handlePress = (banner: BannerItem) => {
-        const vendorId = getBannerVendorId(banner);
-
-        if (!vendorId) {
+        const vendorIds = getBannerVendorIds(banner);
+        if (!vendorIds.length) {
             logger.warn('Promo banner is missing a linked vendorId:', banner.bannerId);
             return;
         }
-
+        void recordCmsClick('banner', banner.bannerId).catch(error => logger.warn('Unable to record banner click:', error));
         triggerSubtleHaptic();
-        if (onBannerPress) {
-            onBannerPress({ ...banner, vendorId });
-        } else {
-            router.push({ pathname: '/realx/vendor/[id]', params: { id: vendorId } } as any);
+        const open = (vendorId: string) => onBannerPress ? onBannerPress({ ...banner, vendorId }) : router.push({ pathname: '/realx/vendor/[id]', params: { id: vendorId } } as any);
+        if (vendorIds.length === 1) open(vendorIds[0]);
+        else {
+            const options: AlertButton[] = vendorIds.map(vendorId => ({ text: banner.vendorNames?.[vendorId] || 'Vendor', onPress: () => open(vendorId) }));
+            options.push({ text: 'Cancel', style: 'cancel' });
+            Alert.alert('Choose a vendor', 'Select where you would like to go.', options);
         }
     };
 
@@ -153,6 +154,7 @@ export default function PromoBanner({ banners: bannersOverride, onBannerPress }:
             >
                 {loopItems.map((banner, index) => {
                     const imageUri = banner.images.mobile || banner.images.desktop;
+                    const imageRatio = imageUri ? imageRatios[imageUri] : undefined;
 
                     return (
                         <ScalePressable
@@ -169,8 +171,17 @@ export default function PromoBanner({ banners: bannersOverride, onBannerPress }:
                             <View style={styles.bannerPill}>
                                 <Image
                                     source={{ uri: imageUri }}
-                                    style={styles.bannerImage}
-                                    contentFit="cover"
+                                    style={[styles.bannerImage, imageRatio ? {
+                                        width: Math.min(bannerWidth, BANNER_HEIGHT * imageRatio),
+                                        height: Math.min(BANNER_HEIGHT, bannerWidth / imageRatio),
+                                    } : undefined]}
+                                    onLoad={({ source }) => {
+                                        if (imageUri && source.width > 0 && source.height > 0) {
+                                            const ratio = source.width / source.height;
+                                            setImageRatios(previous => previous[imageUri] === ratio ? previous : { ...previous, [imageUri]: ratio });
+                                        }
+                                    }}
+                                    contentFit="contain"
                                     cachePolicy="memory-disk"
                                     accessibilityLabel={banner.altText || 'Banner Image'}
                                 />
@@ -208,11 +219,15 @@ const styles = StyleSheet.create({
     bannerPill: {
         width: '100%',
         height: BANNER_HEIGHT,
-        borderRadius: 30,
+        alignItems: 'center',
+        justifyContent: 'center',
+        borderRadius: BANNER_RADIUS,
+        borderCurve: 'circular',
         overflow: 'hidden',
     },
     bannerImage: {
         width: '100%',
         height: '100%',
+        borderRadius: BANNER_RADIUS,
     },
 });

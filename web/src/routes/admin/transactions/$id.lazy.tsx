@@ -11,6 +11,10 @@ export const Route = createLazyFileRoute('/admin/transactions/$id')({
 
 function TransactionDetailsRoute() {
     const transaction = Route.useLoaderData()
+    const formatAmount = (value: number) => new Intl.NumberFormat('en-IN', {
+        style: 'currency',
+        currency: transaction.currency || 'QAR',
+    }).format(value)
 
     return (
         <div className="p-8 space-y-6 w-full max-w-[1200px] mx-auto">
@@ -93,7 +97,7 @@ function TransactionDetailsRoute() {
                                         {transaction.type === 'online_redemption' ? 'Transaction channel' : 'Original Total'}
                                     </span>
                                     <span className="font-medium text-gray-700">
-                                        {transaction.type === 'online_redemption' ? 'Online store' : transaction.totalAmount}
+                                        {transaction.type === 'online_redemption' ? 'Online store' : formatAmount(transaction.totalAmountNum || 0)}
                                     </span>
                                 </div>
 
@@ -105,21 +109,21 @@ function TransactionDetailsRoute() {
                                                 <span className="text-[10px] uppercase font-bold tracking-tight opacity-80">{transaction.discountType} Type</span>
                                             )}
                                         </div>
-                                        <span>-QAR {transaction.discountAmount}</span>
+                                        <span>-{formatAmount(transaction.discountAmount)}</span>
                                     </div>
                                 )}
 
                                 {transaction.redemptionCardAmount !== undefined && transaction.redemptionCardAmount > 0 && (
                                     <div className="flex justify-between items-center text-blue-600 font-medium">
                                         <span className="text-sm">Gift Card Benefit</span>
-                                        <span>-QAR {transaction.redemptionCardAmount}</span>
+                                        <span>-{formatAmount(transaction.redemptionCardAmount)}</span>
                                     </div>
                                 )}
 
                                 {transaction.remainingAmount !== undefined && transaction.remainingAmount > 0 && (
                                     <div className="flex justify-between items-center text-gray-600 font-medium">
                                         <span className="text-sm">Remaining Bal. (Redeemed)</span>
-                                        <span>QAR {transaction.remainingAmount}</span>
+                                        <span>{formatAmount(transaction.remainingAmount)}</span>
                                     </div>
                                 )}
 
@@ -154,7 +158,7 @@ function TransactionDetailsRoute() {
                                                 <span className="text-lg font-bold text-gray-900">Final Total</span>
                                             </div>
                                             <span className="text-2xl font-black text-brand-green">
-                                                QAR {transaction.finalAmount ?? transaction.totalAmount?.toString().replace(/[^\d.]/g, '')}
+                                                {formatAmount(transaction.finalAmount ?? transaction.totalAmountNum ?? 0)}
                                             </span>
                                         </div>
                                     </>
@@ -221,7 +225,7 @@ function TransactionDetailsRoute() {
                                         <div className="w-2.5 h-2.5 rounded-full bg-brand-green animate-pulse"></div>
                                         <p className="text-[10px] text-brand-green font-black uppercase tracking-widest">User Cashback Earned</p>
                                     </div>
-                                    <p className="font-black text-4xl text-brand-green">QAR {transaction.cashbackAmount || 0}</p>
+                                    <p className="font-black text-4xl text-brand-green">{formatAmount(transaction.cashbackAmount || 0)}</p>
                                 </div>
 
                                 <div className="bg-gradient-to-br from-amber-50 to-amber-100/30 p-5 rounded-2xl border border-amber-200/50 flex flex-col justify-center space-y-2 shadow-sm transition-transform hover:scale-[1.02]">
@@ -229,7 +233,7 @@ function TransactionDetailsRoute() {
                                         <div className="w-2.5 h-2.5 rounded-full bg-amber-500"></div>
                                         <p className="text-[10px] text-amber-700 font-black uppercase tracking-widest">Creator Referral Earned</p>
                                     </div>
-                                    <p className="font-black text-4xl text-amber-600">QAR {transaction.creatorCashbackAmount || 0}</p>
+                                    <p className="font-black text-4xl text-amber-600">{formatAmount(transaction.creatorCashbackAmount || 0)}</p>
                                 </div>
 
                                 {(transaction.creatorCode || transaction.creatorUid) && (

@@ -1,11 +1,12 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { useEffect, useState } from 'react'
-import { httpsCallable } from 'firebase/functions'
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query'
 import { Send, Loader2, Bell, ImageIcon } from 'lucide-react'
 import { toast } from 'sonner'
+import { fetchAllVendors } from '@/lib/vendor-directory'
+import type { Vendor } from '@/queries'
 import iconUrl from '@/assets/icon.png'
-import { functions } from '@/firebase/config'
+import { invokeAdminAction } from '@/lib/admin-actions'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
@@ -37,20 +38,25 @@ export const Route = createFileRoute('/admin/notifications/')({
 
 function NotificationsPage() {
     const queryClient = useQueryClient()
-    const defaultNotificationImageUrl = new URL(iconUrl, window.location.origin).toString()
+    const defaultNotificationImageUrl = window.location.protocol === 'https:'
+        ? new URL(iconUrl, window.location.origin).toString()
+        : ''
     const [form, setForm] = useState({
         title: '',
         body: '',
         imageUrl: defaultNotificationImageUrl,
         topic: 'all-users',
+        vendorId: '',
     })
+    const [vendors, setVendors] = useState<Vendor[]>([])
+    const [vendorSearch, setVendorSearch] = useState('')
+    useEffect(() => { void fetchAllVendors().then(setVendors).catch(error => { console.error('Failed to load notification vendors:', error); toast.error('Failed to load vendors') }) }, [])
     const [welcome, setWelcome] = useState<WelcomeSettings>({ id: true, enabled: true, title: 'Welcome to Kouponly', body: 'You’re using Kouponly pre-launch access. Thank you for being here. Please share Kouponly with your friends.', button_label: 'Visit Kouponly', button_url: 'https://kouponly.in' })
 
     const { data: notificationState, isLoading, error: historyError } = useQuery({
         queryKey: ['notifications'],
         queryFn: async () => {
-            const status = httpsCallable<unknown, { campaigns: NotificationRecord[]; registeredDevices: number }>(functions, 'notificationStatus')
-            return (await status({})).data
+            return invokeAdminAction<{ campaigns: NotificationRecord[]; registeredDevices: number }>('notificationStatus', {})
         },
         refetchInterval: 30_000,
     })
@@ -70,17 +76,15 @@ function NotificationsPage() {
 
     // Send notification mutation
     const sendMutation = useMutation({
-        mutationFn: async (data: { title: string; body: string; imageUrl?: string; topic: string }) => {
-            const sendNotification = httpsCallable(functions, 'sendNotification')
-            const result = await sendNotification(data)
-            return result.data as {
+        mutationFn: async (data: { title: string; body: string; imageUrl?: string; topic: string; vendorId?: string }) => {
+            return invokeAdminAction<{
                 success: boolean
                 campaignId: string
                 status: string
                 sentCount: number
                 failedCount: number
                 errors: string[]
-            }
+            }>('sendNotification', data)
         },
         onSuccess: (result) => {
             queryClient.invalidateQueries({ queryKey: ['notifications'] })
@@ -90,7 +94,7 @@ function NotificationsPage() {
             }
             toast.success(`Accepted for ${result.sentCount} device(s). Delivery confirmation is pending.`)
             if (result.failedCount) toast.warning(`${result.failedCount} device(s) failed: ${result.errors.join('; ')}`)
-            setForm({ title: '', body: '', imageUrl: defaultNotificationImageUrl, topic: 'all-users' })
+            setForm({ title: '', body: '', imageUrl: defaultNotificationImageUrl, topic: 'all-users', vendorId: '' })
         },
         onError: (error) => {
             toast.error('Failed to send notification: ' + (error instanceof Error ? error.message : 'Unknown error'))
@@ -102,10 +106,11 @@ function NotificationsPage() {
             toast.error('Title and body are required')
             return
         }
-        const payload: { title: string; body: string; imageUrl?: string; topic: string } = {
+        const payload: { title: string; body: string; imageUrl?: string; topic: string; vendorId?: string } = {
             title: form.title.trim(),
             body: form.body.trim(),
             topic: form.topic,
+            ...(form.vendorId ? { vendorId: form.vendorId } : {}),
         }
         if (form.imageUrl.trim()) {
             payload.imageUrl = form.imageUrl.trim()
@@ -171,6 +176,15 @@ function NotificationsPage() {
                             <Label>Target Audience</Label>
                             <Input value="All Users" disabled />
                         </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="notification-vendor-search">Link to vendor (optional)</Label>
+                            <Input id="notification-vendor-search" value={vendorSearch} onChange={event => setVendorSearch(event.target.value)} placeholder="Search vendors by name" disabled={sendMutation.isPending} />
+                            <select aria-label="Link notification to vendor" value={form.vendorId} onChange={event => setForm(current => ({ ...current, vendorId: event.target.value }))} className="h-10 w-full rounded-md border bg-background px-3" disabled={sendMutation.isPending}>
+                                <option value="">No vendor destination</option>
+                                {vendors.filter(vendor => (vendor.name || '').toLowerCase().includes(vendorSearch.trim().toLowerCase())).slice(0, 50).map(vendor => <option key={vendor.id} value={vendor.id}>{vendor.name || 'Unnamed vendor'}</option>)}
+                            </select>
+                            {form.vendorId && <p className="text-sm text-muted-foreground">Opens: {vendors.find(vendor => vendor.id === form.vendorId)?.name || 'Selected vendor'}</p>}
+                        </div>
 
                         <Button
                             className="bg-primary hover:bg-primary/90 text-white gap-2"
@@ -222,6 +236,7 @@ function NotificationsPage() {
                                     <p className="text-xs text-muted-foreground line-clamp-3">
                                         {form.body || 'Notification body text will appear here'}
                                     </p>
+                                    {form.vendorId && <p className="mt-1 text-xs font-medium">Opens {vendors.find(vendor => vendor.id === form.vendorId)?.name || 'selected vendor'}</p>}
                                 </div>
                             </div>
                         </div>

@@ -4,7 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { useEffect } from 'react';
-import { ActivityIndicator, StyleProp, StyleSheet, View, ViewStyle } from 'react-native';
+import { ActivityIndicator, Linking, StyleProp, StyleSheet, View, ViewStyle } from 'react-native';
 
 import { Colors } from '../../constants/Colors';
 import { Typography } from '../../constants/Typography';
@@ -16,6 +16,8 @@ import {
     type HomeFeaturedBannerItem,
 } from '../../utils/homeQueries';
 import { logger } from '../../utils/logger';
+import { safeWebUrl } from '@/lib/vendor-links';
+import { recordCmsClick } from '@/lib/cms-clicks';
 import AppText from '../AppText';
 import {
     HOME_COMPACT_BANNER_HEIGHT,
@@ -58,9 +60,11 @@ export default function FeaturedBanner({ item, style }: FeaturedBannerProps) {
 
         triggerSubtleHaptic();
 
-        if (currentItem.vendorId?.trim()) {
-            router.push({ pathname: '/realx/vendor/[id]', params: { id: currentItem.vendorId.trim() } } as any);
-        }
+        void recordCmsClick('featuredBrandShowcase', currentItem.id).catch(error => logger.warn('Unable to record showcase click:', error)).finally(() => {
+            const url = safeWebUrl(currentItem.orderUrl);
+            if (url) void Linking.openURL(url).catch(error => logger.warn('Unable to open showcase link:', error));
+            else if (currentItem.vendorId?.trim()) router.push({ pathname: '/realx/vendor/[id]', params: { id: currentItem.vendorId.trim() } } as any);
+        });
     };
 
     if (isCmsLoading) {
@@ -77,7 +81,7 @@ export default function FeaturedBanner({ item, style }: FeaturedBannerProps) {
 
     const title = currentItem.title?.trim();
     const ctaText = currentItem.ctaText?.trim();
-    const imageUrl = currentItem.imageUrl || '';
+    const imageUrl = currentItem.imageUrl || currentItem.heroImageUrl || '';
     const imagePositionY = Math.min(100, Math.max(0, currentItem.imagePositionY ?? 50));
     const accessibilityTitle = title || ctaText || 'Featured partner';
 

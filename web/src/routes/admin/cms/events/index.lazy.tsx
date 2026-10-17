@@ -11,24 +11,14 @@ import {
     Trash2,
     Upload,
 } from 'lucide-react'
-import {
-    Timestamp,
-    collection,
-    deleteDoc,
-    doc,
-    getDocs,
-    orderBy,
-    query,
-    setDoc,
-} from 'firebase/firestore'
-import { ref, deleteObject } from 'firebase/storage'
-import { db, storage } from '@/firebase/config'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { toast } from 'sonner'
-import { uploadImage } from '@/lib/upload'
+import { deletePublicMedia, uploadImage } from '@/lib/upload'
+import { supabase } from '@/lib/supabase'
+import { saveCmsDocument } from '@/lib/admin-cms'
 import { cn } from '@/lib/utils'
 import type { StudentEvent } from '@/types/events'
 import { logAdminRead } from '@/lib/admin-read-logging'
@@ -59,8 +49,6 @@ function toDateTimeInput(value: StudentEvent['startsAt']) {
         date = value
     } else if (typeof value === 'string') {
         date = new Date(value)
-    } else if (typeof value?.toDate === 'function') {
-        date = value.toDate()
     } else {
         return ''
     }
@@ -82,7 +70,7 @@ function normalizeEventForWrite(event: StudentEvent) {
         locationEn: event.locationEn?.trim() || '',
         imageUrl: event.imageUrl || '',
         link: event.link?.trim() || '',
-        startsAt: startsAtValue ? Timestamp.fromDate(new Date(startsAtValue)) : null,
+        startsAt: startsAtValue ? new Date(startsAtValue).toISOString() : null,
         isActive: event.isActive !== false,
         createdAt: event.createdAt || now,
         updatedAt: now,
@@ -107,15 +95,12 @@ function EventsManagement() {
     const fetchEvents = async () => {
         setLoading(true)
         try {
-            const eventsQuery = query(collection(db, 'events'), orderBy('startsAt'))
-            const snapshot = await getDocs(eventsQuery)
-            const nextEvents = snapshot.docs.map((docSnap) => ({
-                id: docSnap.id,
-                ...docSnap.data(),
-            })) as StudentEvent[]
+            const { data, error } = await supabase.from('couponly_events').select('*').order('starts_at')
+            if (error) throw error
+            const nextEvents = (data || []).map(row => ({ id: row.id, titleEn: row.title, descriptionEn: row.payload?.descriptionEn || '', locationEn: row.payload?.locationEn || '', imageUrl: row.image_path || '', link: row.payload?.link || '', startsAt: row.starts_at, isActive: row.published, createdAt: row.payload?.createdAt, updatedAt: row.payload?.updatedAt })) as StudentEvent[]
 
             logAdminRead('cms-events', {
-                docsFetched: snapshot.size,
+                docsFetched: nextEvents.length,
                 docsDisplayed: nextEvents.length,
                 note: 'expected-small-managed-list',
             })
@@ -136,8 +121,9 @@ function EventsManagement() {
 
         setSaving(true)
         try {
-            await Promise.all(normalized.map((event) => setDoc(doc(db, 'events', event.id), event)))
-            await setDoc(doc(db, 'cms', 'events'), {
+            const { error } = await supabase.from('couponly_events').upsert(normalized.map(event => ({ id: event.id, title: event.titleEn, starts_at: event.startsAt, image_path: event.imageUrl, published: event.isActive, payload: event })))
+            if (error) throw error
+            await saveCmsDocument('events', {
                 events: normalized,
                 lastUpdated: now,
             })
@@ -145,7 +131,7 @@ function EventsManagement() {
             if (pendingDeletions.length > 0) {
                 await Promise.all(pendingDeletions.map(async (url) => {
                     try {
-                        await deleteObject(ref(storage, url))
+                        await deletePublicMedia(url)
                     } catch (error) {
                         console.error('Failed to delete event image:', url, error)
                     }
@@ -176,17 +162,18 @@ function EventsManagement() {
         if (!confirm(`Delete ${event.titleEn || 'this event'}?`)) return
 
         try {
-            await deleteDoc(doc(db, 'events', event.id))
+            const { error } = await supabase.from('couponly_events').delete().eq('id', event.id)
+            if (error) throw error
             if (event.imageUrl) {
                 try {
-                    await deleteObject(ref(storage, event.imageUrl))
+                    await deletePublicMedia(event.imageUrl)
                 } catch (error) {
                     console.error('Failed to delete event image:', event.imageUrl, error)
                 }
             }
             const remainingEvents = events.filter((item) => item.id !== event.id)
             setEvents(remainingEvents)
-            await setDoc(doc(db, 'cms', 'events'), {
+            await saveCmsDocument('events', {
                 events: remainingEvents.map(normalizeEventForWrite),
                 lastUpdated: new Date().toISOString(),
             })
