@@ -3,6 +3,9 @@ node_modules/
 dist/
 coverage/
 *.log
+*.aab
+*.tsbuildinfo
+context.tmp
 .env.local
 .env.*.local
 expo-env.d.ts
