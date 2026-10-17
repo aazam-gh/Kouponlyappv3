@@ -101,6 +101,7 @@ const dark = {
 export type AppThemeColors = typeof light;
 
 export const Colors = {
+  cardOutline: 'rgba(100, 116, 106, 0.28)',
   border: softenedBlackBorder,
   light,
   dark,

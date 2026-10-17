@@ -1,4 +1,3 @@
-import { Colors as BorderPalette } from '@/constants/Colors';
 import { useMotionPreferences } from '@/lib/theme';
 import ScalePressable from '@/components/ScalePressable';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -70,7 +69,7 @@ export default function FilterTabs({ selectedFilter, onFilterChange, filters, so
     }));
 
     const inactiveColor = isDark ? theme.text : theme.icon;
-    const selectedColor = theme.onActionSolid;
+    const selectedColor = '#FFFFFF';
 
     return (
         <View
@@ -84,7 +83,6 @@ export default function FilterTabs({ selectedFilter, onFilterChange, filters, so
                 styles.container,
                 {
                     backgroundColor: isDark ? theme.cardMuted : theme.surface,
-                    borderColor: BorderPalette.border,
                 },
             ]}>
                 <Animated.View
@@ -93,7 +91,6 @@ export default function FilterTabs({ selectedFilter, onFilterChange, filters, so
                         {
                             width: tabWidth,
                             backgroundColor: Colors.brandGreen,
-                            borderColor: BorderPalette.border,
                         },
                         sliderStyle,
                     ]}
@@ -105,6 +102,8 @@ export default function FilterTabs({ selectedFilter, onFilterChange, filters, so
                     return (
                         <ScalePressable
                             key={filter.id}
+                            accessibilityRole="button"
+                            accessibilityState={{ selected: isSelected }}
                             style={[styles.filterButton, { width: tabWidth }]}
                             onPress={() => filter.id === 'all' && onSortModeChange ? setSortOpen(true) : onFilterChange(filter.id)}
                             activeOpacity={1}
@@ -148,7 +147,7 @@ const styles = StyleSheet.create({
     container: {
         flexDirection: 'row',
         borderRadius: 24,
-        borderWidth: 1,
+        borderWidth: 0,
         position: 'relative',
         height: 48,
         alignItems: 'center',
@@ -158,7 +157,7 @@ const styles = StyleSheet.create({
         position: 'absolute',
         height: '100%',
         borderRadius: 24,
-        borderWidth: 1,
+        borderWidth: 0,
     },
     filterButton: {
         flexDirection: 'row',

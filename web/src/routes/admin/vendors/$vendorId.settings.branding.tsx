@@ -106,7 +106,7 @@ function BrandingSettingsComponent() {
                 />
             )}
 
-            <div className="flex justify-end gap-4 pt-4 border-t">
+            <div className="sticky bottom-0 z-10 flex flex-wrap justify-end gap-3 border-t bg-background/95 py-4 backdrop-blur-sm">
                 <Button variant="outline" onClick={handleReset} disabled={uploadingImages}>Reset Changes</Button>
                 <Button
                     className="bg-brand-green hover:bg-brand-green/90 text-white gap-2"

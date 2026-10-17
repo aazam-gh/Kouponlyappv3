@@ -41,9 +41,9 @@ export async function benefitsRpc<T>(name: string, args?: Record<string, unknown
   if (data?.error) throw new Error(benefitsError(data.error));
   return data as T;
 }
-export async function redeemSubscriptionCoupon(offerId: string, roundId: string, mutationId: string, billAmount: number) {
-  return benefitsRpc<{ id: string; code?: string; status: 'success'; consumedAt: number; vendorName: string; offerTitle: string; billAmount: number; currency: string; benefits: AccountBenefits }>(
-    'kouponly_redeem_coupon', { p_offer_id: offerId, p_round_id: roundId, p_mutation_id: mutationId, p_bill_amount: billAmount });
+export async function redeemSubscriptionCoupon(offerId: string, roundId: string, mutationId: string, billAmount: number, freeItemAmount?: number) {
+  return benefitsRpc<{ id: string; code?: string; status: 'success'; consumedAt: number; vendorName: string; offerTitle: string; billAmount: number; estimatedSavings?: number; payableAmount?: number; currency: string; benefits: AccountBenefits }>(
+    'kouponly_redeem_coupon', { p_offer_id: offerId, p_round_id: roundId, p_mutation_id: mutationId, p_bill_amount: billAmount, ...(freeItemAmount !== undefined ? { p_free_item_amount: freeItemAmount } : {}) });
 }
 type Value = { benefits: AccountBenefits | null; loading: boolean; error: string; isAdmin: boolean; refresh: () => Promise<void>; claim: (code: string, mutationId: string) => Promise<ClaimResult> };
 const Context = createContext<Value | null>(null);

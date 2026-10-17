@@ -79,10 +79,10 @@ export default function NewDeals({ onVendorPress }: NewDealsProps) {
                     overlapLogo
                     offerCard
                     discountLabel={dealDiscountLabel(vendor)}
-                    borderColor={theme.border}
+                    borderColor={'rgba(100, 116, 106, 0.28)'}
                     titleCaseName
-                    contentStyle={{ minHeight: 48, justifyContent: 'flex-start', paddingTop: 8, paddingBottom: 0 }}
-                    style={{ width: cardWidth, borderWidth: 1, borderColor: theme.border, borderRadius: 20, overflow: 'hidden' }}
+                    contentStyle={{ minHeight: 48, justifyContent: 'center', paddingTop: 10, paddingBottom: 10 }}
+                    style={{ width: cardWidth, borderWidth: 1, borderColor: 'rgba(100, 116, 106, 0.28)', borderRadius: 20, overflow: 'hidden' }}
                     onPress={() => onVendorPress ? onVendorPress(vendor) : router.push({ pathname: '/realx/vendor/[id]', params: { id: vendor.vendorId } } as any)}
                 />
             ))}

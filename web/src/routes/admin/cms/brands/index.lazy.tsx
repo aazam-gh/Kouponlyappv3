@@ -176,21 +176,22 @@ function BrandsManagement() {
     if (loading) {
         return (
             <div className="flex items-center justify-center min-h-screen">
-                <Loader2 className="w-8 h-8 animate-spin text-purple-600" />
+                <Loader2 className="w-8 h-8 animate-spin text-primary" />
             </div>
         )
     }
 
     return (
-        <div className="p-8 space-y-8 max-w-6xl mx-auto font-sans bg-white min-h-screen">
+        <div className="p-4 sm:p-8 space-y-8 w-full max-w-6xl mx-auto font-sans bg-white min-h-screen">
             {/* Header */}
-            <div className="flex items-center justify-between">
+            <div className="sticky top-(--header-height) z-10 flex flex-wrap items-center justify-between gap-4 border-b bg-white py-3">
                 <div className="flex items-center gap-4">
                     <Button
                         variant="ghost"
                         size="icon"
                         className="rounded-xl bg-gray-100 hover:bg-gray-200"
                         onClick={() => navigate({ to: '/admin/cms' })}
+                        aria-label="Back to Home content"
                     >
                         <ArrowLeft className="h-5 w-5" />
                     </Button>
@@ -199,7 +200,7 @@ function BrandsManagement() {
                             <Type className="w-5 h-5" />
                         </div>
                         <div>
-                            <h1 className="text-2xl font-bold tracking-tight">Top Brands</h1>
+                            <h1 className="text-2xl font-bold tracking-tight">Brand logos</h1>
                             <p className="text-xs text-gray-500 font-medium">{brands.length} brand{brands.length !== 1 ? 's' : ''} configured</p>
                         </div>
                     </div>
@@ -214,7 +215,7 @@ function BrandsManagement() {
                     </div>
                     <Button
                         onClick={() => saveBrands(brands)}
-                        className="bg-purple-600 hover:bg-purple-700 text-white rounded-xl px-6 h-10 font-bold shadow-lg shadow-purple-200 transition-all"
+                        className="bg-primary hover:bg-primary/90 text-white rounded-xl px-6 h-10 font-bold shadow-sm transition-all"
                     >
                         Save All Changes
                     </Button>
@@ -222,13 +223,13 @@ function BrandsManagement() {
             </div>
 
             {/* Section Header */}
-            <div className="flex items-center justify-between border-b border-gray-100 pb-4">
+            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-gray-100 pb-4">
                 <h2 className="text-lg font-bold text-gray-900">Configure Brands</h2>
                 <Link
                     to="/admin/cms/brands/add"
                     className="inline-flex items-center justify-center bg-[#F8F9F9] hover:bg-gray-100 text-gray-900 border border-gray-100 rounded-xl px-5 h-10 gap-2 font-bold text-sm shadow-sm transition-all"
                 >
-                    <Plus className="w-4 h-4 text-purple-600" />
+                    <Plus className="w-4 h-4 text-primary" />
                     Add New Brand
                 </Link>
 
@@ -248,12 +249,14 @@ function BrandsManagement() {
                         <div className="flex flex-col md:flex-row items-center gap-6">
                             {/* Logo */}
                             <div className="w-24 h-24 flex-shrink-0">
-                                <div
+                                <button
+                                    type="button"
+                                    aria-label={`Change logo for brand ${index + 1}`}
                                     onClick={() => triggerUpload(brand.id)}
-                                    className="relative w-full h-full rounded-xl overflow-hidden bg-white border-2 border-dashed border-gray-200 cursor-pointer hover:border-purple-400 transition-all flex items-center justify-center group/img"
+                                    className="relative w-full h-full rounded-xl overflow-hidden bg-white border-2 border-dashed border-gray-200 cursor-pointer hover:border-primary transition-all flex items-center justify-center group/img"
                                 >
                                     {brand.logoUrl ? (
-                                        <img src={brand.logoUrl} className="w-full h-full object-contain p-2" loading="lazy" />
+                                        <img alt={`Brand ${index + 1} logo`} src={brand.logoUrl} className="w-full h-full object-contain p-2" loading="lazy" />
                                     ) : (
                                         <div className="flex flex-col items-center gap-1 opacity-30">
                                             <ImageIcon className="w-6 h-6" />
@@ -262,13 +265,13 @@ function BrandsManagement() {
                                     )}
                                     {uploading === brand.id && (
                                         <div className="absolute inset-0 bg-white/80 flex items-center justify-center">
-                                            <Loader2 className="w-5 h-5 animate-spin text-purple-600" />
+                                            <Loader2 className="w-5 h-5 animate-spin text-primary" />
                                         </div>
                                     )}
                                     <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/img:opacity-100 transition-opacity flex items-center justify-center">
                                         <span className="text-white text-[10px] font-bold px-2 py-1 bg-black/50 rounded-xl">Change</span>
                                     </div>
-                                </div>
+                                </button>
                             </div>
 
                             {/* Fields */}
@@ -276,9 +279,10 @@ function BrandsManagement() {
                                 <div className="space-y-1.5">
                                     <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider ml-1">Vendor</label>
                                     <select
+                                        aria-label={`Vendor for brand ${index + 1}`}
                                         value={brand.vendorId || ''}
                                         onChange={(e) => handleUpdateBrand(brand.id, { vendorId: e.target.value })}
-                                        className="w-full h-11 px-4 rounded-xl bg-white border border-gray-100 font-bold text-sm text-gray-900 outline-none focus:border-purple-400 transition-all shadow-sm appearance-none cursor-pointer"
+                                        className="w-full h-11 px-4 rounded-xl bg-white border border-gray-100 font-bold text-sm text-gray-900 outline-none focus:border-primary transition-all shadow-sm appearance-none cursor-pointer"
                                     >
                                         <option value="">— No linked vendor —</option>
                                         {vendors.map(v => (
@@ -289,10 +293,13 @@ function BrandsManagement() {
 
                                 <div className="flex items-center gap-3 pt-1">
                                     <button
+                                        role="switch"
+                                        aria-label={`Show brand ${index + 1}`}
+                                        aria-checked={brand.isActive}
                                         onClick={() => handleUpdateBrand(brand.id, { isActive: !brand.isActive })}
                                         className={cn(
                                             "w-11 h-6 rounded-full transition-colors relative shadow-inner",
-                                            brand.isActive ? "bg-purple-600" : "bg-gray-200"
+                                            brand.isActive ? "bg-primary" : "bg-gray-200"
                                         )}
                                     >
                                         <div className={cn(
@@ -318,8 +325,9 @@ function BrandsManagement() {
                                                 setBrands(updated)
                                             }
                                         }}
+                                        aria-label={`Move brand ${index + 1} up`}
                                         disabled={index === 0}
-                                        className="rounded-xl h-9 w-9 border-gray-100 bg-white text-gray-500 hover:text-purple-600 hover:bg-purple-50"
+                                        className="rounded-xl h-9 w-9 border-gray-100 bg-white text-gray-500 hover:text-primary hover:bg-accent"
                                     >
                                         <ArrowUp className="h-4 w-4" />
                                     </Button>
@@ -335,14 +343,16 @@ function BrandsManagement() {
                                                 setBrands(updated)
                                             }
                                         }}
+                                        aria-label={`Move brand ${index + 1} down`}
                                         disabled={index === brands.length - 1}
-                                        className="rounded-xl h-9 w-9 border-gray-100 bg-white text-gray-500 hover:text-purple-600 hover:bg-purple-50"
+                                        className="rounded-xl h-9 w-9 border-gray-100 bg-white text-gray-500 hover:text-primary hover:bg-accent"
                                     >
                                         <ArrowDown className="h-4 w-4" />
                                     </Button>
                                     <Button
                                         variant="outline"
                                         size="icon"
+                                        aria-label={`Delete brand ${index + 1}`}
                                         onClick={() => handleDeleteBrand(brand.id)}
                                         className="rounded-xl h-9 w-9 border-gray-100 text-red-400 hover:text-red-600 hover:bg-red-50"
                                     >
@@ -357,7 +367,7 @@ function BrandsManagement() {
                 {brands.length === 0 && (
                     <div className="py-20 bg-gray-50 rounded-2xl border-2 border-dashed border-gray-200 flex flex-col items-center justify-center text-gray-400 gap-3">
                         <div className="bg-white p-4 rounded-xl shadow-sm">
-                            <ImageIcon className="w-8 h-8 opacity-30 text-purple-600" />
+                            <ImageIcon className="w-8 h-8 opacity-30 text-primary" />
                         </div>
                         <p className="font-bold text-lg text-gray-500">No brands configured</p>
                         <p className="text-sm">Click 'Add New Brand' to start the list.</p>

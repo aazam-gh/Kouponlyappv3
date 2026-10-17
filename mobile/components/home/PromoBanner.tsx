@@ -3,7 +3,7 @@ import ScalePressable from '@/components/ScalePressable';
 import { useQuery } from '@tanstack/react-query';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef } from 'react';
 import { ActivityIndicator, Animated, ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
 import type { NativeScrollEvent, NativeSyntheticEvent } from 'react-native';
 
@@ -36,15 +36,14 @@ export default function PromoBanner({ banners: bannersOverride, onBannerPress }:
         refetch,
     } = useQuery({ ...homeQueryOptions.promoBanners(), enabled: !bannersOverride });
     const banners = bannersOverride ?? fetchedBanners;
-    const [currentIndex, setCurrentIndex] = useState(0);
-    const currentIndexRef = useRef(0);
+    const currentIndexRef = useRef(1);
     const scrollViewRef = useRef<ScrollView | null>(null);
     const isUserInteractingRef = useRef(false);
     const { width: screenWidth } = useWindowDimensions();
     const router = useRouter();
     const bannerWidth = screenWidth - (BANNER_SIDE_PADDING * 2);
     const bannerScrollInterval = bannerWidth + BANNER_GAP;
-    const maxIndex = Math.max(0, banners.length - 1);
+    const loopItems = banners.length > 1 ? [banners[banners.length - 1], ...banners, banners[0]] : banners;
     useEffect(() => {
         if (error) logger.error('Error fetching banners:', error);
     }, [error]);
@@ -59,26 +58,18 @@ export default function PromoBanner({ banners: bannersOverride, onBannerPress }:
                 return;
             }
 
-            const nextIndex = (currentIndexRef.current + 1) % banners.length;
+            const nextIndex = currentIndexRef.current + 1;
             currentIndexRef.current = nextIndex;
-            setCurrentIndex(nextIndex);
+            scrollViewRef.current?.scrollTo({ x: nextIndex * bannerScrollInterval, animated: true });
         }, BANNER_AUTO_SCROLL_MS);
 
         return () => clearInterval(interval);
-    }, [banners.length, reduceMotion]);
+    }, [banners.length, bannerScrollInterval, reduceMotion]);
 
     useEffect(() => {
-        if (!scrollViewRef.current || banners.length === 0) {
-            return;
-        }
-
-        const safeIndex = Math.min(currentIndex, maxIndex);
-
-        scrollViewRef.current.scrollTo({
-            x: safeIndex * bannerScrollInterval,
-            animated: !reduceMotion,
-        });
-    }, [bannerScrollInterval, banners.length, currentIndex, maxIndex, reduceMotion]);
+        currentIndexRef.current = banners.length > 1 ? 1 : 0;
+        scrollViewRef.current?.scrollTo({ x: currentIndexRef.current * bannerScrollInterval, animated: false });
+    }, [bannerScrollInterval, banners.length]);
 
     const getBannerVendorId = (banner: BannerItem) => {
         const vendorId = banner.vendorId?.trim() || banner.id?.trim();
@@ -95,13 +86,10 @@ export default function PromoBanner({ banners: bannersOverride, onBannerPress }:
             return;
         }
 
-        const nextIndex = Math.min(
-            maxIndex,
-            Math.max(0, Math.round(event.nativeEvent.contentOffset.x / bannerScrollInterval)),
-        );
-
-        currentIndexRef.current = nextIndex;
-        setCurrentIndex(nextIndex);
+        const index = Math.round(event.nativeEvent.contentOffset.x / bannerScrollInterval);
+        const next = index === 0 ? banners.length : index >= banners.length + 1 ? 1 : index;
+        currentIndexRef.current = next;
+        if (next !== index) scrollViewRef.current?.scrollTo({ x: next * bannerScrollInterval, animated: false });
         isUserInteractingRef.current = false;
     };
 
@@ -144,6 +132,7 @@ export default function PromoBanner({ banners: bannersOverride, onBannerPress }:
     return (
         <View style={styles.container}>
             <Animated.ScrollView
+                testID="home-promo-carousel"
                 ref={scrollViewRef}
                 horizontal
                 style={styles.carousel}
@@ -152,7 +141,9 @@ export default function PromoBanner({ banners: bannersOverride, onBannerPress }:
                 directionalLockEnabled
                 canCancelContentTouches
                 keyboardShouldPersistTaps="always"
-                decelerationRate="normal"
+                contentOffset={{ x: banners.length > 1 ? bannerScrollInterval : 0, y: 0 }}
+                snapToInterval={bannerScrollInterval}
+                decelerationRate="fast"
                 scrollEventThrottle={16}
                 onScrollBeginDrag={handleScrollBegin}
                 onMomentumScrollBegin={handleScrollBegin}
@@ -160,12 +151,12 @@ export default function PromoBanner({ banners: bannersOverride, onBannerPress }:
                 onMomentumScrollEnd={handleScrollEnd}
                 contentContainerStyle={styles.scrollContent}
             >
-                {banners.map((banner, index) => {
+                {loopItems.map((banner, index) => {
                     const imageUri = banner.images.mobile || banner.images.desktop;
 
                     return (
                         <ScalePressable
-                            key={banner.bannerId || banner.vendorId || banner.id || index}
+                            key={`${banner.bannerId || banner.vendorId || banner.id}-${index}`}
                             style={({ pressed }) => [
                                 styles.bannerColumn,
                                 { width: bannerWidth },

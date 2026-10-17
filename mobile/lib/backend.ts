@@ -1,3 +1,4 @@
+import { normalizeHomeSectionOrder } from './home-layout';
 import * as Crypto from 'expo-crypto';
 import type { KouponlyState, RedemptionMode } from '@/lib/store';
 import type { CloudCatalogue, PendingMutation, StorageAsset } from '@/lib/cloud.types';
@@ -84,7 +85,7 @@ export async function applyMutation(mutation: PendingMutation): Promise<void> {
 
 export async function fetchCloudCatalogue(): Promise<CloudCatalogue> {
   const client = getSupabase();
-  const [vendors, offers, locations, categories, subcategories, assignments, bannerDocument] = await Promise.all([
+  const [vendors, offers, locations, categories, subcategories, assignments, bannerDocument, layoutDocument] = await Promise.all([
     rows(client.from('realx_vendors').select('*').eq('status', 'Active').order('sort_order'), 'Vendor catalogue load'),
     rows(client.from('realx_offers').select('*').order('sort_order'), 'Vendor offer load'),
     rows(client.from('realx_vendor_locations').select('*').order('sort_order'), 'Vendor locations load'),
@@ -92,6 +93,7 @@ export async function fetchCloudCatalogue(): Promise<CloudCatalogue> {
     rows(client.from('realx_subcategories').select('*').order('sort_order'), 'Subcategories load'),
     rows(client.from('realx_vendor_subcategories').select('*'), 'Vendor subcategories load'),
     single<Row>(client.from('realx_cms_documents').select('payload').eq('id', 'banner').maybeSingle(), 'Hero banners load'),
+    single<Row>(client.from('realx_cms_documents').select('payload').eq('id', 'homeLayout').maybeSingle(), 'Home layout load'),
   ]);
   const projected = projectVendorCatalogue(vendors as MarketplaceVendorRow[], offers as MarketplaceOfferRow[], locations, { categories, subcategories, assignments });
   const featured = new Set(vendors.filter(vendor => vendor.featured).map(vendor => vendor.id));
@@ -108,6 +110,7 @@ export async function fetchCloudCatalogue(): Promise<CloudCatalogue> {
   });
   return {
     ...projected,
+    homeSectionOrder: normalizeHomeSectionOrder(layoutDocument?.payload?.sectionOrder),
     heroSlides: bannerSlides.length ? bannerSlides : projected.deals.filter(deal => featured.has(deal.vendorId)).map(deal => ({
       brand: deal.name, kicker: deal.category, title: deal.offer, copy: deal.description,
       cta: 'View offers', image: deal.image, logo: deal.logo, dealId: deal.id,
@@ -160,7 +163,7 @@ export async function deleteAccountCloud() {
 }
 
 type LocalProfile = {
-  full_name: string; email: string; city: string; mobile?: string; avatar_path?: string | null;
+  full_name: string; first_name?: string; last_name?: string; email: string; city: string; mobile?: string; avatar_path?: string | null;
   date_of_birth?: string | null; first_name_edit_used?: boolean; last_name_edit_used?: boolean;
   date_of_birth_edit_used?: boolean; mobile_edit_used?: boolean; avatar_edit_used?: boolean;
 };
@@ -173,8 +176,8 @@ export async function updateProfile(value: Partial<LocalProfile>): Promise<void>
   const personal: Record<string, string> = {};
   if (value.full_name !== undefined) {
     const [first_name = '', ...last] = value.full_name.trim().split(/\s+/);
-    personal.first_name = first_name;
-    personal.last_name = last.join(' ');
+    personal.first_name = value.first_name ?? first_name;
+    personal.last_name = value.last_name ?? last.join(' ');
   }
   if (value.date_of_birth !== undefined && value.date_of_birth) personal.date_of_birth = value.date_of_birth;
   if (value.mobile !== undefined) personal.mobile = value.mobile;
@@ -197,7 +200,11 @@ export async function fetchProfile(): Promise<LocalProfile | null> {
   const client = getSupabase();
   const { data: { user }, error: userError } = await client.auth.getUser();
   if (userError || !user) return null;
-  return single(client.from('profiles').select('full_name,email,city,mobile,avatar_path,date_of_birth,first_name_edit_used,last_name_edit_used,date_of_birth_edit_used,mobile_edit_used,avatar_edit_used').eq('user_id', user.id).maybeSingle(), 'Profile load') as Promise<LocalProfile | null>;
+  const [profile, student] = await Promise.all([
+    single(client.from('profiles').select('full_name,email,city,mobile,avatar_path,date_of_birth,first_name_edit_used,last_name_edit_used,date_of_birth_edit_used,mobile_edit_used,avatar_edit_used').eq('user_id', user.id).maybeSingle(), 'Profile load') as Promise<LocalProfile | null>,
+    single(client.from('couponly_students').select('first_name,last_name').eq('id', user.id).maybeSingle(), 'Student name load') as Promise<{ first_name: string; last_name: string } | null>,
+  ]);
+  return profile ? { ...profile, first_name: student?.first_name, last_name: student?.last_name } : null;
 }
 
 export async function updatePreferences(value: LocalPreferences): Promise<void> {

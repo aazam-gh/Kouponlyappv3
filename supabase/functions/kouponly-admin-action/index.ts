@@ -202,9 +202,14 @@ Deno.serve(async (request) => {
       }
       case "createVendorUser": {
         requireAdmin();
+        const categoryId=String(data.categoryId||"").trim();
+        if(!categoryId)fail("Select one active main category");
+        const {data:category,error:categoryError}=await service.from("couponly_categories").select("id").eq("id",categoryId).eq("active",true).maybeSingle();
+        if(categoryError)throw categoryError;
+        if(!category)fail("Select one active main category");
         const created=await createAuthUser(service,data);
         const name=String(data.name||"").trim();
-        const vendor={id:created.id,user_id:created.id,name,status:"Active",vendor_type:"in_store",payload:{name,email:created.email,contact:created.email,vendorType:"in_store",xcard:false,offers:[],locations:[]}};
+        const vendor={id:created.id,user_id:created.id,name,category_id:categoryId,status:"Active",vendor_type:"in_store",payload:{name,email:created.email,contact:created.email,vendorType:"in_store",xcard:false,offers:[],locations:[]}};
         try{
           const {error:vendorError}=await service.from("couponly_vendors").insert(vendor);
           if(vendorError)throw vendorError;

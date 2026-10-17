@@ -155,14 +155,31 @@ export function BrandingSettings({
 
     return (
         <div className="space-y-8">
+            <details className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600">
+                <summary className="cursor-pointer font-semibold text-slate-800">Image size guidelines</summary>
+                <ul className="mt-3 grid gap-2 sm:grid-cols-2">
+                    <li><strong>Logo:</strong> 512 × 512 px, square; transparent PNG or WebP works best.</li>
+                    <li><strong>Cover:</strong> 1200 × 800 px, landscape (3:2); keep key content centered because the app crops to fit.</li>
+                    <li><strong>Gallery:</strong> 1200 × 800 px, landscape (3:2); up to {VENDOR_GALLERY_LIMIT} menu, product, or venue photos.</li>
+                    <li><strong>Home banner:</strong> 1080 × 460 px; link it to this vendor in Home content → Partner banners. The phone layout crops the sides, so keep text and logos near the center.</li>
+                    <li><strong>Featured showcase:</strong> hero 1200 × 750 px (16:10); brand tiles 512 × 512 px, square. Set these in Home content → Featured showcase.</li>
+                </ul>
+                <p className="mt-3 text-xs text-slate-500">Uploads are converted to WebP. These are recommended source sizes, not upload restrictions.</p>
+            </details>
+            <section className="space-y-3 rounded-xl border bg-white p-5">
+                <div><Label htmlFor="vendor-card-label" className="text-base font-semibold">Vendor card label</Label><p className="mt-1 text-sm text-muted-foreground">One optional badge for this vendor in New Deals, Trending, search and category listings. It stays the same across all offers.</p></div>
+                <Input id="vendor-card-label" maxLength={32} value={formData.cardLabel || ''} onChange={event => setFormData({ ...formData, cardLabel: event.target.value })} placeholder="e.g. Student favourite" className="max-w-md" />
+                <p className="text-xs text-muted-foreground">Leave blank to hide the badge. Offer savings are managed separately in Offers.</p>
+            </section>
             <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-2"><Label htmlFor="vendor-phone">Phone</Label><Input id="vendor-phone" type="tel" inputMode="tel" autoComplete="tel" placeholder="+974 5000 0000" value={formData.phoneNumber || ''} onChange={e => setFormData({ ...formData, phoneNumber: e.target.value })} /></div>
                 <div className="space-y-2"><Label htmlFor="vendor-website">Website</Label><Input id="vendor-website" placeholder="https://example.com" value={formData.website || ''} onChange={e => setFormData({ ...formData, website: e.target.value })} /></div>
                 <div className="space-y-2"><Label htmlFor="vendor-instagram">Instagram</Label><Input id="vendor-instagram" placeholder="https://instagram.com/yourrestaurant" value={formData.instagramUrl || ''} onChange={e => setFormData({ ...formData, instagramUrl: e.target.value })} /></div>
             </div>
-            <div className="flex gap-8">
+            <div className="flex flex-wrap gap-8">
                 <div className="space-y-4">
-                    <Label className="text-base font-semibold text-slate-700">Profile Picture</Label>
+                    <Label className="text-base font-semibold text-slate-700">Vendor logo</Label>
+                    <p className="-mt-3 text-xs text-slate-500">512 × 512 px · used for this vendor and all its offers</p>
                     <div className="relative w-36 h-36">
                         <input
                             type="file"
@@ -198,6 +215,7 @@ export function BrandingSettings({
 
                 <div className="space-y-4 flex-1">
                     <Label className="text-base font-semibold text-slate-700">Cover Image</Label>
+                    <p className="-mt-3 text-xs text-slate-500">1200 × 800 px · landscape; centered content avoids app cropping</p>
                     <div className="relative h-36 w-full max-w-2xl group">
                         <input
                             type="file"
@@ -248,7 +266,7 @@ export function BrandingSettings({
                     <div>
                         <Label className="text-base font-semibold text-slate-700">Vendor Gallery</Label>
                         <p className="mt-1 text-sm text-slate-500">
-                            Menu, food, and ambience photos. {(formData.galleryImages || []).length}/{VENDOR_GALLERY_LIMIT} images.
+                            1200 × 800 px each · landscape photos of menus, products, and the venue. {(formData.galleryImages || []).length}/{VENDOR_GALLERY_LIMIT} images.
                         </p>
                     </div>
                     <input

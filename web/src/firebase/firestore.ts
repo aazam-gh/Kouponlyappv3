@@ -183,6 +183,8 @@ function serialize(ref: Ref, input: any) {
         throw new Error('Vendor ordering must use non-negative whole numbers.');
       }
     }
+    if (value.cardLabel != null && (typeof value.cardLabel !== 'string' || value.cardLabel.trim().length > 32)) throw new Error('Vendor card label must be 32 characters or fewer.');
+    row.card_label=typeof value.cardLabel === 'string' ? value.cardLabel.trim() || null : null;
     row.id=value.vendorId||value.id||row.id;row.user_id=value.userId||value.uid||null;row.name=value.name||value.businessName||'';row.status=value.status||'Pending';row.vendor_type='in_store';row.category_id=value.categoryId||null;row.catalogue_deal_id=value.catalogueDealId||null;
     row.website=value.website||null;row.logo_path=value.profilePicture??value.logoPath??null;row.description=value.shortDescription??value.description??null;row.locations=value.locations||[];row.settings=value.settings||{};
     row.place_label=value.place||value.placeLabel||null;row.image_url=value.imageUrl||value.profilePicture||null;row.cover_image_url=value.coverImage||null;row.color=value.color||null;row.rating=value.rating??null;row.distance_km=value.distanceKm??null;

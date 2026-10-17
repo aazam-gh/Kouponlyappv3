@@ -19,7 +19,8 @@ compiled._compile(ts.transpileModule(fs.readFileSync(source,'utf8'),{compilerOpt
   assert.equal(current.shortDescription,'old-description');
   assert.equal(current.isTrending,true);
   assert.deepEqual(current.subcategory,['Rice']);
-  await updateDoc(reference,{profilePicture:'new-logo',shortDescription:'new-description',isTrending:false,coverImage:'new-cover',galleryImages:['gallery-photo']});
+  await updateDoc(reference,{profilePicture:'new-logo',cardLabel:' Student favourite ',shortDescription:'new-description',isTrending:false,coverImage:'new-cover',galleryImages:['gallery-photo']});
+  assert.equal(written.card_label,'Student favourite');
   assert.equal(written.logo_path,'new-logo');
   assert.equal(written.description,'new-description');
   assert.equal(written.featured,false);
@@ -30,7 +31,8 @@ compiled._compile(ts.transpileModule(fs.readFileSync(source,'utf8'),{compilerOpt
   row.trend=0;
   row.featured=true;
   assert.equal((await getDoc(reference)).data().isTrending,false);
-  await updateDoc(reference,{shortDescription:'',profilePicture:'',isTrending:true});
+  await updateDoc(reference,{shortDescription:'',profilePicture:'',cardLabel:'',isTrending:true});
+  assert.equal(written.card_label,null);
   assert.equal(written.description,'');
   assert.equal(written.logo_path,'');
   assert.equal(written.featured,true);
@@ -41,5 +43,6 @@ compiled._compile(ts.transpileModule(fs.readFileSync(source,'utf8'),{compilerOpt
   assert.equal(written.sort_order,3);
   await assert.rejects(updateDoc(reference,{newest:-1}),/non-negative whole numbers/);
   await assert.rejects(updateDoc(reference,{sortOrder:0.5}),/non-negative whole numbers/);
+  await assert.rejects(updateDoc(reference,{cardLabel:'x'.repeat(33)}),/32 characters/);
   console.log('Admin canonical branding, empty-field clearing, taxonomy, and offer preservation: passed');
 })().catch(error=>{console.error(error.message);process.exitCode=1;});

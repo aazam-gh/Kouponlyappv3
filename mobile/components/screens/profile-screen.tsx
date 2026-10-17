@@ -47,7 +47,7 @@ export default function ProfileScreen() {
   const tabBarScrollVisibility = useTabBarScrollVisibility();
   const savedAmount = userData?.savings ?? 0;
   const savingsAmount = Number.isInteger(savedAmount) ? savedAmount.toFixed(0) : savedAmount.toFixed(2);
-  const formattedSavingsAmount = savingsAmount;
+  const formattedSavingsAmount = `₹${savingsAmount}`;
   const androidTopInset = Platform.OS === 'android' ? NativeStatusBar.currentHeight ?? 24 : 0;
   const handleLogout = () => {
     Alert.alert(
@@ -161,16 +161,6 @@ export default function ProfileScreen() {
       >
         <View style={styles.savingsCard}>
           <View style={[styles.profileSavingsRow, isRTL && styles.profileSavingsRowRTL]}>
-              <View style={[styles.savingsDetails, { borderColor: BorderPalette.border }, isRTL && styles.savingsDetailsRTL]}>
-                <View style={[styles.savingsInline, isRTL && styles.savingsInlineRTL]}>
-                  <ResponsiveText style={[styles.savingsValueText, { color: theme.brandText }]} minimumFontScale={0.7}>
-                    {formattedSavingsAmount}
-                  </ResponsiveText>
-                  <ResponsiveText style={[styles.savingsValueText, { color: theme.text }]} minimumFontScale={0.7}>
-                    {t('savings_saved_label')}
-                  </ResponsiveText>
-                </View>
-            </View>
             <ScalePressable
               style={styles.profileAvatarButton}
               onPress={() => router.push('/profile-details')}
@@ -188,6 +178,16 @@ export default function ProfileScreen() {
                 size={56}
               />
             </ScalePressable>
+            <View style={[styles.savingsDetails, { borderColor: BorderPalette.border }, isRTL && styles.savingsDetailsRTL]}>
+              <View style={[styles.savingsInline, isRTL && styles.savingsInlineRTL]}>
+                <ResponsiveText style={[styles.savingsValueText, { color: theme.brandText }]} minimumFontScale={0.7}>
+                  {formattedSavingsAmount}
+                </ResponsiveText>
+                <ResponsiveText style={[styles.savingsValueText, { color: theme.text }]} minimumFontScale={0.7}>
+                  {t('savings_saved_label')}
+                </ResponsiveText>
+              </View>
+            </View>
           </View>
         </View>
 

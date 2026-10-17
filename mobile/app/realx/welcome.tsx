@@ -15,66 +15,10 @@ import { Typography } from '../../constants/Typography';
 import { Colors } from '../../constants/Colors';
 import ProfileSprites from '@/components/profile/ProfileSprites';
 
-const backgroundIcons: {
-    name: keyof typeof Ionicons.glyphMap;
-    top: number;
-    left: number;
-    size: number;
-    rotation: string;
-}[] = [
-    // Food and drinks
-    { name: 'fast-food-outline', top: 0.04, left: 0.07, size: 30, rotation: '-14deg' },
-    { name: 'pizza-outline', top: 0.08, left: 0.80, size: 34, rotation: '18deg' },
-    { name: 'cafe-outline', top: 0.14, left: 0.48, size: 26, rotation: '-8deg' },
-    { name: 'ice-cream-outline', top: 0.19, left: 0.12, size: 29, rotation: '10deg' },
-    { name: 'wine-outline', top: 0.22, left: 0.87, size: 30, rotation: '10deg' },
-    { name: 'restaurant-outline', top: 0.28, left: 0.62, size: 30, rotation: '-12deg' },
-    { name: 'beer-outline', top: 0.33, left: 0.05, size: 29, rotation: '8deg' },
-
-    // Entertainment and activities
-    { name: 'musical-notes-outline', top: 0.30, left: 0.25, size: 32, rotation: '-8deg' },
-    { name: 'headset-outline', top: 0.37, left: 0.78, size: 31, rotation: '-12deg' },
-    { name: 'ticket-outline', top: 0.40, left: 0.55, size: 34, rotation: '-16deg' },
-    { name: 'game-controller-outline', top: 0.45, left: 0.87, size: 32, rotation: '8deg' },
-    { name: 'film-outline', top: 0.48, left: 0.04, size: 30, rotation: '15deg' },
-    { name: 'camera-outline', top: 0.53, left: 0.70, size: 28, rotation: '10deg' },
-    { name: 'color-palette-outline', top: 0.58, left: 0.27, size: 30, rotation: '-12deg' },
-    { name: 'football-outline', top: 0.62, left: 0.89, size: 29, rotation: '15deg' },
-    { name: 'basketball-outline', top: 0.68, left: 0.06, size: 29, rotation: '-15deg' },
-    { name: 'tennisball-outline', top: 0.72, left: 0.51, size: 28, rotation: '8deg' },
-    { name: 'bicycle-outline', top: 0.77, left: 0.80, size: 32, rotation: '-10deg' },
-
-    // Campus, deals, and everyday life
-    { name: 'book-outline', top: 0.52, left: 0.13, size: 30, rotation: '-10deg' },
-    { name: 'school-outline', top: 0.58, left: 0.82, size: 34, rotation: '8deg' },
-    { name: 'library-outline', top: 0.65, left: 0.38, size: 32, rotation: '-6deg' },
-    { name: 'laptop-outline', top: 0.69, left: 0.68, size: 30, rotation: '8deg' },
-    { name: 'glasses-outline', top: 0.75, left: 0.20, size: 30, rotation: '-8deg' },
-    { name: 'pricetag-outline', top: 0.80, left: 0.89, size: 29, rotation: '18deg' },
-    { name: 'cash-outline', top: 0.83, left: 0.08, size: 30, rotation: '-10deg' },
-    { name: 'card-outline', top: 0.86, left: 0.56, size: 29, rotation: '10deg' },
-    { name: 'cart-outline', top: 0.90, left: 0.26, size: 32, rotation: '-10deg' },
-    { name: 'gift-outline', top: 0.93, left: 0.72, size: 30, rotation: '8deg' },
-    { name: 'bag-handle-outline', top: 0.96, left: 0.90, size: 28, rotation: '12deg' },
-    { name: 'shirt-outline', top: 0.96, left: 0.03, size: 28, rotation: '-12deg' },
-
-    // Community and discovery
-    { name: 'people-outline', top: 0.10, left: 0.27, size: 30, rotation: '8deg' },
-    { name: 'heart-outline', top: 0.17, left: 0.68, size: 28, rotation: '-10deg' },
-    { name: 'chatbubble-outline', top: 0.25, left: 0.33, size: 29, rotation: '8deg' },
-    { name: 'location-outline', top: 0.35, left: 0.17, size: 29, rotation: '-8deg' },
-    { name: 'map-outline', top: 0.43, left: 0.36, size: 30, rotation: '12deg' },
-    { name: 'sparkles-outline', top: 0.48, left: 0.58, size: 29, rotation: '-10deg' },
-    { name: 'leaf-outline', top: 0.56, left: 0.57, size: 30, rotation: '14deg' },
-    { name: 'flower-outline', top: 0.64, left: 0.19, size: 29, rotation: '-10deg' },
-    { name: 'rocket-outline', top: 0.74, left: 0.41, size: 29, rotation: '-12deg' },
-    { name: 'planet-outline', top: 0.87, left: 0.38, size: 32, rotation: '12deg' },
-];
-
 export default function OnboardingScreen() {
     const router = useRouter();
     const params = useLocalSearchParams<{ intent?: string; prefillEmail?: string }>();
-    const { width, height } = useWindowDimensions();
+    const { width } = useWindowDimensions();
     const { t } = useTranslation();
     const { theme } = useAppTheme();
     const { isRTL } = useAppLocale();
@@ -101,23 +45,6 @@ export default function OnboardingScreen() {
         <View style={styles.container}>
                 <StatusBar style="dark" />
             <ProfileSprites />
-            {backgroundIcons.map((icon, index) => (
-                <View
-                    key={`${icon.name}-${index}`}
-                    pointerEvents="none"
-                    style={[
-                        styles.backgroundIcon,
-                        {
-                            top: height * icon.top,
-                            left: width * icon.left,
-                            transform: [{ rotate: icon.rotation }],
-                        },
-                    ]}
-                >
-                    <Ionicons name={icon.name} size={icon.size} color={Colors.brandGreen} />
-                </View>
-            ))}
-
                 <SafeAreaView style={styles.safeArea}>
                     <View style={styles.content}>
                         <View style={styles.header}>
@@ -183,11 +110,6 @@ const styles = StyleSheet.create({
     },
     safeArea: {
         flex: 1,
-    },
-    backgroundIcon: {
-        position: 'absolute',
-        opacity: 0.24,
-        zIndex: 0,
     },
     content: {
         flex: 1,

@@ -9,20 +9,15 @@ export interface EmbeddedOffer {
     id?: string
     titleEn: string
     descriptionEn?: string
-    discountType: 'percentage' | 'amount' | 'buy1get1'
+    discountType: 'percentage' | 'amount' | 'buy1get1' | 'free' | 'combo' | 'fixed_price'
     discountValue?: number
     currency?: string
     savingLabel?: string
-    cardLabel?: string
-    cardLabels?: string[]
     offerValue?: number
-    startsAt?: string
-    endsAt?: string
     termsEn?: string
     redemptionInstructionsEn?: string
     active?: boolean
     redemptionMode?: 'inStore'
-    imageUrl?: string
 }
 
 export interface VendorLocation {
@@ -46,6 +41,7 @@ export interface Vendor {
     status?: 'Active' | 'Inactive'
     contact?: string
     profilePicture?: string
+    cardLabel?: string | null
     coverImage?: string
     galleryImages?: string[]
     rating?: number
@@ -82,7 +78,7 @@ export interface Transaction {
     type: string
     totalAmount: number
     discountAmount: number
-    discountType: 'percentage' | 'amount' | 'buy1get1'
+    discountType: 'percentage' | 'amount' | 'buy1get1' | 'free' | 'combo' | 'fixed_price'
     discountValue?: number
     finalAmount: number
     status: 'completed' | 'pending' | 'failed'

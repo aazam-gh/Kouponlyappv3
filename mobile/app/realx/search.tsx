@@ -45,7 +45,7 @@ export default function RealXSearchScreen() {
   const tryAnother = () => { triggerSubtleHaptic(); setInput(''); setCommitted(''); requestAnimationFrame(() => inputRef.current?.focus()); };
   const openVendor = (item: Deal) => router.push({ pathname: '/realx/vendor/[id]', params: { id: String(item.vendorId || item.id) } } as any);
   const renderCard = ({ item }: { item: Deal }) => <View style={s.cardWrap}>
-    <RestaurantCard id={String(item.vendorId || item.id)} name={item.name} imageUri={item.image} logoUri={item.logo} distance={distanceByVendor.get(String(item.vendorId || item.id))?.label} xcardEnabled={item.xcard} badgeLabel={item.cardLabels?.[0] ?? item.cardLabel} distanceOnImage overlapLogo onPress={() => openVendor(item)} />
+    <RestaurantCard id={String(item.vendorId || item.id)} name={item.name} imageUri={item.image} logoUri={item.logo} distance={distanceByVendor.get(String(item.vendorId || item.id))?.label} xcardEnabled={item.xcard} badgeLabel={item.cardLabel} distanceOnImage overlapLogo onPress={() => openVendor(item)} />
   </View>;
   const noMatches = !!committed && results.length === 0;
 

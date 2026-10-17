@@ -73,7 +73,7 @@ Deno.serve(async(request)=>{
         const ip=request.headers.get("x-forwarded-for")?.split(",")[0]?.trim()||"unknown";
         const {data:requestId,error}=await service.rpc("kouponly_submit_student_request",{
           p_id:data.id||null,p_kind:data.kind||null,p_name:data.name||"",p_domain:data.domain||"",p_email:data.email||"",
-          p_contact:data.contact||"",p_phone:data.phone||"",p_user_id:user?.id||null,
+          p_location:data.location||"",p_contact:data.contact||"",p_phone:data.phone||"",p_user_id:user?.id||null,
           p_origin_hash:await sha256("community:"+ip),
         });
         if(error)throw Object.assign(new Error(error.message),{status:400});

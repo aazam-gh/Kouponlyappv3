@@ -14,10 +14,10 @@ const FEATURED_BANNER_TOP_SPACING = 16;
 const DISPLAY_DURATION_MS = 4000;
 
 export default function HomeBannerCarousel() {
-    const [currentIndex, setCurrentIndex] = useState(0);
     const { reduceMotion } = useMotionPreferences();
     const [autoplayResetKey, setAutoplayResetKey] = useState(0);
-    const currentIndexRef = useRef(0);
+    const currentIndexRef = useRef(1);
+    const isUserInteractingRef = useRef(false);
     const scrollViewRef = useRef<ScrollView | null>(null);
     const { width: screenWidth } = useWindowDimensions();
     const {
@@ -32,53 +32,39 @@ export default function HomeBannerCarousel() {
             : [];
 
     const slideCount = featuredBanners.length;
+    const loopItems = featuredBanners.length > 1 ? [featuredBanners[featuredBanners.length - 1], ...featuredBanners, featuredBanners[0]] : featuredBanners;
     useEffect(() => {
         if (reduceMotion || slideCount <= 1) {
             return;
         }
 
         const timeout = setTimeout(() => {
-            const nextIndex = (currentIndexRef.current + 1) % slideCount;
+            if (isUserInteractingRef.current) return;
+            const nextIndex = currentIndexRef.current + 1;
             currentIndexRef.current = nextIndex;
-            setCurrentIndex(nextIndex);
+            scrollViewRef.current?.scrollTo({ x: nextIndex * screenWidth, animated: true });
             setAutoplayResetKey((key) => key + 1);
         }, DISPLAY_DURATION_MS);
 
         return () => clearTimeout(timeout);
-    }, [autoplayResetKey, slideCount, reduceMotion]);
+    }, [autoplayResetKey, slideCount, reduceMotion, screenWidth]);
 
     useEffect(() => {
-        if (slideCount === 0) {
-            currentIndexRef.current = 0;
-            setCurrentIndex(0);
-            return;
-        }
-
-        const nextIndex = Math.min(currentIndexRef.current, slideCount - 1);
-        currentIndexRef.current = nextIndex;
-        setCurrentIndex(nextIndex);
-    }, [slideCount]);
-
-    useEffect(() => {
-        if (!scrollViewRef.current || slideCount === 0) {
-            return;
-        }
-
-        scrollViewRef.current.scrollTo({
-            x: currentIndex * screenWidth,
-            animated: !reduceMotion,
-        });
-    }, [currentIndex, screenWidth, slideCount, reduceMotion]);
+        currentIndexRef.current = slideCount > 1 ? 1 : 0;
+        scrollViewRef.current?.scrollTo({ x: currentIndexRef.current * screenWidth, animated: false });
+    }, [screenWidth, slideCount]);
 
     const handleScrollEnd = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
-        const nextIndex = Math.min(
-            slideCount - 1,
-            Math.max(0, Math.round(event.nativeEvent.contentOffset.x / screenWidth)),
-        );
+        const index = Math.round(event.nativeEvent.contentOffset.x / screenWidth);
+        const next = slideCount > 1 ? index === 0 ? slideCount : index >= slideCount + 1 ? 1 : index : 0;
+        currentIndexRef.current = next;
+        if (next !== index) scrollViewRef.current?.scrollTo({ x: next * screenWidth, animated: false });
+        isUserInteractingRef.current = false;
+        setAutoplayResetKey(key => key + 1);
+    };
 
-        currentIndexRef.current = nextIndex;
-        setCurrentIndex(nextIndex);
-        setAutoplayResetKey((key) => key + 1);
+    const handleScrollBegin = () => {
+        isUserInteractingRef.current = true;
     };
 
     if (featuredBanners.length === 0) {
@@ -88,9 +74,11 @@ export default function HomeBannerCarousel() {
     return (
         <View style={styles.container} accessibilityLabel="Home promotional banners">
             <ScrollView
+                testID="home-featured-carousel"
                 ref={scrollViewRef}
                 horizontal
-                pagingEnabled
+                contentOffset={{ x: slideCount > 1 ? screenWidth : 0, y: 0 }}
+                snapToInterval={screenWidth}
                 bounces={false}
                 showsHorizontalScrollIndicator={false}
                 nestedScrollEnabled
@@ -98,13 +86,15 @@ export default function HomeBannerCarousel() {
                 canCancelContentTouches
                 decelerationRate="fast"
                 scrollEventThrottle={16}
+                onScrollBeginDrag={handleScrollBegin}
+                onMomentumScrollBegin={handleScrollBegin}
                 onScrollEndDrag={handleScrollEnd}
                 onMomentumScrollEnd={handleScrollEnd}
                 style={styles.stage}
             >
-                {featuredBanners.map((featuredBanner) => (
+                {loopItems.map((featuredBanner, index) => (
                     <View
-                        key={featuredBanner.id}
+                        key={`${featuredBanner.id}-${index}`}
                         style={{ width: screenWidth }}
                     >
                         <FeaturedBanner

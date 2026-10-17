@@ -16,16 +16,28 @@ describe('normalized vendor catalogue projection',()=>{
     expect(projectVendorCatalogue([vendor],[offers[0],{...offers[1],starts_at:'2099-01-01'},{...offers[2],active:false}],locations,taxonomy).deals).toEqual([]);
     expect(projectVendorCatalogue([vendor],[],locations,taxonomy).deals).toEqual([]);
   });
-  it('uses uploaded cover photos and each selected offer logo',()=>{
+  it('uses uploaded cover photos and the vendor logo for every offer',()=>{
     const uploaded={...vendor,logo_path:'https://example.test/logo.png',cover_image_url:'https://example.test/banner.jpg',description:'Business description',gallery_images:['https://example.test/gallery.jpg'],payload:{logo:'https://example.test/stale-logo.png'}};
     const result=projectVendorCatalogue([uploaded],offers,locations,taxonomy);
     expect(result.deals[0]).toMatchObject({image:'https://example.test/banner.jpg',logo:'https://example.test/logo.png',description:'Business description'});
     expect(result.deals[0].galleryImages).toEqual(['https://example.test/gallery.jpg']);
-    expect(result.deals[0].offers?.[1].logo).toBe('https://example.test/sweets.jpg');
+    expect(result.deals[0].offers?.every(offer => offer.logo === uploaded.logo_path)).toBe(true);
+    expect(result.offers.every(offer => offer.logo === uploaded.logo_path)).toBe(true);
     const fallback=projectVendorCatalogue([uploaded],[{...offers[1],image_url:''}],locations,taxonomy);
     expect(fallback.deals[0].image).toBe('https://example.test/banner.jpg');
     expect(fallback.offers[0].image).toBe('https://example.test/banner.jpg');
     expect(fallback.deals[0].logo).toBe('https://example.test/logo.png');
+  });
+  it('uses one vendor badge regardless of offer order, availability or legacy labels',()=>{
+    const branded={...vendor,card_label:'Student favourite'};
+    const legacyOffers=offers.map(offer=>({...offer,payload:{cardLabels:['Offer badge','Extra badge']}}));
+    const label=(rows: typeof legacyOffers)=>projectVendorCatalogue([branded],rows,locations,taxonomy).deals[0].cardLabel;
+    expect(label(legacyOffers)).toBe('Student favourite');
+    expect(label(legacyOffers.map(offer=>({...offer,sort_order:-offer.sort_order})))).toBe('Student favourite');
+    expect(label(legacyOffers.map(offer=>offer.id==='rice-offer'?{...offer,active:false}:offer))).toBe('Student favourite');
+    const cleared=projectVendorCatalogue([{...branded,card_label:null}],legacyOffers,locations,taxonomy);
+    expect(cleared.deals[0].cardLabel).toBeUndefined();
+    expect(cleared.deals[0].offers?.[0]).not.toHaveProperty('cardLabels');
   });
   it('uses only the vendor website for an online offer',()=>{
     const result=projectVendorCatalogue([{...vendor,website:'https://example.test/store'}],[{...offers[1],redemption_mode:'online'}],locations,taxonomy);

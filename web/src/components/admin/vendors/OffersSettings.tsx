@@ -6,7 +6,6 @@ import { db } from '@/firebase/config'
 import { doc, updateDoc } from 'firebase/firestore'
 import { toast } from 'sonner'
 import { useState, useEffect } from 'react'
-import { format } from 'date-fns'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Checkbox } from '@/components/ui/checkbox'
@@ -14,7 +13,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { vendorQueryOptions, type EmbeddedOffer } from '@/queries'
 import { refreshVendorList } from '@/lib/vendorList'
-import { uploadImage } from '@/lib/upload'
+import { Link } from '@tanstack/react-router'
 
 export function generateSearchTokens({
     name,
@@ -58,24 +57,10 @@ interface OffersSettingsProps {
     vendorId: string | undefined
 }
 
-function makeVendorLogo(name: string): File {
-    const initials = name.trim().split(/\s+/).map(word => word[0]).join('').slice(0, 2).toUpperCase()
-    const safeName = name.replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&apos;' })[char]!)
-    const color = ({
-        Starbucks: '#00704a', KFC: '#e4002b', 'Burger King': '#d62300', 'Kochi Marriott': '#8a714c',
-        IndiGo: '#172b85', 'PVR Cinemas': '#ed1c24', Wonderla: '#e61e2b', Croma: '#6d2077',
-        Chicking: '#e31837', Cinepolis: '#003da5', Nykaa: '#fc2779', Decathlon: '#0072ce', Westside: '#302c2b',
-    } as Record<string, string>)[name] || '#17894f'
-    const fontSize = name.length > 13 ? 28 : name.length > 9 ? 34 : 40
-    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512"><rect width="512" height="512" rx="72" fill="${color}"/><circle cx="256" cy="190" r="91" fill="#fff"/><text x="256" y="217" text-anchor="middle" font-family="Outfit,sans-serif" font-size="76" font-weight="700" fill="${color}">${initials}</text><text x="256" y="353" text-anchor="middle" font-family="Outfit,sans-serif" font-size="${fontSize}" font-weight="700" fill="#fff">${safeName}</text><text x="256" y="407" text-anchor="middle" font-family="Outfit,sans-serif" font-size="17" letter-spacing="5" fill="#ffffffcc">KOUPONLY OFFER</text></svg>`
-    return new File([svg], `${name.toLowerCase().replace(/[^a-z0-9]+/g, '-')}-offer-logo.svg`, { type: 'image/svg+xml' })
-}
-
 export function OffersSettings({ vendorId }: OffersSettingsProps) {
     const queryClient = useQueryClient()
     const [isCreating, setIsCreating] = useState(false)
     const [editingIndex, setEditingIndex] = useState<number | null>(null)
-    const [isUploadingImage, setIsUploadingImage] = useState(false)
 
     // Form State
     const [formData, setFormData] = useState<Partial<EmbeddedOffer>>({
@@ -105,7 +90,7 @@ export function OffersSettings({ vendorId }: OffersSettingsProps) {
             const offers = vendor?.offers || []
             if (offers[editingIndex]) {
                 const offer = offers[editingIndex]
-                setFormData({ ...offer, cardLabels: offer.cardLabels ?? (offer.cardLabel ? [offer.cardLabel] : []) })
+                setFormData({ ...offer })
             }
         }
     }, [editingIndex])
@@ -117,23 +102,18 @@ export function OffersSettings({ vendorId }: OffersSettingsProps) {
         mutationFn: async (data: Partial<EmbeddedOffer>) => {
             if (!vendorId) throw new Error("Vendor ID is missing")
             if (!data.titleEn?.trim()) throw new Error('Enter an offer title before saving.')
-            if (data.startsAt && data.endsAt && Date.parse(data.endsAt) <= Date.parse(data.startsAt)) {
-                throw new Error('The end date must be later than the start date.')
-            }
+            if (!['buy1get1', 'free'].includes(data.discountType || '') && (!Number.isFinite(data.discountValue) || data.discountValue! < 0 || (data.discountType === 'percentage' && data.discountValue! > 100))) throw new Error('Enter a valid discount or exclusive price. Percentages must be between 0 and 100.');
 
             const offer: EmbeddedOffer = {
+                ...(editingIndex !== null ? offers[editingIndex] : {}),
                 id: data.id,
                 titleEn: data.titleEn.trim(),
                 descriptionEn: data.descriptionEn,
-                imageUrl: data.imageUrl,
                 discountType: data.discountType || 'percentage',
-                ...(data.discountType !== 'buy1get1' && { discountValue: data.discountValue || 0 }),
+                discountValue: data.discountType === 'buy1get1' ? undefined : data.discountValue || 0,
                 currency: data.currency || 'INR',
                 savingLabel: data.savingLabel?.trim(),
-                cardLabels: (data.cardLabels ?? (data.cardLabel ? [data.cardLabel] : [])).map(label => label.trim()).filter(Boolean).slice(0, 3),
                 offerValue: data.offerValue ?? data.discountValue ?? 0,
-                startsAt: data.startsAt || undefined,
-                endsAt: data.endsAt || undefined,
                 termsEn: data.termsEn?.trim(),
                 redemptionInstructionsEn: data.redemptionInstructionsEn?.trim(),
                 active: data.active ?? true,
@@ -205,10 +185,11 @@ export function OffersSettings({ vendorId }: OffersSettingsProps) {
         return (
             <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-300">
                 {/* Header */}
-                <div className="flex items-center justify-between mb-8">
+                <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
                     <div className="flex items-center gap-4">
                         <Button
                             variant="ghost"
+                            aria-label="Back to offers"
                             size="icon"
                             className="rounded-full h-10 w-10 border hover:bg-slate-100"
                             onClick={() => {
@@ -218,10 +199,7 @@ export function OffersSettings({ vendorId }: OffersSettingsProps) {
                         >
                             <ArrowLeft className="h-5 w-5" />
                         </Button>
-                        <h1 className="text-3xl font-bold tracking-tight">
-                            <span className="text-slate-400 font-medium">{vendor?.name || 'Vendor'} / </span>
-                            {isCreating ? 'Create new Offer' : 'Manage Offer'}
-                        </h1>
+                        <h2 className="text-xl font-semibold">{isCreating ? 'Create offer' : 'Edit offer'}</h2>
                     </div>
                     {editingIndex !== null && (
                         <Button
@@ -275,64 +253,8 @@ export function OffersSettings({ vendorId }: OffersSettingsProps) {
 
                     {/* Right Column: Discount Settings */}
                     <div className="space-y-6">
-                        <div className="space-y-3">
-                            <Label htmlFor="offerImage">Offer logo</Label>
-                            <div className="flex items-center gap-4">
-                                {formData.imageUrl ? (
-                                    <img src={formData.imageUrl} alt="Offer logo preview" className="h-16 w-16 rounded-xl border bg-white object-contain p-1" />
-                                ) : (
-                                    <div className="h-16 w-16 rounded-xl border bg-white text-xs text-slate-400 flex items-center justify-center">No logo</div>
-                                )}
-                                <div>
-                                    <div className="flex flex-wrap items-center gap-2">
-                                        <Input
-                                            id="offerImage"
-                                            type="file"
-                                            accept="image/*"
-                                            disabled={isUploadingImage}
-                                            className="max-w-xs bg-white"
-                                            onChange={async e => {
-                                                const file = e.target.files?.[0]
-                                                if (!file || !vendorId) return
-                                                setIsUploadingImage(true)
-                                                try {
-                                                    const path = `vendors/${vendorId}/offers/offer-${editingIndex ?? 'new'}`
-                                                    const imageUrl = await uploadImage(path, file, { maxWidth: 512, quality: 0.9 })
-                                                    setFormData(prev => ({ ...prev, imageUrl }))
-                                                    toast.success('Offer logo uploaded')
-                                                } catch (error) {
-                                                    toast.error(error instanceof Error ? error.message : 'Failed to upload offer logo')
-                                                } finally {
-                                                    setIsUploadingImage(false)
-                                                    e.target.value = ''
-                                                }
-                                            }}
-                                        />
-                                        <Button
-                                            type="button"
-                                            variant="outline"
-                                            disabled={isUploadingImage}
-                                            onClick={async () => {
-                                                if (!vendorId) return
-                                                setIsUploadingImage(true)
-                                                try {
-                                                    const path = `vendors/${vendorId}/offers/offer-${editingIndex ?? 'new'}`
-                                                    const imageUrl = await uploadImage(path, makeVendorLogo(vendor?.name || 'Vendor'), { maxWidth: 512, quality: 0.9 })
-                                                    setFormData(prev => ({ ...prev, imageUrl }))
-                                                    toast.success('Vendor offer logo created and uploaded')
-                                                } catch (error) {
-                                                    toast.error(error instanceof Error ? error.message : 'Failed to create offer logo')
-                                                } finally {
-                                                    setIsUploadingImage(false)
-                                                }
-                                            }}
-                                        >
-                                            Create vendor logo
-                                        </Button>
-                                    </div>
-                                    {isUploadingImage && <p className="mt-1 text-xs text-slate-500">Uploading logo…</p>}
-                                </div>
-                            </div>
+                        <div className="rounded-xl border bg-secondary/50 p-4 text-sm text-muted-foreground">
+                            All offers use this vendor’s logo and card label. <Link to="/admin/vendors/$vendorId/settings/branding" params={{ vendorId: vendorId! }} className="font-medium text-primary underline underline-offset-4">Edit vendor profile</Link>
                         </div>
                         {/* Discount Settings */}
                         <div className="grid grid-cols-2 gap-4 p-5 bg-slate-50 rounded-2xl border border-slate-100">
@@ -349,12 +271,15 @@ export function OffersSettings({ vendorId }: OffersSettingsProps) {
                                         <SelectItem value="percentage">Percentage (%)</SelectItem>
                                         <SelectItem value="amount">Fixed Amount</SelectItem>
                                         <SelectItem value="buy1get1">Buy 1 Get 1</SelectItem>
+                                        <SelectItem value="free">Free eligible item</SelectItem>
+                                        <SelectItem value="combo">Combo price</SelectItem>
+                                        <SelectItem value="fixed_price">Kouponly Exclusive Price</SelectItem>
                                     </SelectContent>
                                 </Select>
                             </div>
-                            {formData.discountType !== 'buy1get1' && (
+                            {!['buy1get1', 'free'].includes(formData.discountType || '') && (
                                 <div className="space-y-2">
-                                    <Label>Discount Value</Label>
+                                    <Label>{['combo', 'fixed_price'].includes(formData.discountType || '') ? 'Kouponly Exclusive Price' : 'Discount Value'}</Label>
                                     <Input
                                         type="number"
                                         value={formData.discountValue}
@@ -366,29 +291,6 @@ export function OffersSettings({ vendorId }: OffersSettingsProps) {
                             )}
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div className="space-y-3 md:col-span-2">
-                                <div>
-                                    <Label>Vendor card labels (up to 3)</Label>
-                                    <p className="mt-1 text-xs text-slate-500">Shown stacked on the Home screen’s All Vendors cards. The first label also appears in New Deals, Trending, search, and category listings.</p>
-                                </div>
-                                {[0, 1, 2].map(index => (
-                                    <div key={index} className="space-y-2">
-                                        <Label htmlFor={`cardLabel-${index}`}>Label {index + 1}</Label>
-                                        <Input
-                                            id={`cardLabel-${index}`}
-                                            value={formData.cardLabels?.[index] || ''}
-                                            onChange={e => setFormData(prev => {
-                                                const cardLabels = [...(prev.cardLabels ?? [])]
-                                                cardLabels[index] = e.target.value
-                                                return { ...prev, cardLabels }
-                                            })}
-                                            placeholder={index === 0 ? 'e.g. Student Combos' : 'Optional'}
-                                            maxLength={32}
-                                            className="bg-slate-50 h-11"
-                                        />
-                                    </div>
-                                ))}
-                            </div>
                             <div className="space-y-2">
                                 <Label htmlFor="savingLabel">Mobile offer label</Label>
                                 <Input id="savingLabel" value={formData.savingLabel || ''} onChange={e => setFormData(prev => ({ ...prev, savingLabel: e.target.value }))} placeholder="Save up to ₹480" className="bg-slate-50 h-11" />
@@ -396,14 +298,6 @@ export function OffersSettings({ vendorId }: OffersSettingsProps) {
                             <div className="space-y-2">
                                 <Label htmlFor="offerValue">Saving value (₹)</Label>
                                 <Input id="offerValue" type="number" min="0" value={formData.offerValue ?? ''} onChange={e => setFormData(prev => ({ ...prev, offerValue: e.target.value === '' ? undefined : Number(e.target.value) }))} placeholder="480" className="bg-slate-50 h-11" />
-                            </div>
-                            <div className="space-y-2">
-                                <Label htmlFor="startsAt">Starts (your local time)</Label>
-                                <Input id="startsAt" type="datetime-local" value={formData.startsAt ? format(new Date(formData.startsAt), "yyyy-MM-dd'T'HH:mm") : ''} onChange={e => setFormData(prev => ({ ...prev, startsAt: e.target.value ? new Date(e.target.value).toISOString() : undefined }))} className="bg-slate-50 h-11" />
-                            </div>
-                            <div className="space-y-2">
-                                <Label htmlFor="endsAt">Ends (your local time)</Label>
-                                <Input id="endsAt" type="datetime-local" value={formData.endsAt ? format(new Date(formData.endsAt), "yyyy-MM-dd'T'HH:mm") : ''} onChange={e => setFormData(prev => ({ ...prev, endsAt: e.target.value ? new Date(e.target.value).toISOString() : undefined }))} className="bg-slate-50 h-11" />
                             </div>
                             <div className="space-y-2 md:col-span-2">
                                 <Label htmlFor="termsEn">Terms and conditions</Label>
@@ -422,7 +316,7 @@ export function OffersSettings({ vendorId }: OffersSettingsProps) {
                 </div>
 
                 {/* Footer Actions */}
-                <div className="flex justify-end gap-4 pt-8 border-t border-slate-100">
+                <div className="sticky bottom-0 z-10 flex flex-wrap justify-end gap-3 bg-white/95 py-4 pt-8 border-t border-slate-100">
                     <Button
                         variant="ghost"
                         onClick={() => {
@@ -437,10 +331,7 @@ export function OffersSettings({ vendorId }: OffersSettingsProps) {
                     <Button
                         onClick={() => saveMutation.mutate(formData)}
                         disabled={saveMutation.isPending}
-                        className={`rounded-full px-8 h-12 text-base font-bold text-white shadow-lg flex items-center gap-2 ${editingIndex !== null
-                            ? 'bg-[#8B5CF6] hover:bg-[#8B5CF6]/90 shadow-purple-200'
-                            : 'bg-brand-green hover:bg-brand-green/90 shadow-green-200'
-                            }`}
+                        className="rounded-xl bg-primary px-6 text-white hover:bg-primary/90"
                     >
                         {saveMutation.isPending ? (
                             <Loader2 className="w-5 h-5 animate-spin" />
@@ -459,75 +350,22 @@ export function OffersSettings({ vendorId }: OffersSettingsProps) {
     }
 
     return (
-        <div className="flex flex-wrap gap-8 items-start py-4 overflow-x-auto pb-8">
-            {offers?.map((offer, index) => (
-                <div key={index} className="flex items-center gap-6">
-                    <Card className="flex flex-col w-[340px] h-[300px] rounded-[32px] border-none shadow-[0_8px_30px_rgb(0,0,0,0.06)] bg-white p-0 overflow-hidden group transition-all duration-300 hover:shadow-[0_20px_40px_rgba(24,184,82,0.1)] relative">
-                        {/* Discount Badge */}
-                        <div className="h-[80px] w-full bg-slate-50 relative flex items-center justify-center">
-                            <span className="text-2xl font-bold text-brand-green">
-                                {offer.discountType === 'buy1get1' ? 'Buy 1 Get 1' : offer.discountType === 'percentage' ? `${offer.discountValue}% OFF` : `${offer.currency === 'INR' ? '₹' : '$'}${offer.discountValue} OFF`}
-                            </span>
-                        </div>
-
-                        <div className="flex flex-col p-6 flex-grow">
-                            <h3 className="text-xl font-bold text-[#1a1a1a] leading-tight mb-2 line-clamp-1">
-                                {offer.titleEn || 'Untitled Offer'}
-                            </h3>
-                            <p className="text-slate-500 text-sm leading-relaxed line-clamp-2 mb-4">
-                                {offer.descriptionEn || 'No description provided.'}
-                            </p>
-
-                            <Button
-                                className="mt-auto w-full bg-brand-green hover:bg-brand-green/90 text-white rounded-xl py-5 text-[15px] font-bold gap-2 shadow-[0_4px_15px_rgba(24,184,82,0.3)] transition-all active:scale-[0.98]"
-                                onClick={() => setEditingIndex(index)}
-                            >
-                                <SquarePen className="h-4 w-4" />
-                                Manage Offer
-                            </Button>
-                        </div>
-                    </Card>
-
-                    {/* Visual Separator Handles */}
-                    <div className="flex gap-[4px] h-full items-center">
-                        <div className="w-[3px] h-10 bg-slate-200 rounded-full" />
-                        <div className="w-[3px] h-10 bg-slate-200 rounded-full" />
-                    </div>
-                </div>
-            ))}
-
-            <Card className="flex flex-col items-center justify-between w-[340px] h-[300px] rounded-[32px] border-2 border-[#3b82f6] border-solid bg-white p-8 text-center transition-all shadow-[0_8px_30px_rgb(0,0,0,0.06)]">
-                <div className="flex-grow flex flex-col items-center justify-center gap-6">
-                    <div className="relative">
-                        <div className="relative h-24 w-24 flex items-center justify-center">
-                            {/* Custom Wavy Badge Icon */}
-                            <svg viewBox="0 0 100 100" className="w-full h-full">
-                                <path
-                                    d="M50 5 L58 12 Q65 18 73 18 L82 18 Q90 18 90 27 L90 36 Q90 43 96 50 L96 50 Q90 57 90 64 L90 73 Q90 82 82 82 L73 82 Q65 82 58 88 L50 95 L42 88 Q35 82 27 82 L18 82 Q10 82 10 73 L10 64 Q10 57 4 50 L4 50 Q10 43 10 36 L10 27 Q10 18 18 18 L27 18 Q35 18 42 12 Z"
-                                    fill="none"
-                                    stroke="#18B852"
-                                    strokeWidth="5"
-                                    strokeLinejoin="round"
-                                />
-                                <path d="M40 60 L60 40 M42 42 A3 3 0 1 1 42 41.9 M58 58 A3 3 0 1 1 58 57.9" stroke="#18B852" strokeWidth="6" strokeLinecap="round" />
-                            </svg>
-                            <Plus className="absolute top-0 right-0 h-8 w-8 text-brand-green stroke-[3]" />
-                            <Plus className="absolute bottom-1 left-2 h-6 w-6 text-brand-green stroke-[3]" />
-                        </div>
-                    </div>
-
-                    <p className="text-slate-500 font-bold text-[15px] max-w-[200px] leading-relaxed italic">
-                        Get more discounts for students Yallah Admin!
-                    </p>
-                </div>
-
-                <Button
-                    onClick={() => setIsCreating(true)}
-                    className="w-full bg-brand-green hover:bg-brand-green/90 text-white rounded-[20px] py-7 text-[16px] font-bold shadow-[0_4px_15px_rgba(124,58,237,0.3)] transition-all active:scale-[0.98]"
-                >
-                    Create New Offer
-                </Button>
-            </Card>
-        </div>
+        <section className="space-y-5 py-2">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+                <div><h2 className="text-lg font-semibold">Offers</h2><p className="mt-1 text-sm text-muted-foreground">{offers.length} offers. Vendor branding applies to every offer.</p></div>
+                <Button onClick={() => setIsCreating(true)}><Plus className="size-4" />Create offer</Button>
+            </div>
+            <div className="grid gap-4 md:grid-cols-2">
+                {offers.map((offer, index) => <Card key={offer.id || index} className="gap-0 rounded-xl border bg-white p-5 shadow-sm">
+                    <div className="mb-4 flex items-center justify-between gap-3"><span className="rounded-lg bg-emerald-50 px-3 py-1.5 text-sm font-semibold text-primary">
+                        {offer.discountType === 'free' ? 'Free eligible item' : ['combo', 'fixed_price'].includes(offer.discountType) ? `Exclusive price ${offer.currency === 'INR' ? '₹' : offer.currency} ${offer.discountValue}` : offer.discountType === 'buy1get1' ? 'Buy 1 Get 1' : offer.discountType === 'percentage' ? `${offer.discountValue}% off` : `${offer.currency === 'INR' ? '₹' : offer.currency || 'INR'} ${offer.discountValue} off`}
+                    </span><span className="text-xs text-muted-foreground">{offer.active === false ? 'Inactive' : 'Active'}</span></div>
+                    <h3 className="text-lg font-semibold">{offer.titleEn || 'Untitled offer'}</h3>
+                    <p className="mt-2 flex-1 text-sm leading-relaxed text-muted-foreground">{offer.descriptionEn || 'No description provided.'}</p>
+                    <Button variant="outline" className="mt-5 w-fit" onClick={() => setEditingIndex(index)}><SquarePen className="size-4" />Edit offer</Button>
+                </Card>)}
+            </div>
+            {!offers.length && <div className="rounded-xl border border-dashed p-8 text-center text-sm text-muted-foreground">No offers yet. Create an offer to make this vendor available in the app.</div>}
+        </section>
     )
 }

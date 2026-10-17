@@ -12,7 +12,6 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AdminIndexRouteImport } from './routes/admin/index'
-import { Route as AdminMembershipRouteImport } from './routes/admin/membership'
 import { Route as AdminDashboardRouteImport } from './routes/admin/dashboard'
 import { Route as vendorPanelVendorRouteImport } from './routes/(vendor-panel)/_vendor'
 import { Route as authUnauthorizedRouteImport } from './routes/(auth)/unauthorized'
@@ -32,11 +31,13 @@ import { Route as vendorPanelVendorContactUsRouteImport } from './routes/(vendor
 import { Route as vendorPanelVendorCampaignRouteImport } from './routes/(vendor-panel)/_vendor.campaign'
 import { Route as AdminCmsUniversitiesIndexRouteImport } from './routes/admin/cms/universities/index'
 import { Route as AdminCmsTrendingOfferBannersIndexRouteImport } from './routes/admin/cms/trending-offer-banners/index'
+import { Route as AdminCmsHomeLayoutIndexRouteImport } from './routes/admin/cms/home-layout/index'
 import { Route as AdminCmsFeaturedBrandShowcaseIndexRouteImport } from './routes/admin/cms/featured-brand-showcase/index'
 import { Route as AdminCmsEventsIndexRouteImport } from './routes/admin/cms/events/index'
 import { Route as AdminCmsCategoriesIndexRouteImport } from './routes/admin/cms/categories/index'
 import { Route as AdminCmsBrandsIndexRouteImport } from './routes/admin/cms/brands/index'
 import { Route as AdminCmsBannersIndexRouteImport } from './routes/admin/cms/banners/index'
+import { Route as AdminCmsAppLaunchPosterIndexRouteImport } from './routes/admin/cms/app-launch-poster/index'
 import { Route as vendorPanelVendorTransactionHistoryIndexRouteImport } from './routes/(vendor-panel)/_vendor.transaction-history.index'
 import { Route as AdminVendorsVendorIdSettingsRouteImport } from './routes/admin/vendors/$vendorId.settings'
 import { Route as AdminStudentsStudentIdSettingsRouteImport } from './routes/admin/students/$studentId.settings'
@@ -64,11 +65,6 @@ const IndexRoute = IndexRouteImport.update({
 const AdminIndexRoute = AdminIndexRouteImport.update({
   id: '/',
   path: '/',
-  getParentRoute: () => AdminRoute,
-} as any)
-const AdminMembershipRoute = AdminMembershipRouteImport.update({
-  id: '/membership',
-  path: '/membership',
   getParentRoute: () => AdminRoute,
 } as any)
 const AdminDashboardRoute = AdminDashboardRouteImport.update({
@@ -189,6 +185,11 @@ const AdminCmsTrendingOfferBannersIndexRoute =
       (d) => d.Route,
     ),
   )
+const AdminCmsHomeLayoutIndexRoute = AdminCmsHomeLayoutIndexRouteImport.update({
+  id: '/cms/home-layout/',
+  path: '/cms/home-layout/',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AdminCmsFeaturedBrandShowcaseIndexRoute =
   AdminCmsFeaturedBrandShowcaseIndexRouteImport.update({
     id: '/cms/featured-brand-showcase/',
@@ -225,6 +226,16 @@ const AdminCmsBannersIndexRoute = AdminCmsBannersIndexRouteImport.update({
 } as any).lazy(() =>
   import('./routes/admin/cms/banners/index.lazy').then((d) => d.Route),
 )
+const AdminCmsAppLaunchPosterIndexRoute =
+  AdminCmsAppLaunchPosterIndexRouteImport.update({
+    id: '/cms/app-launch-poster/',
+    path: '/cms/app-launch-poster/',
+    getParentRoute: () => AdminRoute,
+  } as any).lazy(() =>
+    import('./routes/admin/cms/app-launch-poster/index.lazy').then(
+      (d) => d.Route,
+    ),
+  )
 const vendorPanelVendorTransactionHistoryIndexRoute =
   vendorPanelVendorTransactionHistoryIndexRouteImport.update({
     id: '/',
@@ -307,7 +318,6 @@ export interface FileRoutesByFullPath {
   '/login': typeof authLoginRoute
   '/unauthorized': typeof authUnauthorizedRoute
   '/admin/dashboard': typeof AdminDashboardRoute
-  '/admin/membership': typeof AdminMembershipRoute
   '/admin/': typeof AdminIndexRoute
   '/campaign': typeof vendorPanelVendorCampaignRoute
   '/contact-us': typeof vendorPanelVendorContactUsRoute
@@ -330,11 +340,13 @@ export interface FileRoutesByFullPath {
   '/admin/students/$studentId/settings': typeof AdminStudentsStudentIdSettingsRoute
   '/admin/vendors/$vendorId/settings': typeof AdminVendorsVendorIdSettingsRouteWithChildren
   '/transaction-history/': typeof vendorPanelVendorTransactionHistoryIndexRoute
+  '/admin/cms/app-launch-poster/': typeof AdminCmsAppLaunchPosterIndexRoute
   '/admin/cms/banners/': typeof AdminCmsBannersIndexRoute
   '/admin/cms/brands/': typeof AdminCmsBrandsIndexRoute
   '/admin/cms/categories/': typeof AdminCmsCategoriesIndexRoute
   '/admin/cms/events/': typeof AdminCmsEventsIndexRoute
   '/admin/cms/featured-brand-showcase/': typeof AdminCmsFeaturedBrandShowcaseIndexRoute
+  '/admin/cms/home-layout/': typeof AdminCmsHomeLayoutIndexRoute
   '/admin/cms/trending-offer-banners/': typeof AdminCmsTrendingOfferBannersIndexRoute
   '/admin/cms/universities/': typeof AdminCmsUniversitiesIndexRoute
   '/admin/vendors/$vendorId/settings/branding': typeof AdminVendorsVendorIdSettingsBrandingRoute
@@ -348,7 +360,6 @@ export interface FileRoutesByTo {
   '/login': typeof authLoginRoute
   '/unauthorized': typeof authUnauthorizedRoute
   '/admin/dashboard': typeof AdminDashboardRoute
-  '/admin/membership': typeof AdminMembershipRoute
   '/admin': typeof AdminIndexRoute
   '/campaign': typeof vendorPanelVendorCampaignRoute
   '/contact-us': typeof vendorPanelVendorContactUsRoute
@@ -369,11 +380,13 @@ export interface FileRoutesByTo {
   '/admin/cms/universities/add': typeof AdminCmsUniversitiesAddRoute
   '/admin/students/$studentId/settings': typeof AdminStudentsStudentIdSettingsRoute
   '/transaction-history': typeof vendorPanelVendorTransactionHistoryIndexRoute
+  '/admin/cms/app-launch-poster': typeof AdminCmsAppLaunchPosterIndexRoute
   '/admin/cms/banners': typeof AdminCmsBannersIndexRoute
   '/admin/cms/brands': typeof AdminCmsBrandsIndexRoute
   '/admin/cms/categories': typeof AdminCmsCategoriesIndexRoute
   '/admin/cms/events': typeof AdminCmsEventsIndexRoute
   '/admin/cms/featured-brand-showcase': typeof AdminCmsFeaturedBrandShowcaseIndexRoute
+  '/admin/cms/home-layout': typeof AdminCmsHomeLayoutIndexRoute
   '/admin/cms/trending-offer-banners': typeof AdminCmsTrendingOfferBannersIndexRoute
   '/admin/cms/universities': typeof AdminCmsUniversitiesIndexRoute
   '/admin/vendors/$vendorId/settings/branding': typeof AdminVendorsVendorIdSettingsBrandingRoute
@@ -390,7 +403,6 @@ export interface FileRoutesById {
   '/(auth)/unauthorized': typeof authUnauthorizedRoute
   '/(vendor-panel)/_vendor': typeof vendorPanelVendorRouteWithChildren
   '/admin/dashboard': typeof AdminDashboardRoute
-  '/admin/membership': typeof AdminMembershipRoute
   '/admin/': typeof AdminIndexRoute
   '/(vendor-panel)/_vendor/campaign': typeof vendorPanelVendorCampaignRoute
   '/(vendor-panel)/_vendor/contact-us': typeof vendorPanelVendorContactUsRoute
@@ -413,11 +425,13 @@ export interface FileRoutesById {
   '/admin/students/$studentId/settings': typeof AdminStudentsStudentIdSettingsRoute
   '/admin/vendors/$vendorId/settings': typeof AdminVendorsVendorIdSettingsRouteWithChildren
   '/(vendor-panel)/_vendor/transaction-history/': typeof vendorPanelVendorTransactionHistoryIndexRoute
+  '/admin/cms/app-launch-poster/': typeof AdminCmsAppLaunchPosterIndexRoute
   '/admin/cms/banners/': typeof AdminCmsBannersIndexRoute
   '/admin/cms/brands/': typeof AdminCmsBrandsIndexRoute
   '/admin/cms/categories/': typeof AdminCmsCategoriesIndexRoute
   '/admin/cms/events/': typeof AdminCmsEventsIndexRoute
   '/admin/cms/featured-brand-showcase/': typeof AdminCmsFeaturedBrandShowcaseIndexRoute
+  '/admin/cms/home-layout/': typeof AdminCmsHomeLayoutIndexRoute
   '/admin/cms/trending-offer-banners/': typeof AdminCmsTrendingOfferBannersIndexRoute
   '/admin/cms/universities/': typeof AdminCmsUniversitiesIndexRoute
   '/admin/vendors/$vendorId/settings/branding': typeof AdminVendorsVendorIdSettingsBrandingRoute
@@ -434,7 +448,6 @@ export interface FileRouteTypes {
     | '/login'
     | '/unauthorized'
     | '/admin/dashboard'
-    | '/admin/membership'
     | '/admin/'
     | '/campaign'
     | '/contact-us'
@@ -457,11 +470,13 @@ export interface FileRouteTypes {
     | '/admin/students/$studentId/settings'
     | '/admin/vendors/$vendorId/settings'
     | '/transaction-history/'
+    | '/admin/cms/app-launch-poster/'
     | '/admin/cms/banners/'
     | '/admin/cms/brands/'
     | '/admin/cms/categories/'
     | '/admin/cms/events/'
     | '/admin/cms/featured-brand-showcase/'
+    | '/admin/cms/home-layout/'
     | '/admin/cms/trending-offer-banners/'
     | '/admin/cms/universities/'
     | '/admin/vendors/$vendorId/settings/branding'
@@ -475,7 +490,6 @@ export interface FileRouteTypes {
     | '/login'
     | '/unauthorized'
     | '/admin/dashboard'
-    | '/admin/membership'
     | '/admin'
     | '/campaign'
     | '/contact-us'
@@ -496,11 +510,13 @@ export interface FileRouteTypes {
     | '/admin/cms/universities/add'
     | '/admin/students/$studentId/settings'
     | '/transaction-history'
+    | '/admin/cms/app-launch-poster'
     | '/admin/cms/banners'
     | '/admin/cms/brands'
     | '/admin/cms/categories'
     | '/admin/cms/events'
     | '/admin/cms/featured-brand-showcase'
+    | '/admin/cms/home-layout'
     | '/admin/cms/trending-offer-banners'
     | '/admin/cms/universities'
     | '/admin/vendors/$vendorId/settings/branding'
@@ -516,7 +532,6 @@ export interface FileRouteTypes {
     | '/(auth)/unauthorized'
     | '/(vendor-panel)/_vendor'
     | '/admin/dashboard'
-    | '/admin/membership'
     | '/admin/'
     | '/(vendor-panel)/_vendor/campaign'
     | '/(vendor-panel)/_vendor/contact-us'
@@ -539,11 +554,13 @@ export interface FileRouteTypes {
     | '/admin/students/$studentId/settings'
     | '/admin/vendors/$vendorId/settings'
     | '/(vendor-panel)/_vendor/transaction-history/'
+    | '/admin/cms/app-launch-poster/'
     | '/admin/cms/banners/'
     | '/admin/cms/brands/'
     | '/admin/cms/categories/'
     | '/admin/cms/events/'
     | '/admin/cms/featured-brand-showcase/'
+    | '/admin/cms/home-layout/'
     | '/admin/cms/trending-offer-banners/'
     | '/admin/cms/universities/'
     | '/admin/vendors/$vendorId/settings/branding'
@@ -582,13 +599,6 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/admin/'
       preLoaderRoute: typeof AdminIndexRouteImport
-      parentRoute: typeof AdminRoute
-    }
-    '/admin/membership': {
-      id: '/admin/membership'
-      path: '/membership'
-      fullPath: '/admin/membership'
-      preLoaderRoute: typeof AdminMembershipRouteImport
       parentRoute: typeof AdminRoute
     }
     '/admin/dashboard': {
@@ -724,6 +734,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminCmsTrendingOfferBannersIndexRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/cms/home-layout/': {
+      id: '/admin/cms/home-layout/'
+      path: '/cms/home-layout'
+      fullPath: '/admin/cms/home-layout/'
+      preLoaderRoute: typeof AdminCmsHomeLayoutIndexRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/admin/cms/featured-brand-showcase/': {
       id: '/admin/cms/featured-brand-showcase/'
       path: '/cms/featured-brand-showcase'
@@ -757,6 +774,13 @@ declare module '@tanstack/react-router' {
       path: '/cms/banners'
       fullPath: '/admin/cms/banners/'
       preLoaderRoute: typeof AdminCmsBannersIndexRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/cms/app-launch-poster/': {
+      id: '/admin/cms/app-launch-poster/'
+      path: '/cms/app-launch-poster'
+      fullPath: '/admin/cms/app-launch-poster/'
+      preLoaderRoute: typeof AdminCmsAppLaunchPosterIndexRouteImport
       parentRoute: typeof AdminRoute
     }
     '/(vendor-panel)/_vendor/transaction-history/': {
@@ -882,7 +906,6 @@ const AdminVendorsVendorIdSettingsRouteWithChildren =
 
 interface AdminRouteChildren {
   AdminDashboardRoute: typeof AdminDashboardRoute
-  AdminMembershipRoute: typeof AdminMembershipRoute
   AdminIndexRoute: typeof AdminIndexRoute
   AdminTransactionsIdRoute: typeof AdminTransactionsIdRoute
   AdminCmsIndexRoute: typeof AdminCmsIndexRoute
@@ -897,18 +920,19 @@ interface AdminRouteChildren {
   AdminCmsUniversitiesAddRoute: typeof AdminCmsUniversitiesAddRoute
   AdminStudentsStudentIdSettingsRoute: typeof AdminStudentsStudentIdSettingsRoute
   AdminVendorsVendorIdSettingsRoute: typeof AdminVendorsVendorIdSettingsRouteWithChildren
+  AdminCmsAppLaunchPosterIndexRoute: typeof AdminCmsAppLaunchPosterIndexRoute
   AdminCmsBannersIndexRoute: typeof AdminCmsBannersIndexRoute
   AdminCmsBrandsIndexRoute: typeof AdminCmsBrandsIndexRoute
   AdminCmsCategoriesIndexRoute: typeof AdminCmsCategoriesIndexRoute
   AdminCmsEventsIndexRoute: typeof AdminCmsEventsIndexRoute
   AdminCmsFeaturedBrandShowcaseIndexRoute: typeof AdminCmsFeaturedBrandShowcaseIndexRoute
+  AdminCmsHomeLayoutIndexRoute: typeof AdminCmsHomeLayoutIndexRoute
   AdminCmsTrendingOfferBannersIndexRoute: typeof AdminCmsTrendingOfferBannersIndexRoute
   AdminCmsUniversitiesIndexRoute: typeof AdminCmsUniversitiesIndexRoute
 }
 
 const AdminRouteChildren: AdminRouteChildren = {
   AdminDashboardRoute: AdminDashboardRoute,
-  AdminMembershipRoute: AdminMembershipRoute,
   AdminIndexRoute: AdminIndexRoute,
   AdminTransactionsIdRoute: AdminTransactionsIdRoute,
   AdminCmsIndexRoute: AdminCmsIndexRoute,
@@ -924,12 +948,14 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminStudentsStudentIdSettingsRoute: AdminStudentsStudentIdSettingsRoute,
   AdminVendorsVendorIdSettingsRoute:
     AdminVendorsVendorIdSettingsRouteWithChildren,
+  AdminCmsAppLaunchPosterIndexRoute: AdminCmsAppLaunchPosterIndexRoute,
   AdminCmsBannersIndexRoute: AdminCmsBannersIndexRoute,
   AdminCmsBrandsIndexRoute: AdminCmsBrandsIndexRoute,
   AdminCmsCategoriesIndexRoute: AdminCmsCategoriesIndexRoute,
   AdminCmsEventsIndexRoute: AdminCmsEventsIndexRoute,
   AdminCmsFeaturedBrandShowcaseIndexRoute:
     AdminCmsFeaturedBrandShowcaseIndexRoute,
+  AdminCmsHomeLayoutIndexRoute: AdminCmsHomeLayoutIndexRoute,
   AdminCmsTrendingOfferBannersIndexRoute:
     AdminCmsTrendingOfferBannersIndexRoute,
   AdminCmsUniversitiesIndexRoute: AdminCmsUniversitiesIndexRoute,

@@ -165,18 +165,18 @@ export default function TrendingOffers({ onVendorPress }: TrendingOffersProps) {
                             xcardEnabled={vendor.xcard}
                             distanceOnImage
                             overlapLogo
-                            badgeLabel={vendor.cardLabels?.[0] ?? vendor.cardLabel}
-                            borderColor={BorderPalette.border}
+                            badgeLabel={vendor.cardLabel}
+                            borderColor={BorderPalette.cardOutline}
                             imageHeight={89.2}
                             logoBottom={-35.6}
                             titleCaseName
                             nameStyle={styles.carouselName}
-                            contentStyle={{ minHeight: 48, justifyContent: 'flex-start', paddingTop: 8, paddingBottom: 0 }}
+                            contentStyle={{ minHeight: 48, justifyContent: 'center', paddingTop: 10, paddingBottom: 10 }}
                             onPress={() => handleVendorPress(vendor)}
                             style={{
                                 width: offerCardWidth,
                                 borderWidth: 1,
-                                borderColor: BorderPalette.border,
+                                borderColor: BorderPalette.cardOutline,
                                 borderRadius: 20,
                                 overflow: 'hidden',
                             }}

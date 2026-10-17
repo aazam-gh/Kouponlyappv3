@@ -38,6 +38,9 @@ beforeEach(() => {
   mockBenefits = null;
   mockDeal.externalUrl = 'vendor.example';
   mockDeal.instagramUrl = '@vendor';
+  mockDeal.vendorInformation = undefined;
+  mockDeal.openingHours = undefined;
+  mockDeal.locations = undefined;
   jest.spyOn(Linking, 'openURL').mockResolvedValue(true);
   jest.spyOn(Share, 'share').mockResolvedValue({ action: Share.dismissedAction });
 });
@@ -54,6 +57,33 @@ it('shares a link to this vendor and opens normalized contact links', async () =
   expect(Linking.openURL).toHaveBeenCalledWith('https://www.instagram.com/vendor/');
   await fireEvent.press(view.getByLabelText('Call +91 12345'));
   expect(Linking.openURL).toHaveBeenCalledWith('tel:+9112345');
+});
+
+it('shows vendor information in a dismissible bottom sheet', async () => {
+  mockDeal.vendorInformation = { title: 'Good to know', message: 'Walk-ins are welcome.' };
+  mockDeal.openingHours = 'Monday to Saturday, 9 AM to 9 PM';
+  mockDeal.locations = [{ id: 'branch-1', name: 'Main branch', address: '123 Market Street' }];
+  const view = await screen();
+
+  await fireEvent.press(view.getByLabelText('More information about Vendor'));
+  expect(view.getByTestId('vendor-info-modal').props.animationType).toBe('none');
+  expect(view.getByTestId('vendor-info-backdrop')).toHaveStyle({ flex: 1, backgroundColor: 'rgba(0,0,0,.42)' });
+  expect(view.getByTestId('vendor-info-sheet').props.entering).toBeDefined();
+  expect(view.getByLabelText('Close store information')).toBeTruthy();
+  expect(view.getByLabelText('Vendor website')).toBeTruthy();
+  expect(view.getByLabelText('Vendor Instagram')).toBeTruthy();
+  expect(view.getByText('Store timings')).toBeTruthy();
+  expect(view.getByText('Good to know')).toBeTruthy();
+  expect(view.getByText('About Vendor')).toBeTruthy();
+  expect(view.getByText('Address')).toBeTruthy();
+  expect(view.getByText('123 Market Street')).toBeTruthy();
+
+  await fireEvent.press(view.getByLabelText('Close store information'));
+  expect(view.queryByText('Store timings')).toBeNull();
+
+  await fireEvent.press(view.getByLabelText('More information about Vendor'));
+  await fireEvent.press(view.getByTestId('vendor-info-backdrop'));
+  expect(view.queryByText('Store timings')).toBeNull();
 });
 
 it('hides invalid links and reports an external-link failure', async () => {

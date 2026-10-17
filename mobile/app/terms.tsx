@@ -1,5 +1,5 @@
 import { useRouter } from 'expo-router';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, Linking, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAppTheme } from '../context/AppThemeContext';
 import { Typography } from '../constants/Typography';
@@ -82,6 +82,12 @@ export default function TermsScreen() {
                     <Text style={[styles.paragraph, { color: theme.mutedText }]}>
                         {'We reserve the right to modify these terms at any time. Your continued use of Kouponly after any such changes constitutes your acceptance of the new Terms and Conditions.'}
                     </Text>
+                </View>
+                <View style={styles.section}>
+                    <Text style={[styles.sectionTitle, { color: theme.text }]}>Artwork credits</Text>
+                    <Text style={[styles.paragraph, { color: theme.mutedText }]}>Sample subcategory artwork: Twemoji © Twitter, Inc and other contributors. Unmodified graphics, licensed under CC BY 4.0.</Text>
+                    <Text accessibilityRole="link" onPress={() => void Linking.openURL('https://github.com/twitter/twemoji').catch(() => Alert.alert('Unable to open link', 'Visit github.com/twitter/twemoji for the artwork source.'))} style={[styles.paragraph, { color: theme.brand }]}>Twemoji source</Text>
+                    <Text accessibilityRole="link" onPress={() => void Linking.openURL('https://creativecommons.org/licenses/by/4.0/').catch(() => Alert.alert('Unable to open link', 'Visit creativecommons.org/licenses/by/4.0 for the license.'))} style={[styles.paragraph, { color: theme.brand }]}>CC BY 4.0 license</Text>
                 </View>
             </ScrollView>
         </SafeAreaView>

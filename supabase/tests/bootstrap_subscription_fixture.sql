@@ -18,6 +18,7 @@ create trigger on_auth_user_created after insert on auth.users for each row exec
 create table public.referral_uses(referred_user_id uuid primary key references auth.users(id) on delete cascade,inviter_user_id uuid not null references auth.users(id) on delete cascade,created_at timestamptz default now(),check(referred_user_id<>inviter_user_id));
 create table public.mutation_receipts(user_id uuid references auth.users(id) on delete cascade,mutation_id uuid,operation text,result jsonb,created_at timestamptz default now(),primary key(user_id,mutation_id));
 create table public.redemptions(user_id uuid references auth.users(id) on delete cascade,redemption_id text,mode text,status text,code text,expires_at timestamptz,completed_at timestamptz,consumed_at timestamptz,primary key(user_id,redemption_id));
+create table public.saved_offers(user_id uuid references auth.users(id) on delete cascade,offer_id text not null,created_at timestamptz not null default now(),primary key(user_id,offer_id));
 create table public.offer_usage(user_id uuid references auth.users(id),offer_id text,use_count integer,period_start date);
 create table realx_categories(id text primary key,active boolean); insert into realx_categories values('test-category',true);
 create table realx_vendors(id text primary key,name text,status text,catalogue_deal_id integer,category_id text);

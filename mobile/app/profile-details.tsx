@@ -22,7 +22,7 @@ function InfoRow({ label, value, isRTL }: { label: string; value: string; isRTL:
 
 export default function ProfileDetailsScreen() {
   const { user, deleteAccount } = useAuth();
-  const { profile, avatarUrl, uploading, refresh } = useProfile();
+  const { profile, avatarUrl, refresh } = useProfile();
   const { theme } = useAppTheme();
   const { isRTL } = useAppLocale();
   const { t } = useTranslation();
@@ -37,8 +37,8 @@ export default function ProfileDetailsScreen() {
     return () => { active = false; };
   }, [refresh, t]);
   const names = profile.full_name.trim().split(/\s+/);
-  const firstName = names[0] || '';
-  const lastName = names.slice(1).join(' ');
+  const firstName = profile.first_name ?? names[0] ?? '';
+  const lastName = profile.last_name ?? names.slice(1).join(' ');
   const rawDob = profile.date_of_birth || '';
   const dobDate = rawDob && /^\d{4}-\d{2}-\d{2}$/.test(rawDob) ? new Date(`${rawDob}T12:00:00`) : null;
   const dateOfBirth = dobDate ? dobDate.toLocaleDateString('en-GB') : 'DD/MM/YYYY';
@@ -56,10 +56,6 @@ export default function ProfileDetailsScreen() {
     <OnboardingFlowSectionMotion delay={65} style={[styles.identityCard, isRTL && styles.identityCardRTL]}>
       <View style={[styles.avatarRing, { backgroundColor: theme.brandSoft, borderColor: theme.border }]}>
         <UserAvatar firstName={firstName} lastName={lastName} email={profile.email || user?.email} photoURL={avatarUrl} seed={user?.id} size={112} style={styles.avatarMain} />
-      </View>
-      <View style={[styles.identityCopy, isRTL && styles.identityCopyRTL]}>
-        <ResponsiveText selectable style={[styles.identityName, { color: theme.text }, isRTL && styles.textRTL]}>{profile.full_name || t('user')}</ResponsiveText>
-        <Text selectable style={[styles.identityEmail, { color: theme.mutedText }, isRTL && styles.textRTL]}>{uploading ? 'Uploading photo…' : profile.email || user?.email || t('email_address_placeholder')}</Text>
       </View>
     </OnboardingFlowSectionMotion>
     {updated === '1' ? <InlineNotice tone="success">{t('profile_update_success')}</InlineNotice> : null}
@@ -83,9 +79,8 @@ export default function ProfileDetailsScreen() {
 }
 
 const styles = StyleSheet.create({
-  identityCard: { flexDirection: 'row', alignItems: 'center', gap: 16, marginTop: -18 }, identityCardRTL: { flexDirection: 'row-reverse' },
+  identityCard: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginTop: -18 }, identityCardRTL: { flexDirection: 'row-reverse' },
   avatarRing: { width: 104, height: 104, borderRadius: 52, borderWidth: 1, alignItems: 'center', justifyContent: 'center' }, avatarMain: { borderWidth: 3, borderColor: '#FFFFFF' },
-  identityCopy: { flex: 1, alignItems: 'flex-start', gap: 4 }, identityCopyRTL: { alignItems: 'flex-end' }, identityName: { fontSize: 18, lineHeight: 25 }, identityEmail: { fontSize: 13, lineHeight: 19, fontFamily: 'Outfit_400Regular' },
   loader: { marginVertical: 40 }, content: { gap: 12 }, sectionTitle: { fontSize: 15, lineHeight: 22 }, infoList: { gap: 8 }, infoRow: { minHeight: 66, borderRadius: 16, borderWidth: 1, paddingHorizontal: 16, paddingVertical: 11, gap: 3 }, infoRowRTL: { alignItems: 'flex-end' }, infoLabel: { fontSize: 12, lineHeight: 18, fontFamily: 'Outfit_400Regular' }, infoValue: { fontSize: 16, lineHeight: 23, fontFamily: 'Outfit_400Regular' },
   dangerZone: { marginTop: 16, paddingTop: 24, borderTopWidth: StyleSheet.hairlineWidth }, deleteButton: { minHeight: 44, borderRadius: 22, borderWidth: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 16 }, deleteButtonText: { fontSize: 13, lineHeight: 19, fontFamily: 'Outfit_400Regular' }, textRTL: { textAlign: 'right', writingDirection: 'rtl' },
 });

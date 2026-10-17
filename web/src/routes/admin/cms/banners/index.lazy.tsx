@@ -183,30 +183,31 @@ function BannersManagement() {
     if (loading) {
         return (
             <div className="flex items-center justify-center min-h-screen">
-                <Loader2 className="w-8 h-8 animate-spin text-purple-600" />
+                <Loader2 className="w-8 h-8 animate-spin text-primary" />
             </div>
         )
     }
 
     return (
-        <div className="p-8 space-y-8 max-w-6xl mx-auto font-sans bg-white min-h-screen">
+        <div className="p-4 sm:p-8 space-y-8 w-full max-w-6xl mx-auto font-sans bg-white min-h-screen">
             {/* Header */}
-            <div className="flex items-center justify-between">
+            <div className="sticky top-(--header-height) z-10 flex flex-wrap items-center justify-between gap-4 border-b bg-white py-3">
                 <div className="flex items-center gap-4">
                     <Button
                         variant="ghost"
                         size="icon"
                         className="rounded-xl bg-gray-100 hover:bg-gray-200"
                         onClick={() => navigate({ to: '/admin/cms' })}
+                        aria-label="Back to Home content"
                     >
                         <ArrowLeft className="h-5 w-5" />
                     </Button>
                     <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-xl bg-violet-100 text-violet-600 flex items-center justify-center">
+                        <div className="w-10 h-10 rounded-xl bg-secondary text-primary flex items-center justify-center">
                             <ImageIcon className="w-5 h-5" />
                         </div>
                         <div>
-                            <h1 className="text-2xl font-bold tracking-tight">Banners</h1>
+                            <h1 className="text-2xl font-bold tracking-tight">Partner banners</h1>
                             <p className="text-xs text-gray-500 font-medium">{banners.length} banner{banners.length !== 1 ? 's' : ''} configured</p>
                         </div>
                     </div>
@@ -221,7 +222,7 @@ function BannersManagement() {
                     </div>
                     <Button
                         onClick={() => saveBanners(banners)}
-                        className="bg-purple-600 hover:bg-purple-700 text-white rounded-xl px-6 h-10 font-bold shadow-md shadow-purple-200 transition-all"
+                        className="bg-primary hover:bg-primary/90 text-white rounded-xl px-6 h-10 font-bold shadow-sm transition-all"
                     >
                         Save All Changes
                     </Button>
@@ -229,13 +230,13 @@ function BannersManagement() {
             </div>
 
             {/* Section Header */}
-            <div className="flex items-center justify-between border-b border-gray-100 pb-4">
+            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-gray-100 pb-4">
                 <h2 className="text-lg font-bold text-gray-900">Configured Banners</h2>
                 <Link
                     to="/admin/cms/banners/add"
                     className="inline-flex items-center justify-center bg-[#F8F9F9] hover:bg-gray-100 text-gray-900 border border-gray-100 rounded-xl px-5 h-10 gap-2 font-bold text-sm shadow-sm transition-all"
                 >
-                    <Plus className="w-4 h-4 text-purple-600" />
+                    <Plus className="w-4 h-4 text-primary" />
                     Add New Banner
                 </Link>
 
@@ -256,12 +257,15 @@ function BannersManagement() {
                             {/* Image */}
                             <div className="flex-1 space-y-1.5">
                                 <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider ml-1">Banner Image</p>
-                                <div
+                                <p className="ml-1 text-xs text-gray-500">Recommended: 1080 × 460 px. Keep logos and text centered; the mobile app crops the sides.</p>
+                                <button
+                                    type="button"
+                                    aria-label={`Change image for banner ${index + 1}`}
                                     onClick={() => triggerUpload(banner.bannerId)}
-                                    className="relative w-full aspect-[21/9] rounded-xl overflow-hidden bg-white border-2 border-dashed border-gray-200 cursor-pointer hover:border-purple-400 transition-all flex flex-col items-center justify-center group/img"
+                                    className="relative w-full aspect-[21/9] rounded-xl overflow-hidden bg-white border-2 border-dashed border-gray-200 cursor-pointer hover:border-primary transition-all flex flex-col items-center justify-center group/img"
                                 >
                                     {banner.images.mobile ? (
-                                        <img src={banner.images.mobile} className="w-full h-full object-cover" loading="lazy" />
+                                        <img alt={banner.altText || `Banner ${index + 1}`} src={banner.images.mobile} className="w-full h-full object-cover" loading="lazy" />
                                     ) : (
                                         <div className="flex flex-col items-center gap-2 opacity-30">
                                             <ImageIcon className="w-8 h-8" />
@@ -270,13 +274,13 @@ function BannersManagement() {
                                     )}
                                     {uploading === 'mobile' && activeBannerId === banner.bannerId && (
                                         <div className="absolute inset-0 bg-white/80 flex items-center justify-center">
-                                            <Loader2 className="w-6 h-6 animate-spin text-purple-600" />
+                                            <Loader2 className="w-6 h-6 animate-spin text-primary" />
                                         </div>
                                     )}
                                     <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/img:opacity-100 transition-opacity flex items-center justify-center">
                                         <span className="text-white text-xs font-bold px-3 py-1.5 bg-black/50 rounded-xl">Change Image</span>
                                     </div>
-                                </div>
+                                </button>
                             </div>
 
                             {/* Fields */}
@@ -285,9 +289,10 @@ function BannersManagement() {
                                     <div className="space-y-1.5">
                                         <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider ml-1">Vendor</label>
                                         <select
+                                            aria-label={`Vendor for banner ${index + 1}`}
                                             value={banner.vendorId}
                                             onChange={(e) => handleUpdateBanner(banner.bannerId, { vendorId: e.target.value })}
-                                            className="w-full h-11 px-4 rounded-xl bg-white border border-gray-100 font-bold text-sm text-gray-900 outline-none focus:border-purple-400 transition-all shadow-sm appearance-none cursor-pointer"
+                                            className="w-full h-11 px-4 rounded-xl bg-white border border-gray-100 font-bold text-sm text-gray-900 outline-none focus:border-primary transition-all shadow-sm appearance-none cursor-pointer"
                                         >
                                             <option value="">— No linked vendor —</option>
                                             {vendors.map(v => (
@@ -298,10 +303,11 @@ function BannersManagement() {
                                     <div className="space-y-1.5">
                                         <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider ml-1">Alt Text</label>
                                         <input
+                                            aria-label={`Alt text for banner ${index + 1}`}
                                             value={banner.altText}
                                             onChange={(e) => handleUpdateBanner(banner.bannerId, { altText: e.target.value })}
                                             placeholder="50% off Winter Gear"
-                                            className="w-full h-11 px-4 rounded-xl bg-white border border-gray-100 font-medium text-sm text-gray-900 outline-none focus:border-purple-400 transition-all shadow-sm"
+                                            className="w-full h-11 px-4 rounded-xl bg-white border border-gray-100 font-medium text-sm text-gray-900 outline-none focus:border-primary transition-all shadow-sm"
                                         />
                                     </div>
                                 </div>
@@ -309,10 +315,13 @@ function BannersManagement() {
                                 <div className="flex items-center justify-between pt-3 border-t border-gray-200/60">
                                     <div className="flex items-center gap-3">
                                         <button
+                                            role="switch"
+                                            aria-label={`Show banner ${index + 1}`}
+                                            aria-checked={banner.isActive}
                                             onClick={() => handleUpdateBanner(banner.bannerId, { isActive: !banner.isActive })}
                                             className={cn(
                                                 "w-11 h-6 rounded-full transition-colors relative shadow-inner",
-                                                banner.isActive ? "bg-purple-600" : "bg-gray-200"
+                                                banner.isActive ? "bg-primary" : "bg-gray-200"
                                             )}
                                         >
                                             <div className={cn(
@@ -338,8 +347,9 @@ function BannersManagement() {
                                                     setBanners(updated)
                                                 }
                                             }}
+                                            aria-label={`Move banner ${index + 1} up`}
                                             disabled={index === 0}
-                                            className="rounded-xl h-9 w-9 border-gray-100 bg-white text-gray-500 hover:text-purple-600 hover:bg-purple-50"
+                                            className="rounded-xl h-9 w-9 border-gray-100 bg-white text-gray-500 hover:text-primary hover:bg-accent"
                                         >
                                             <ArrowUp className="h-4 w-4" />
                                         </Button>
@@ -355,14 +365,16 @@ function BannersManagement() {
                                                     setBanners(updated)
                                                 }
                                             }}
+                                            aria-label={`Move banner ${index + 1} down`}
                                             disabled={index === banners.length - 1}
-                                            className="rounded-xl h-9 w-9 border-gray-100 bg-white text-gray-500 hover:text-purple-600 hover:bg-purple-50"
+                                            className="rounded-xl h-9 w-9 border-gray-100 bg-white text-gray-500 hover:text-primary hover:bg-accent"
                                         >
                                             <ArrowDown className="h-4 w-4" />
                                         </Button>
                                         <Button
                                             variant="outline"
                                             size="icon"
+                                            aria-label={`Delete banner ${index + 1}`}
                                             onClick={() => handleDeleteBanner(banner.bannerId)}
                                             className="rounded-xl h-9 w-9 border-gray-100 text-red-400 hover:text-red-600 hover:bg-red-50"
                                         >
@@ -378,7 +390,7 @@ function BannersManagement() {
                 {banners.length === 0 && (
                     <div className="py-20 bg-gray-50 rounded-2xl border-2 border-dashed border-gray-200 flex flex-col items-center justify-center text-gray-400 gap-3">
                         <div className="bg-white p-4 rounded-xl shadow-sm">
-                            <ImageIcon className="w-10 h-10 opacity-30 text-purple-600" />
+                            <ImageIcon className="w-10 h-10 opacity-30 text-primary" />
                         </div>
                         <p className="font-bold text-lg text-gray-500">No banners yet</p>
                         <p className="text-sm">Click 'Add New Banner' to create your first one.</p>

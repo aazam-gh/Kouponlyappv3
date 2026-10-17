@@ -56,6 +56,20 @@
 
 /* Font Faces */
 @font-face {
+  font-family: 'Hanson';
+  src: url('./assets/fonts/Hanson-Bold.otf') format('opentype');
+  font-weight: 700;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Poppins';
+  src: url('./assets/fonts/poppins.ttf') format('truetype');
+  font-weight: 100 900;
+  font-display: swap;
+}
+
+@font-face {
   font-family: 'Outfit';
   src: url('./assets/fonts/outfit-variable.woff2') format('woff2');
   font-weight: 100 900;
@@ -180,38 +194,52 @@
 }
 
 .admin-shell {
-  --background: #f5f7f4;
+  --font-sans: 'Poppins', ui-sans-serif, system-ui, sans-serif;
+  --font-heading: 'Hanson', 'Poppins', ui-sans-serif, sans-serif;
+  --primary: #12853d;
+  --primary-foreground: #ffffff;
+  --brand-green: #12853d;
+  --ring: #12853d;
+  --background: #ffffff;
   --card: #ffffff;
-  --border: #000000;
-  --input: #000000;
-  --muted: #eef2ed;
-  --muted-foreground: #647067;
-  --sidebar: #ffffff;
-  --sidebar-border: #000000;
+  --border: #e2e8f0;
+  --input: #cbd5e1;
+  --muted: #f1f5f9;
+  --muted-foreground: #64748b;
+  --sidebar: #f8fafc;
+  --sidebar-border: #e2e8f0;
+  --sidebar-foreground: #0f172a;
+  font-family: var(--font-sans);
+  background: var(--sidebar);
+}
+
+.admin-shell [data-slot="sidebar-inset"] {
   background: var(--background);
 }
 
-.admin-shell [data-sidebar="inset"] {
-  background: var(--background);
+.admin-shell h1 {
+  font-family: var(--font-heading);
+  font-size: clamp(1.25rem, 2vw, 1.75rem);
+  line-height: 1.4;
+}
+
+.admin-shell :is(h2, h3, h4, h5, h6) {
+  font-family: var(--font-sans);
 }
 
 /* Keep existing border utilities and body-level portals consistent across admin routes. */
 body:has(.admin-shell, .admin-auth-shell) {
-  --border: #000000;
-  --input: #000000;
-  --sidebar-border: #000000;
+  --primary: #12853d;
+  --primary-foreground: #ffffff;
+  --brand-green: #12853d;
+  --ring: #12853d;
+  --border: #e2e8f0;
+  --input: #cbd5e1;
+  --sidebar-border: #e2e8f0;
 }
 
-body:has(.admin-shell, .admin-auth-shell) [class*="border"] {
-  border-color: #000000 !important;
-}
-
-body:has(.admin-shell, .admin-auth-shell) [class*="bg-"][class*="rounded"] {
-  border: 1px solid #000000 !important;
-}
-
-body:has(.admin-shell, .admin-auth-shell) [data-slot="button"] {
-  border: 1px solid #000000;
+body:has(.admin-shell) {
+  font-family: 'Poppins', ui-sans-serif, system-ui, sans-serif;
 }
 
 @layer base {

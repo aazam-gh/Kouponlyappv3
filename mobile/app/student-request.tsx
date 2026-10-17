@@ -8,12 +8,12 @@ import { makeMutationId } from '@/lib/backend';
 import { submitStudentRequest, type StudentRequest } from '@/lib/student-community';
 
 export default function StudentRequestScreen() {
-  const params = useLocalSearchParams<{ kind?: string; email?: string }>();
+  const params = useLocalSearchParams<{ kind?: string; email?: string; name?: string }>();
   const kind = params.kind === 'restaurant' ? 'restaurant' : 'school';
   const suggestedEmail = typeof params.email === 'string' ? params.email : '';
   const { user } = useAuth();
   const { colors: C } = useAppTheme();
-  const [draft, setDraft] = React.useState<StudentRequest>({ kind, name: '', domain: suggestedEmail.split('@')[1] || '', email: user?.email || suggestedEmail, contact: '', phone: '' });
+  const [draft, setDraft] = React.useState<StudentRequest>({ kind, location: '', name: typeof params.name === 'string' ? params.name : '', domain: suggestedEmail.split('@')[1] || '', email: user?.email || suggestedEmail, contact: '', phone: '' });
   const [busy, setBusy] = React.useState(false);
   const [error, setError] = React.useState('');
   const [done, setDone] = React.useState(false);
@@ -24,7 +24,7 @@ export default function StudentRequestScreen() {
   React.useEffect(() => {
     if (draftOwner.current === user?.id) return;
     draftOwner.current = user?.id;
-    setDraft({ kind, name: '', domain: '', email: user?.email || '', contact: '', phone: '' });
+    setDraft({ kind, location: '', name: typeof params.name === 'string' ? params.name : '', domain: '', email: user?.email || '', contact: '', phone: '' });
     setError(''); setDone(false); attempt.current = { fingerprint: '', id: '' };
   }, [user?.id, kind]);
   const submit = async () => {
@@ -40,7 +40,7 @@ export default function StudentRequestScreen() {
   };
   const field = (key: keyof Omit<StudentRequest, 'kind'>, label: string, keyboardType: 'default' | 'email-address' | 'phone-pad' = 'default') => <View key={key} style={{ gap: 8 }}>
     <AppText variant="callout">{label}</AppText>
-    <TextInput accessibilityLabel={label} value={draft[key]} editable={!busy} onChangeText={value => { setDraft(current => ({ ...current, [key]: value })); setError(''); }} keyboardType={keyboardType} autoCapitalize={key === 'email' || key === 'domain' ? 'none' : 'words'} autoCorrect={false} maxLength={key === 'phone' ? 40 : key === 'domain' || key === 'email' ? 254 : 160} returnKeyType="done" style={{ minHeight: 54, padding: 14, borderWidth: 1, borderColor: C.line, borderRadius: 16, color: C.ink, backgroundColor: C.card, fontFamily: 'Outfit_400Regular', fontSize: 16 }} />
+    <TextInput accessibilityLabel={label} value={draft[key] || ''} editable={!busy} onChangeText={value => { setDraft(current => ({ ...current, [key]: value })); setError(''); }} keyboardType={keyboardType} autoCapitalize={key === 'email' || key === 'domain' ? 'none' : 'words'} autoCorrect={false} maxLength={key === 'phone' ? 40 : key === 'domain' || key === 'email' ? 254 : 160} returnKeyType="done" style={{ minHeight: 54, padding: 14, borderWidth: 1, borderColor: C.line, borderRadius: 16, color: C.ink, backgroundColor: C.card, fontFamily: 'Outfit_400Regular', fontSize: 16 }} />
   </View>;
   return <Screen testID="student-request-screen">
     <AppHeader title={kind === 'school' ? 'Suggest a school' : 'Request a restaurant'} back />
@@ -50,7 +50,8 @@ export default function StudentRequestScreen() {
         {field('name', kind === 'school' ? 'Institute name (required)' : 'Restaurant name (required)')}
         {kind === 'school' ? field('domain', 'Student email domain (required)', 'email-address') : null}
         {kind === 'school' ? field('email', 'Your contact email (required)', 'email-address') : null}
-        {kind === 'restaurant' ? <>{field('contact', 'Manager or contact name (optional)')}{field('phone', 'Contact phone (optional)', 'phone-pad')}</> : null}
+        {kind === 'school' ? <>{field('contact', 'Your name (required)')}{field('phone', 'Your phone number (required)', 'phone-pad')}</> : null}
+        {kind === 'restaurant' ? <>{field('location', 'Enter location (required)')}{field('contact', 'Manager or contact name (optional)')}{field('phone', 'Contact phone (optional)', 'phone-pad')}</> : null}
         {error ? <AppText accessibilityRole="alert" color="danger">{error}</AppText> : null}
         <PrimaryButton label={kind === 'restaurant' && !user ? 'Sign in to submit' : 'Submit request'} loading={busy} onPress={() => void submit()} />
       </>}

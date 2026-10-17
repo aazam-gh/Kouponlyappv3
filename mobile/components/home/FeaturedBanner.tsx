@@ -216,7 +216,7 @@ const styles = StyleSheet.create({
         height: 76,
         borderRadius: 17,
         borderWidth: 1,
-        borderColor: BorderPalette.border,
+        borderColor: BorderPalette.cardOutline,
         overflow: 'hidden',
         backgroundColor: '#f0f0f0',
         boxShadow: '0 12px 24px rgba(0, 0, 0, 0.24)',

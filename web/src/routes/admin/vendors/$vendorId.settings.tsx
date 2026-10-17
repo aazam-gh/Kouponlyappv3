@@ -19,18 +19,19 @@ function VendorSettingsLayout() {
     const { data: vendor } = useQuery(vendorQueryOptions(vendorId))
 
     return (
-        <div className="p-8 space-y-6 w-full max-w-[1200px] mx-auto">
+        <div className="p-4 sm:p-8 space-y-6 w-full max-w-[1200px] mx-auto">
             <div className="flex items-center gap-4">
                 <Link
                     to="/admin/vendors"
                     search={{ page: 1, pageSize: 10, search: '', sort: 'name-asc' }}
+                    aria-label="Back to vendors"
                     className="p-2 -ml-2 rounded-full hover:bg-muted transition-colors"
                 >
                     <ArrowLeft className="h-5 w-5" />
                 </Link>
                 <div>
                     <h1 className="text-3xl font-bold tracking-tight flex items-center gap-3">
-                        <span className="text-slate-400 font-medium">{vendor?.name || 'Vendor'}</span>
+                        <span className="font-semibold">{vendor?.name || 'Vendor'}</span>
                     </h1>
                 </div>
             </div>
@@ -75,7 +76,7 @@ function VendorSettingsLayout() {
                             : 'text-muted-foreground hover:text-black hover:bg-white/50'
                             }`}
                     >
-                        Coupon analytics
+                        Transactions
                     </Link>
                 </div>
             </div>

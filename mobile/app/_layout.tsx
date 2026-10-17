@@ -31,6 +31,7 @@ import { queryClient } from '@/utils/queryClient';
 import { AnalyticsProvider } from '@/lib/analytics';
 import { usePostHog } from 'posthog-react-native';
 import { ReduceMotion, ReducedMotionConfig } from 'react-native-reanimated';
+import AppLaunchPosterModal from '@/components/AppLaunchPosterModal';
 
 // The app deliberately applies the student's reduced-motion preference globally.
 LogBox.ignoreLogs(['[Reanimated] Reduced motion setting is overwritten with mode']);
@@ -46,6 +47,7 @@ function AppNavigation({ firstRunStatus }: { firstRunStatus: Exclude<FirstRunSta
   const posthog=usePostHog();
   const segments=useSegments();
   const screen=segments.filter(segment=>!segment.startsWith('(')).join('/')||'home';
+  const isHomeRoute=screen==='home'||screen==='index';
   const previousUserId=React.useRef<string|null>(null);
   const firstRunRedirected=React.useRef(false);
   React.useEffect(()=>{
@@ -88,7 +90,7 @@ function AppNavigation({ firstRunStatus }: { firstRunStatus: Exclude<FirstRunSta
     const subscription=Notifications.addNotificationResponseReceivedListener(openNotification);
     return ()=>subscription.remove();
   },[]);
-  return <><ReducedMotionConfig mode={theme.motion.reduceMotion ? ReduceMotion.Always : ReduceMotion.System}/><StatusBar style={theme.dark?"light":"dark"}/><Stack initialRouteName={firstRunStatus==='new'?'realx/welcome':'(tabs)'} screenOptions={{headerShown:false,contentStyle:{backgroundColor:theme.colors.paper},animation:theme.motion.reduceMotion?"fade":"default"}}/><Toast/></>;
+  return <><ReducedMotionConfig mode={theme.motion.reduceMotion ? ReduceMotion.Always : ReduceMotion.System}/><StatusBar style={theme.dark?"light":"dark"}/><Stack initialRouteName={firstRunStatus==='new'?'realx/welcome':'(tabs)'} screenOptions={{headerShown:false,contentStyle:{backgroundColor:theme.colors.paper},animation:theme.motion.reduceMotion?"fade":"default"}}/><AppLaunchPosterModal userId={session?.user.id??null} enabled={isHomeRoute}/><Toast/></>;
 }
 
 export default function RootLayout(){

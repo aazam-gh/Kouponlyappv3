@@ -28,8 +28,8 @@ export default function EditProfileDetailsScreen() {
   const { isRTL } = useAppLocale();
   const { t } = useTranslation();
   const names = profile.full_name.trim().split(/\s+/);
-  const [firstName, setFirstName] = React.useState(names[0] || '');
-  const [lastName, setLastName] = React.useState(names.slice(1).join(' '));
+  const [firstName, setFirstName] = React.useState(profile.first_name ?? names[0] ?? '');
+  const [lastName, setLastName] = React.useState(profile.last_name ?? names.slice(1).join(' '));
   const [dob, setDob] = React.useState<Date | null>(parseDate(profile.date_of_birth));
   const [mobile, setMobile] = React.useState(profile.mobile);
   const [dateDraft, setDateDraft] = React.useState<Date>(dob || DEFAULT_DATE);
@@ -48,13 +48,13 @@ export default function EditProfileDetailsScreen() {
   React.useEffect(() => {
     if (loading || initialDraft) return;
     const currentNames = profile.full_name.trim().split(/\s+/);
-    const next = { firstName: currentNames[0] || '', lastName: currentNames.slice(1).join(' '), dob: parseDate(profile.date_of_birth), mobile: profile.mobile };
+    const next = { firstName: profile.first_name ?? currentNames[0] ?? '', lastName: profile.last_name ?? currentNames.slice(1).join(' '), dob: parseDate(profile.date_of_birth), mobile: profile.mobile };
     setFirstName(next.firstName);
     setLastName(next.lastName);
     setDob(next.dob);
     setMobile(next.mobile);
     setInitialDraft(next);
-  }, [initialDraft, loading, profile.date_of_birth, profile.full_name, profile.mobile]);
+  }, [initialDraft, loading, profile.date_of_birth, profile.full_name, profile.first_name, profile.last_name, profile.mobile]);
   const openDatePicker = () => { setDateDraft(dob || DEFAULT_DATE); setShowDatePicker(true); };
   const exitEditor = () => router.canGoBack() ? router.back() : router.replace('/profile-details' as any);
   const confirmDiscard = () => {
@@ -80,7 +80,7 @@ export default function EditProfileDetailsScreen() {
     try {
       if (!user) throw new Error('Sign in to edit your profile.');
       const fullName = `${firstName.trim()} ${lastName.trim()}`;
-      await saveProfile({ ...profile, full_name: fullName, date_of_birth: dateValue(dob) || null, mobile: mobile.trim() });
+      await saveProfile({ ...profile, full_name: fullName, first_name: firstName.trim(), last_name: lastName.trim(), date_of_birth: dateValue(dob) || null, mobile: mobile.trim() });
       await refresh();
       router.replace({ pathname: '/profile-details', params: { updated: '1' } } as any);
     } catch (error) { Alert.alert(t('error'), error instanceof Error ? error.message : t('profile_update_failure')); }

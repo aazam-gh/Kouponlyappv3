@@ -22,6 +22,8 @@ import { pickAvatar } from "@/lib/media";
 
 type Profile = {
   full_name: string;
+  first_name?: string;
+  last_name?: string;
   email: string;
   city: string;
   mobile: string;
@@ -133,6 +135,8 @@ export function ProfileProvider({ children }: { children: React.ReactNode }) {
         row?.full_name ||
         (user.user_metadata.full_name as string | undefined) ||
         "",
+      first_name: row?.first_name,
+      last_name: row?.last_name,
       email: user.email ?? row?.email ?? "",
       city: row?.city ?? "",
       mobile: row?.mobile ?? "",

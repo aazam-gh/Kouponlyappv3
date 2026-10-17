@@ -2,7 +2,7 @@
 begin;
 -- Test-only wrapper supplies the origin and owner normally verified by the Edge Function.
 create function pg_temp.submit_request(p_id uuid,p_kind text,p_name text,p_domain text,p_email text)
-returns uuid language sql as $$select public.kouponly_submit_student_request(p_id,p_kind,p_name,p_domain,p_email,'','',auth.uid(),repeat('a',64))$$;
+returns uuid language sql as $$select public.kouponly_submit_student_request(p_id,p_kind,p_name,p_domain,p_email,'Student Name','+919876543210',auth.uid(),repeat('a',64),'Kochi')$$;
 
 insert into auth.users(id,email,email_confirmed_at,raw_user_meta_data,created_at) values
  ('cccccccc-1212-0000-0000-000000000001','community-alice@rajagiri.edu.in',now(),'{}',now()),
@@ -15,7 +15,8 @@ insert into public.couponly_students(id,email) values
 insert into public.profiles(user_id,full_name) values
  ('cccccccc-1212-0000-0000-000000000001','Alice'),('cccccccc-1212-0000-0000-000000000002','Bob'),('cccccccc-1212-0000-0000-000000000003','Carol')
  on conflict(user_id) do update set full_name=excluded.full_name;
-insert into public.couponly_vendors(id,name,status) values('community-vendor','Community Cafe','Active');
+insert into public.couponly_vendors(id,name,status,category_id)
+select 'community-vendor','Community Cafe','Active',id from public.couponly_categories where active order by sort_order limit 1;
 insert into public.couponly_offers(id,vendor_id,title,active) values('community-offer','community-vendor','Lunch discount',true);
 insert into public.couponly_student_saved_items(student_id,item_type,item_id) values('cccccccc-1212-0000-0000-000000000002','offer','community-offer');
 do $$
@@ -43,6 +44,12 @@ begin
   insert into public.kouponly_social_preferences(user_id,share_activity) values(bob,true);
   snap:=public.kouponly_friends_snapshot(); assert jsonb_array_length(snap->'activity')=1,'accepted friends can see opted in saved offers';
   assert snap->'activity'->0->>'vendorName'='Community Cafe';
+  insert into public.saved_offers(user_id,offer_id) values(bob,'community-offer');
+  assert jsonb_array_length(public.kouponly_friends_snapshot()->'activity')=1,'dual saved stores do not duplicate activity';
+  delete from public.couponly_student_saved_items where student_id=bob;
+  assert jsonb_array_length(public.kouponly_friends_snapshot()->'activity')=1,'mobile saved_offers appear without legacy saved items';
+  insert into public.redemptions(user_id,redemption_id,mode,vendor_id,status,consumed_at,offer_snapshot) values(bob,'community-receipt','inStore','community-vendor','success',now(),'{"title":"Lunch discount"}');
+  assert jsonb_array_length(public.kouponly_friends_snapshot()->'activity')=2,'shared redemptions and saved offers both load';
   update public.kouponly_social_preferences set share_activity=false where user_id=bob;
   assert public.kouponly_friends_snapshot()->'activity'='[]'::jsonb,'turning sharing off hides existing activity';
   perform public.kouponly_respond_friend(friend,'remove');
@@ -58,8 +65,8 @@ begin
   assert not has_table_privilege('anon','public.kouponly_student_requests','TRUNCATE');
   assert not has_table_privilege('authenticated','public.kouponly_social_preferences','TRUNCATE');
   assert not has_table_privilege('authenticated','public.kouponly_community_request_log','TRUNCATE');
-  assert not has_function_privilege('anon','public.kouponly_submit_student_request(uuid,text,text,text,text,text,text,uuid,text)','EXECUTE');
-  assert not has_function_privilege('authenticated','public.kouponly_submit_student_request(uuid,text,text,text,text,text,text,uuid,text)','EXECUTE');
+  assert not has_function_privilege('anon','public.kouponly_submit_student_request(uuid,text,text,text,text,text,text,uuid,text,text)','EXECUTE');
+  assert not has_function_privilege('authenticated','public.kouponly_submit_student_request(uuid,text,text,text,text,text,text,uuid,text,text)','EXECUTE');
 end $$;
 set local role authenticated;
 select set_config('request.jwt.claim.sub','cccccccc-1212-0000-0000-000000000001',true);

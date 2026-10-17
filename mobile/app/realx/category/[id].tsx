@@ -14,6 +14,29 @@ import { useNearbyDistances } from '@/lib/nearby';
 import { isCouponOfferUsed, useBenefits } from '@/lib/benefits';
 import { sortVendors, type VendorSortMode } from '@/lib/vendor-sorting';
 
+const sampleImages: Record<string, number> = {
+  rice: require('../../../assets/subcategories/rice.png'),
+  biryani: require('../../../assets/subcategories/biryani.png'),
+  mains: require('../../../assets/subcategories/mains.png'),
+  snacks: require('../../../assets/subcategories/snacks.png'),
+  drinks: require('../../../assets/subcategories/drinks.png'),
+  sweets: require('../../../assets/subcategories/sweets.png'),
+  dietary: require('../../../assets/subcategories/dietary.png'),
+  vegetarian: require('../../../assets/subcategories/vegetarian.png'),
+  vegan: require('../../../assets/subcategories/vegan.png'),
+  breakfast: require('../../../assets/subcategories/breakfast.png'),
+  buffet: require('../../../assets/subcategories/buffet.png'),
+  cuisines: require('../../../assets/subcategories/cuisines.png'),
+  cafes: require('../../../assets/subcategories/cafes.png'),
+  beauty: require('../../../assets/subcategories/beauty.png'),
+  shopping: require('../../../assets/subcategories/shopping.png'),
+  fitness: require('../../../assets/subcategories/fitness.png'),
+  travel: require('../../../assets/subcategories/travel.png'),
+  stays: require('../../../assets/subcategories/stays.png'),
+  entertainment: require('../../../assets/subcategories/entertainment.png'),
+  food: require('../../../assets/subcategories/mains.png'),
+};
+
 export default function RealXCategoryScreen() {
   const { id, name, englishName } = useLocalSearchParams<{ id: string; name?: string; englishName?: string }>();
   const { t } = useTranslation();
@@ -33,7 +56,7 @@ export default function RealXCategoryScreen() {
   const isCategoryActive = Boolean(category);
   const subcategories = React.useMemo(() => [
     { id: 'all', name: t('all'), icon: 'apps-outline' },
-    ...(category?.subcategories.filter(item => item.id).map(item => ({ id: item.id!, name: item.label, icon: item.image || '' })) || []),
+    ...(category?.subcategories.filter(item => item.id).map(item => ({ id: item.id!, name: item.label, icon: item.image || '', sampleImage: sampleImages[item.label.toLowerCase()] || sampleImages[category.slug || ''] || sampleImages.shopping })) || []),
   ], [category, t]);
   const rows = React.useMemo(() => {
     const matching = deals.filter(deal => {
@@ -78,11 +101,11 @@ export default function RealXCategoryScreen() {
         logoBottom={-35.6}
         distance={distanceByVendor.get(String(item.vendorId || item.id))?.label}
         xcardEnabled={item.xcard}
-        badgeLabel={item.cardLabels?.[0] ?? item.cardLabel}
+        badgeLabel={item.cardLabel}
         distanceOnImage
         overlapLogo
         titleCaseName
-        contentStyle={{ minHeight: 48, justifyContent: 'flex-start', paddingTop: 8, paddingBottom: 0 }}
+        contentStyle={{ minHeight: 48, justifyContent: 'center', paddingTop: 10, paddingBottom: 10 }}
         style={{ width: cardWidth, marginHorizontal: 20, marginBottom: 14, borderWidth: 1, borderColor: theme.border, borderRadius: 20, overflow: 'hidden' }}
         onPress={() => router.push({ pathname: '/realx/vendor/[id]', params: { id: String(item.vendorId || item.id) } } as any)}
       />}

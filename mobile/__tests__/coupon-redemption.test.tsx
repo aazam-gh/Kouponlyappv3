@@ -11,7 +11,7 @@ let mockBenefits: any={subscription:{roundId:'round-one'},usedVendorIds:[]};
 const mockRedeem=jest.fn(); const mockRefresh=jest.fn(async()=>{}); const mockRetry=jest.fn(async()=>{}); const mockCapture=jest.fn();
 jest.mock('../lib/auth',()=>({useAuth:()=>({user:mockUser})}));
 jest.mock('../lib/catalogue',()=>({useCatalogue:()=>({status:'ready'})}));
-jest.mock('../lib/data',()=>({dealById:()=>({name:'Test vendor',vendorId:'vendor-one',offers:[{index:0,id:'offer-one',title:'Test offer',description:'Test description',redemption:'inStore'},{index:1,id:'offer-two',title:'Second offer',redemption:'inStore'}]})}));
+jest.mock('../lib/data',()=>({dealById:()=>({name:'Test vendor',vendorId:'vendor-one',offers:[{index:0,id:'offer-one',title:'Test offer',description:'Test description',redemption:'inStore',discountType:'percentage',discountValue:25},{index:1,id:'offer-two',title:'Second offer',redemption:'inStore',discountType:'percentage',discountValue:25}]})}));
 jest.mock('../lib/benefits',()=>({benefitsError:(message:string)=>message,isCouponOfferUsed:(benefits:any,offerId:string,vendorId?:string|null)=>Array.isArray(benefits?.usedOfferIds)?benefits.usedOfferIds.includes(offerId):Boolean(vendorId&&benefits?.usedVendorIds?.includes(vendorId)),useBenefits:()=>({benefits:mockBenefits,refresh:mockRefresh}),makeMutationId:()=> 'operation-one',redeemSubscriptionCoupon:(...args:any[])=>mockRedeem(...args)}));
 jest.mock('../lib/store',()=>({useStore:()=>({retrySync:mockRetry})}));
 jest.mock('posthog-react-native',()=>({usePostHog:()=>({capture:mockCapture})}));

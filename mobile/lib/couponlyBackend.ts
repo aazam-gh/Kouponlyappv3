@@ -39,7 +39,7 @@ export async function verifyCouponlyEmailCode(email: string, purpose: 'signup'|'
 }
 export async function completeCouponlySignup(profile: {
   email: string; firstName: string; lastName: string; accountRole?: VerificationRole;
-  dob?: string; gender?: string;
+  dob?: string; phone?: string; gender?: string;
 }) {
   return invoke<{ success: true; alreadyExists?: boolean; creatorCode?: string|null }>('completeSignup', profile);
 }

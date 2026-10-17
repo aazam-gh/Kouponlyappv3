@@ -4,7 +4,7 @@ import { AppThemeProvider } from '../context/AppThemeContext';
 import { LocaleProvider } from '../context/LocaleContext';
 import { queryClient } from '../utils/queryClient';
 import { TabBarVisibilityProvider } from '../components/TabBarScrollVisibility';
-import { cleanup, fireEvent, render, waitFor } from '@testing-library/react-native';
+import { cleanup, fireEvent, render, waitFor, within } from '@testing-library/react-native';
 import { act } from '@testing-library/react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -31,12 +31,37 @@ const wrapper = (node: React.ReactNode) => render(<SafeAreaProvider initialMetri
 afterEach(async () => { cleanup(); queryClient.clear(); clearFixture(); await AsyncStorage.clear(); });
 
 describe('mobile showcase states', () => {
+  it('renders Top Brands before categories when the CMS order changes', async () => {
+    const backend = require('../lib/backend');
+    const { DEFAULT_HOME_SECTION_ORDER } = require('../lib/home-layout');
+    backend.fetchCloudCatalogue.mockResolvedValueOnce({ ...require('../test/catalogue-fixture').fixture(), heroSlides: [], rewards: [], source: 'cloud', updatedAt: 0, homeSectionOrder: ['top-brands', ...DEFAULT_HOME_SECTION_ORDER.filter((id: string) => id !== 'top-brands')] });
+    const view = await wrapper(<HomeScreen />);
+    const flatten = (node: any): string => node == null ? '' : typeof node === 'string' ? node : Array.isArray(node) ? node.map(flatten).join('|') : flatten(node.children);
+    await waitFor(() => {
+      const content = flatten(view.toJSON());
+      expect(content.indexOf('Top Brands')).toBeGreaterThanOrEqual(0);
+      expect(content.indexOf('Top Brands')).toBeLessThan(content.indexOf('Food'));
+    });
+    await fireEvent.press(within(view.getByTestId('home-section-top-brands')).getByLabelText('Test Kitchen'));
+    expect(router.push).toHaveBeenCalledWith({ pathname: '/realx/vendor/[id]', params: { id: 'vendor-1' } });
+  });
+
   it('submits the home search query on Enter', async () => {
     const view = await wrapper(<HomeScreen />);
     expect(view.getByTestId('home-search')).toBeTruthy();
     await fireEvent.changeText(view.getByTestId('home-search'), '  lunch  ');
     await fireEvent(view.getByTestId('home-search'),'submitEditing');
     expect(router.push).toHaveBeenCalledWith({pathname:'/realx/search',params:{q:'lunch'}});
+  });
+  it('shows suggested vendors for an unmatched home search', async () => {
+    const view = await wrapper(<HomeScreen />);
+    const initialVendorCount = view.getAllByText('Test Kitchen').length;
+    await fireEvent.changeText(view.getByTestId('home-search'), 'Missing restaurant');
+    expect(view.queryByText('Can’t find it? Suggest a restaurant')).toBeNull();
+    const suggestedVendors = view.getAllByText('Test Kitchen');
+    expect(suggestedVendors).toHaveLength(initialVendorCount + 1);
+    await fireEvent.press(suggestedVendors[suggestedVendors.length - 1]);
+    expect(router.push).toHaveBeenCalledWith({ pathname: '/realx/vendor/[id]', params: { id: 'vendor-1' } });
   });
   it('returns Home to the top when its tab is pressed', async () => {
     const listeners = new Map<string, () => void>();
@@ -60,6 +85,7 @@ describe('mobile showcase states', () => {
     await fireEvent(input, 'submitEditing');
     await waitFor(() => expect(view.getByText('Popular offers for you')).toBeTruthy());
     expect(view.getByLabelText('Test Kitchen')).toBeTruthy();
+    expect(view.queryByLabelText('Suggest a restaurant')).toBeNull();
   });
   it('shows database main categories on Home', async () => {
     const view = await wrapper(<HomeScreen />);

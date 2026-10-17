@@ -63,11 +63,11 @@ export default function NewDealsSection({ scrollY, viewportHeight, bottomInset, 
                 xcardEnabled={deal.xcard}
                 distanceOnImage
                 overlapLogo
-                badgeLabel={deal.cardLabels?.[0] ?? deal.cardLabel}
-                borderColor={BorderPalette.border}
+                badgeLabel={deal.cardLabel}
+                borderColor={BorderPalette.cardOutline}
                 titleCaseName
-                contentStyle={{ minHeight: 48, justifyContent: 'flex-start', paddingTop: 8, paddingBottom: 0 }}
-                style={{ width: width * 0.6, borderWidth: 1, borderColor: BorderPalette.border, borderRadius: 20, overflow: 'hidden' }}
+                contentStyle={{ minHeight: 48, justifyContent: 'center', paddingTop: 10, paddingBottom: 10 }}
+                style={{ width: width * 0.6, borderWidth: 1, borderColor: BorderPalette.cardOutline, borderRadius: 20, overflow: 'hidden' }}
                 onPress={() => router.push({ pathname: '/realx/vendor/[id]', params: { id: String(deal.vendorId || deal.id) } } as any)}
               />
             ))}

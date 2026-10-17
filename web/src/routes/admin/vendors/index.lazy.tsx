@@ -17,7 +17,7 @@ import {
     SelectValue,
 } from '@/components/ui/select'
 import { Search, Plus, ChevronRight, Loader2, Trash2 } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type FormEvent } from 'react'
 import {
     Dialog,
     DialogContent,
@@ -28,12 +28,11 @@ import {
     DialogDescription,
 } from '@/components/ui/dialog'
 import { Label } from '@/components/ui/label'
-import { db, functions } from '@/firebase/config'
+import { functions } from '@/firebase/config'
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query'
 import { httpsCallable } from 'firebase/functions'
-import { doc, setDoc } from 'firebase/firestore'
 import { fetchVendorsPage } from '@/lib/vendor-directory'
-import type { Vendor } from '@/queries'
+import { categoriesQueryOptions, type Vendor } from '@/queries'
 import { refreshVendorList } from '@/lib/vendorList'
 import { resetFirestorePaginationCursors } from '@/lib/firestore-pagination'
 
@@ -47,7 +46,7 @@ function RouteComponent() {
     const { page, pageSize, search: searchQuery, sort } = useSearch({ from: '/admin/vendors/' })
     const [searchInput, setSearchInput] = useState(searchQuery)
     const [open, setOpen] = useState(false)
-    const [form, setForm] = useState({ name: '', email: '', password: '' })
+    const [form, setForm] = useState({ name: '', email: '', password: '', categoryId: '' })
     const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
     const [vendorToDelete, setVendorToDelete] = useState<Vendor | null>(null)
 
@@ -55,11 +54,13 @@ function RouteComponent() {
         setSearchInput(searchQuery)
     }, [searchQuery])
 
-    const { data = { vendors: [], totalCount: 0 }, isLoading } = useQuery({
+    const { data = { vendors: [], totalCount: 0 }, isLoading, isError, error, refetch } = useQuery({
         queryKey: ['vendors-page', 'in_store', { page, pageSize, search: searchQuery, sort }],
         queryFn: () => fetchVendorsPage({ page, pageSize, search: searchQuery, sort }, 'in_store'),
         staleTime: 1000 * 60 * 5,
     })
+
+    const { data: categories = [] } = useQuery(categoriesQueryOptions())
 
     const totalVendors = data.totalCount
     const totalPages = Math.max(1, Math.ceil(totalVendors / pageSize))
@@ -83,17 +84,14 @@ function RouteComponent() {
                 name: formData.name,
                 email: formData.email,
                 password: formData.password,
+                categoryId: formData.categoryId,
             })
-            const dataResult = result.data as { uid: string }
-            if (dataResult?.uid) {
-                await setDoc(doc(db, 'vendors', dataResult.uid), { vendorType: 'in_store' }, { merge: true })
-            }
             return result.data
         },
         onSuccess: () => {
             resetFirestorePaginationCursors('vendors:')
             queryClient.invalidateQueries({ queryKey: ['vendors-page'] })
-            setForm({ name: '', email: '', password: '' })
+            setForm({ name: '', email: '', password: '', categoryId: '' })
             setOpen(false)
             void refreshVendorList()
         },
@@ -123,8 +121,9 @@ function RouteComponent() {
 
     const loading = isLoading
 
-    const handleAddVendor = async () => {
-        if (!form.name || !form.email || !form.password) return
+    const handleAddVendor = (event: FormEvent<HTMLFormElement>) => {
+        event.preventDefault()
+        if (!form.name || !form.email || !form.password || !form.categoryId) return
         addVendorMutation.mutate(form)
     }
 
@@ -140,8 +139,9 @@ function RouteComponent() {
     }
 
     return (
-        <div className="p-8 space-y-6 w-full max-w-[1600px] mx-auto">
-            <h1 className="text-2xl font-semibold tracking-tight">Explore & vendors</h1>
+        <div className="p-4 sm:p-8 space-y-6 w-full max-w-[1600px] mx-auto">
+            <div><h1 className="text-2xl font-semibold tracking-tight">Vendors & offers</h1>
+                <p className="mt-1 text-sm text-muted-foreground">Manage vendor profiles, offers and branch locations shown in the app.</p></div>
 
             {/* Delete Confirmation Dialog */}
             <Dialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
@@ -181,7 +181,7 @@ function RouteComponent() {
                         <Input
                             aria-label="Search vendors"
                             placeholder="Search vendor, category or contact"
-                            className="pl-9 bg-muted/50 border-none h-10"
+                            className="pl-9 bg-card h-10"
                             value={searchInput}
                             onChange={(e) => setSearchInput(e.target.value)}
                             onKeyDown={(e) => {
@@ -197,6 +197,7 @@ function RouteComponent() {
                     >
                         Search
                     </Button>
+                    {searchQuery && <Button variant="ghost" onClick={() => { setSearchInput(''); updateFilters({ search: '' }) }}>Clear</Button>}
                 </div>
                 <div className="flex items-center gap-2 w-full sm:w-auto">
                     <Dialog open={open} onOpenChange={setOpen}>
@@ -208,12 +209,14 @@ function RouteComponent() {
                         <DialogContent className="sm:max-w-[425px]">
                             <DialogHeader>
                                 <DialogTitle>Add New Vendor</DialogTitle>
+                                <DialogDescription>Create a vendor account, then add its profile, offers and branches.</DialogDescription>
                             </DialogHeader>
-                            <div className="grid gap-4 py-4">
+                            <form id="add-vendor" onSubmit={handleAddVendor} className="grid gap-4 py-4">
                                 <div className="grid gap-2">
                                     <Label htmlFor="name">Vendor Name</Label>
                                     <Input
                                         id="name"
+                                        required
                                         value={form.name}
                                         onChange={(e) => setForm({ ...form, name: e.target.value })}
                                         placeholder="Enter vendor name"
@@ -221,10 +224,18 @@ function RouteComponent() {
                                     />
                                 </div>
                                 <div className="grid gap-2">
+                                    <Label htmlFor="vendor-category">Main category</Label>
+                                    <Select value={form.categoryId} onValueChange={(categoryId) => setForm({ ...form, categoryId })} disabled={addVendorMutation.isPending}>
+                                        <SelectTrigger id="vendor-category"><SelectValue placeholder="Select a category" /></SelectTrigger>
+                                        <SelectContent>{categories.map(category => <SelectItem key={category.id} value={category.id}>{category.nameEnglish}</SelectItem>)}</SelectContent>
+                                    </Select>
+                                </div>
+                                <div className="grid gap-2">
                                     <Label htmlFor="email">Email Address</Label>
                                     <Input
                                         id="email"
                                         type="email"
+                                        required
                                         value={form.email}
                                         onChange={(e) => setForm({ ...form, email: e.target.value })}
                                         placeholder="Enter email address"
@@ -236,21 +247,25 @@ function RouteComponent() {
                                     <Input
                                         id="password"
                                         type="password"
+                                        required
+                                        minLength={6}
+                                        autoComplete="new-password"
                                         value={form.password}
                                         onChange={(e) => setForm({ ...form, password: e.target.value })}
-                                        placeholder="Enter password"
+                                        placeholder="At least 6 characters"
                                         disabled={addVendorMutation.isPending}
                                     />
                                 </div>
-                            </div>
+                            </form>
                             <DialogFooter>
                                 <Button variant="outline" onClick={() => setOpen(false)}>
                                     Cancel
                                 </Button>
                                 <Button
                                     className="bg-brand-green hover:bg-brand-green/90 text-white"
-                                    onClick={handleAddVendor}
-                                    disabled={addVendorMutation.isPending}
+                                    type="submit"
+                                    form="add-vendor"
+                                    disabled={addVendorMutation.isPending || !form.categoryId}
                                 >
                                     {addVendorMutation.isPending ? (
                                         <>
@@ -265,7 +280,7 @@ function RouteComponent() {
                         </DialogContent>
                     </Dialog>
                     <Select value={sort} onValueChange={(v) => updateFilters({ sort: v })}>
-                        <SelectTrigger className="w-[130px] h-10 bg-muted/50 border-none">
+                        <SelectTrigger aria-label="Sort vendors" className="w-[130px] h-10 bg-card">
                             <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
@@ -277,22 +292,23 @@ function RouteComponent() {
             </div>
 
             {/* Results info */}
-            {searchQuery && (
-                <p className="text-sm text-muted-foreground">
-                    {totalVendors} result{totalVendors !== 1 ? 's' : ''} found
-                </p>
-            )}
+            <p role="status" className="text-sm text-muted-foreground">
+                {loading ? 'Loading vendors…' : `${totalVendors} vendor${totalVendors !== 1 ? 's' : ''}${searchQuery ? ` matching “${searchQuery}”` : ''}`}
+            </p>
+            {isError && <div role="alert" className="flex flex-wrap items-center gap-3 rounded-xl border border-destructive/30 bg-destructive/5 p-4 text-sm">
+                <p className="flex-1">Could not load vendors: {error.message}</p><Button variant="outline" onClick={() => void refetch()}>Try again</Button>
+            </div>}
 
             <div className="overflow-x-auto rounded-2xl border bg-card">
                 <Table>
                     <TableHeader>
                         <TableRow className="hover:bg-transparent border-none">
-                            <TableHead className="text-black font-bold text-base">Brand Name</TableHead>
+                            <TableHead>Vendor</TableHead>
                             <TableHead>Category & subcategories</TableHead>
                             <TableHead>Mobile status</TableHead>
                             <TableHead>Offers / branches</TableHead>
                             <TableHead>Contact</TableHead>
-                            <TableHead className="text-black font-bold text-base text-right pr-8">Actions:</TableHead>
+                            <TableHead className="text-right pr-8">Actions</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -305,7 +321,7 @@ function RouteComponent() {
                                     </div>
                                 </TableCell>
                             </TableRow>
-                        ) : vendorList.length === 0 ? (
+                        ) : isError ? null : vendorList.length === 0 ? (
                             <TableRow>
                                 <TableCell colSpan={6} className="text-center py-10 text-muted-foreground">
                                     {searchQuery
@@ -325,20 +341,21 @@ function RouteComponent() {
                                                     <span className="text-gray-400 text-xs font-bold">{(vendor.name || 'V').charAt(0)}</span>
                                                 </div>
                                             )}
-                                            <span className="font-medium text-base">{vendor.name || 'Vendor'}</span>
+                                            <Link to="/admin/vendors/$vendorId/settings/branding" params={{ vendorId: vendor.id }} className="font-medium text-base underline-offset-4 hover:underline">{vendor.name || 'Vendor'}</Link>
                                         </div>
                                     </TableCell>
                                     <TableCell><p>{vendor.mainCategory || 'Not assigned'}</p><p className="text-xs text-muted-foreground">{vendor.subcategory?.join(', ') || 'No subcategories'}</p></TableCell>
                                     <TableCell>{vendor.status || 'Unknown'}</TableCell>
-                                    <TableCell>{vendor.offers?.length ?? 0} offers / {vendor.locations?.length ?? 0} branches</TableCell>
+                                    <TableCell><div className="flex flex-col gap-1">
+                                        <Link to="/admin/vendors/$vendorId/settings/offers" params={{ vendorId: vendor.id }} className="w-fit text-sm underline underline-offset-4">{vendor.offers?.length ?? 0} offers</Link>
+                                        <Link to="/admin/vendors/$vendorId/settings/location" params={{ vendorId: vendor.id }} className="w-fit text-sm text-muted-foreground underline underline-offset-4">{vendor.locations?.length ?? 0} branches</Link>
+                                    </div></TableCell>
                                     <TableCell className="font-medium text-gray-900">{vendor.contact}</TableCell>
                                     <TableCell className="text-right">
                                         <div className="flex items-center justify-end gap-2">
-                                            <Link to="/admin/vendors/$vendorId/settings" params={{ vendorId: vendor.id }}>
-                                                <Button variant="outline" size="sm" className="rounded-full h-8 px-4 gap-1 text-xs font-semibold">
-                                                    Manage <ChevronRight className="h-3 w-3" />
-                                                </Button>
-                                            </Link>
+                                            <Button asChild variant="outline" size="sm" className="h-9 px-4 gap-1 text-xs font-semibold">
+                                                <Link to="/admin/vendors/$vendorId/settings" params={{ vendorId: vendor.id }}>Manage <ChevronRight className="h-3 w-3" /></Link>
+                                            </Button>
                                             <Button
                                                 variant="ghost"
                                                 size="icon"

@@ -37,6 +37,7 @@ it('submits a restaurant request without manager or phone details', async () => 
   (submitStudentRequest as jest.Mock).mockResolvedValue(undefined);
   const view = await wrap(<StudentRequestScreen />);
   await fireEvent.changeText(view.getByLabelText('Restaurant name (required)'), 'Marina Cafe');
+  await fireEvent.changeText(view.getByLabelText('Enter location (required)'), 'Kochi');
   await fireEvent.press(view.getByLabelText('Submit request'));
   await waitFor(() => expect(submitStudentRequest).toHaveBeenCalledWith(expect.objectContaining({ kind: 'restaurant', name: 'Marina Cafe', contact: '', phone: '' }), 'request-uuid'));
 });

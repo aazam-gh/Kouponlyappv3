@@ -1,3 +1,4 @@
+import { DEFAULT_HOME_SECTION_ORDER, normalizeHomeSectionOrder, type HomeSectionId } from './home-layout';
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { applyCataloguePatch, type CataloguePatch } from '@/lib/data';
 import { ActivityIndicator, Text, View } from 'react-native';
@@ -8,12 +9,13 @@ import { fetchCloudCatalogue, subscribeToCatalogue } from '@/lib/backend';
 import { queryClient, queryKeys } from '@/utils/queryClient';
 
 type CatalogueStatus = 'loading' | 'cloud' | 'offline';
-type Value = { error: string; status: CatalogueStatus; revision: number; refresh: () => Promise<void> };
-const Context = createContext<Value>({ error: '', status: 'loading', revision: 0, refresh: async () => {} });
+type Value = { homeSectionOrder: HomeSectionId[]; error: string; status: CatalogueStatus; revision: number; refresh: () => Promise<void> };
+const Context = createContext<Value>({ homeSectionOrder: DEFAULT_HOME_SECTION_ORDER, error: '', status: 'loading', revision: 0, refresh: async () => {} });
 
 export function CatalogueProvider({ children }: { children: React.ReactNode }) {
   const [status, setStatus] = useState<CatalogueStatus>('loading');
   const [error, setError] = useState('');
+  const [homeSectionOrder, setHomeSectionOrder] = useState(DEFAULT_HOME_SECTION_ORDER);
   const [revision, setRevision] = useState(0);
   const activeRefresh = useRef(0);
 
@@ -33,6 +35,7 @@ export function CatalogueProvider({ children }: { children: React.ReactNode }) {
         rewards: catalogue.rewards,
       };
       applyCataloguePatch(patch);
+      setHomeSectionOrder(normalizeHomeSectionOrder(catalogue.homeSectionOrder));
       setRevision(value => value + 1);
       setStatus('cloud');
     } catch (error) {
@@ -57,7 +60,7 @@ export function CatalogueProvider({ children }: { children: React.ReactNode }) {
     };
   }, [refresh]);
 
-  const value = useMemo(() => ({ status, error, revision, refresh }), [status, error, revision, refresh]);
+  const value = useMemo(() => ({ status, error, revision, refresh, homeSectionOrder }), [status, error, revision, refresh, homeSectionOrder]);
   return <Context.Provider value={value}>{children}</Context.Provider>;
 }
 

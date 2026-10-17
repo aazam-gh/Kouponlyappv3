@@ -29,12 +29,12 @@ export default function ScrollCrunchSection({ children, scrollY, viewportHeight,
   const reveal = useSharedValue(1);
   const pinnedStyle = useAnimatedStyle(() => pinBelowHeader && !reduceMotion ? {
     zIndex: 1,
-    transform: [{ translateY: pinnedCategoryState(top.get() + 68, height.get(), scrollY.get(), pinBelowHeader.get()).translateY }],
+    transform: [{ translateY: pinnedCategoryState(top.get(), height.get(), scrollY.get(), pinBelowHeader.get()).translateY }],
   } : {});
   useAnimatedReaction(
     () => pinBelowHeader
-      ? pinnedCategoryState(top.get() + 68, height.get(), scrollY.get(), pinBelowHeader.get()).reveal
-      : Number(sectionShouldReveal(top.get() + 68 - scrollY.get(), height.get(), 68, viewportHeight.get() - bottomInset, reduceMotion)),
+      ? pinnedCategoryState(top.get(), height.get(), scrollY.get(), pinBelowHeader.get()).reveal
+      : Number(sectionShouldReveal(top.get() - scrollY.get(), height.get(), 68, viewportHeight.get() - bottomInset, reduceMotion)),
     (progress, previous) => {
       if (reduceMotion) reveal.set(1);
       else if (pinBelowHeader) reveal.set(progress);

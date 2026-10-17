@@ -1,3 +1,5 @@
+import * as Clipboard from 'expo-clipboard';
+import { normalizeDigits } from '@/utils/numbers';
 import ScalePressable from '@/components/ScalePressable';
 import { isSchoolEmail, SCHOOL_EMAIL_MESSAGE } from '@/lib/school-email';
 import * as ImagePicker from 'expo-image-picker';
@@ -35,6 +37,8 @@ export default function RealXOnboardingScreen() {
   const inviteRequest = React.useRef({code: '', id: ''});
   const [firstName, setFirstName] = React.useState('');
   const [lastName, setLastName] = React.useState('');
+  const [dob, setDob] = React.useState('');
+  const [phone, setPhone] = React.useState('');
   const role: VerificationRole = 'student';
   const [image, setImage] = React.useState<PickedImage | null>(null);
   const [request, setRequest] = React.useState<{ requestId: string; statusToken: string } | null>(typeof params.requestId === 'string' && typeof params.statusToken === 'string' ? { requestId: params.requestId, statusToken: params.statusToken } : null);
@@ -71,6 +75,7 @@ export default function RealXOnboardingScreen() {
 
   const sendCode = async () => {
     if (flow === 'verification' && !isSchoolEmail(email)) { Alert.alert('School email required', SCHOOL_EMAIL_MESSAGE); return; }
+    if (flow === 'signup' && dob.trim() && (!/^\d{4}-\d{2}-\d{2}$/.test(dob.trim()) || !Number.isFinite(Date.parse(dob.trim())) || new Date(dob.trim()).toISOString().slice(0, 10) !== dob.trim() || Date.parse(dob.trim()) > Date.now())) { setMessage('Enter a valid date of birth as YYYY-MM-DD.'); return; }
     setBusy(true); setMessage('');
     try {
       await sendCouponlyEmailCode(email.trim().toLowerCase(), flow);
@@ -123,7 +128,8 @@ export default function RealXOnboardingScreen() {
   const finishProfile = async () => {
     setBusy(true); setMessage('');
     try {
-      await completeCouponlySignup({ email: user?.email || email.trim().toLowerCase(), firstName: firstName.trim(), lastName: lastName.trim(), accountRole: role });
+      const signup = await completeCouponlySignup({ dob: dob.trim() || undefined, phone: phone.trim() || undefined, email: user?.email || email.trim().toLowerCase(), firstName: firstName.trim(), lastName: lastName.trim(), accountRole: role });
+      if (!signup.alreadyExists) Alert.alert('Welcome to Kouponly!', 'You have pre-launch access. Thanks for joining! Share Kouponly with your friends. You can find this message again in Notifications.', [{ text: 'Continue' }, { text: 'Visit Kouponly', onPress: () => { void Linking.openURL('https://kouponly.in').catch(() => setMessage('Unable to open the website.')); } }]);
       if (inviteCode.trim()) {
         const normalized = inviteCode.trim().toUpperCase();
         if (inviteRequest.current.code !== normalized) inviteRequest.current = {code: normalized, id: makeMutationId()};
@@ -202,6 +208,8 @@ export default function RealXOnboardingScreen() {
       {flow === 'signup' ? <>
         <OnboardingField label={t('first_name_placeholder')} value={firstName} onChangeText={setFirstName} autoComplete="given-name" autoCapitalize="words" editable={!busy} />
         <OnboardingField label={t('last_name_placeholder')} value={lastName} onChangeText={setLastName} autoComplete="family-name" autoCapitalize="words" editable={!busy} />
+        <OnboardingField label="Date of birth (optional, YYYY-MM-DD)" value={dob} onChangeText={setDob} autoCapitalize="none" maxLength={10} editable={!busy} />
+        <OnboardingField label="Phone number (optional)" value={phone} onChangeText={setPhone} keyboardType="phone-pad" autoComplete="tel" maxLength={40} editable={!busy} />
         <OnboardingField label="Invite code (optional)" value={inviteCode} onChangeText={text => setInviteCode(text.toUpperCase())} autoCapitalize="characters" autoCorrect={false} maxLength={5} editable={!busy} />
       </> : null}
       {flow === 'signup' ? <Text style={styles.legal}>{t('onboarding_v2_legal')}</Text> : null}
@@ -228,6 +236,7 @@ export default function RealXOnboardingScreen() {
       {(status === 'approved' || status === 'rejected' || status === 'cancelled') ? <OnboardingTextButton label={status === 'approved' ? 'Continue to sign in' : 'Start again'} onPress={() => { setFlow(status === 'approved' ? 'login' : 'verification'); setStep('email'); }} /> : null}
     </> : null}
     {step === 'done' ? <InlineNotice tone="success">{t('onboarding_v2_success_preview')}</InlineNotice> : null}
+    {/waitlist|wait.list|invite.only|signups?.*(disabled|restricted|not allowed)/i.test(message) ? <><InlineNotice tone="info">Pre-launch access is currently limited to the waitlist. Complete the waitlist form and we’ll let you know when you can join.</InlineNotice><OnboardingTextButton label="Join the Kouponly waitlist" onPress={() => void Linking.openURL('https://kouponly.in/waitlist#waitlist-form').catch(() => setMessage('Unable to open the waitlist. Visit kouponly.in.'))} /></> : null}
     {message && step !== 'document' ? <InlineNotice tone={step === 'done' ? 'info' : 'error'}>{message}</InlineNotice> : null}
   </OnboardingScaffold>;
 }
@@ -240,7 +249,8 @@ function OtpField({ value, onChangeText, disabled }: { value: string; onChangeTe
     <ScalePressable activeOpacity={1} onPress={() => input.current?.focus()} style={styles.otpCells}>
       {Array.from({ length: 6 }, (_, index) => <View key={index} style={[styles.otpCell, index === value.length && styles.otpCellActive]}><Text style={styles.otpDigit}>{value[index] || ''}</Text></View>)}
     </ScalePressable>
-    <TextInput ref={input} value={value} onChangeText={text => onChangeText(text.replace(/\D/g, '').slice(0, 6))} keyboardType="number-pad" autoComplete="one-time-code" textContentType="oneTimeCode" maxLength={6} editable={!disabled} autoFocus style={styles.hiddenInput} accessibilityLabel="Six-digit verification code" />
+    <TextInput ref={input} value={value} onChangeText={text => onChangeText(normalizeDigits(text).replace(/\D/g, '').slice(0, 6))} keyboardType="number-pad" autoComplete="one-time-code" textContentType="oneTimeCode" editable={!disabled} autoFocus style={styles.hiddenInput} accessibilityLabel="Six-digit verification code" />
+    <OnboardingTextButton label="Paste code" disabled={disabled} onPress={() => { void Clipboard.getStringAsync().then(text => { const digits = normalizeDigits(text).replace(/\D/g, ''); if (digits.length === 6) onChangeText(digits); else Alert.alert('Copy your code first', 'Copy the six-digit verification code from your email, then tap Paste code.'); }).catch(() => Alert.alert('Unable to paste', 'Enter the code using the keyboard.')); }} />
   </View>;
 }
 

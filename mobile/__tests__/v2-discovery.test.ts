@@ -25,10 +25,13 @@ it('opens only valid web and Instagram links', () => {
   expect(safeWebUrl('https://user:password@example.com')).toBeUndefined();
 });
 it('requires institute and domain details but allows optional restaurant contact details', () => {
-  const request = { kind: 'school' as const, name: 'Marina University', domain: 'students.marina.edu', email: 'student@marina.edu', contact: '', phone: '' };
+  const request = { kind: 'school' as const, name: 'Marina University', domain: 'students.marina.edu', email: 'student@marina.edu', contact: 'Student Name', phone: '+919876543210' };
   expect(validateStudentRequest(request)).toBeNull();
+  expect(validateStudentRequest({ ...request, contact: '' })).toContain('name');
+  expect(validateStudentRequest({ ...request, phone: '' })).toContain('phone');
+  expect(validateStudentRequest({ ...request, kind: 'restaurant', location: '' })).toContain('location');
   expect(validateStudentRequest({ ...request, domain: 'student@marina.edu' })).toContain('domain');
   expect(validateStudentRequest({ ...request, email: 'bad' })).toContain('email');
-  expect(validateStudentRequest({ ...request, kind: 'restaurant', domain: '', name: 'Marina Cafe' })).toBeNull();
+  expect(validateStudentRequest({ ...request, kind: 'restaurant', domain: '', name: 'Marina Cafe', location: 'Kochi', contact: '', phone: '' })).toBeNull();
   expect(validateStudentRequest({ ...request, kind: 'restaurant', name: '' })).toContain('restaurant');
 });

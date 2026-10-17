@@ -41,3 +41,9 @@ it('does not cache a permanently rejected one-time edit as an offline draft',asy
  await act(async()=>{await expect(reader.saveProfile({...reader.profile,full_name:'Forbidden'})).rejects.toThrow('only be changed once');});
  expect(reader.profile.full_name).toBe('Alice');expect(await AsyncStorage.getItem('kouponly.user.alice.profile.pending.v1')).toBeNull();
 });
+
+it('keeps the saved first and last name boundaries for compound names',async()=>{
+ mockProfile.mockResolvedValue({full_name:'Mary Jane van Doe',first_name:'Mary Jane',last_name:'van Doe'});
+ const view=await render(tree());await waitFor(()=>expect(view.getByText('Mary Jane van Doe')).toBeTruthy());
+ expect(reader.profile.first_name).toBe('Mary Jane');expect(reader.profile.last_name).toBe('van Doe');
+});

@@ -216,20 +216,21 @@ function FeaturedBrandShowcaseManagement() {
     if (loading) {
         return (
             <div className="flex items-center justify-center min-h-screen">
-                <Loader2 className="w-8 h-8 animate-spin text-purple-600" />
+                <Loader2 className="w-8 h-8 animate-spin text-primary" />
             </div>
         )
     }
 
     return (
-        <div className="p-8 space-y-8 max-w-6xl mx-auto font-sans bg-white min-h-screen">
-            <div className="flex items-center justify-between gap-4">
+        <div className="p-4 sm:p-8 space-y-8 w-full max-w-6xl mx-auto font-sans bg-white min-h-screen">
+            <div className="sticky top-(--header-height) z-10 flex flex-wrap items-center justify-between gap-4 border-b bg-white py-3">
                 <div className="flex items-center gap-4">
                     <Button
                         variant="ghost"
                         size="icon"
                         className="rounded-xl bg-gray-100 hover:bg-gray-200"
                         onClick={() => navigate({ to: '/admin/cms' })}
+                        aria-label="Back to Home content"
                     >
                         <ArrowLeft className="h-5 w-5" />
                     </Button>
@@ -238,7 +239,7 @@ function FeaturedBrandShowcaseManagement() {
                             <Sparkles className="w-5 h-5" />
                         </div>
                         <div>
-                            <h1 className="text-2xl font-bold tracking-tight">Featured Brand Showcase</h1>
+                            <h1 className="text-2xl font-bold tracking-tight">Featured showcase</h1>
                             <p className="text-xs text-gray-500 font-medium">
                                 Mobile hero campaign content
                             </p>
@@ -256,7 +257,7 @@ function FeaturedBrandShowcaseManagement() {
                     <Button
                         onClick={saveShowcase}
                         disabled={saving || uploadInProgress}
-                        className="bg-purple-600 hover:bg-purple-700 text-white rounded-xl px-6 h-10 font-bold shadow-md shadow-purple-200 transition-all"
+                        className="bg-primary hover:bg-primary/90 text-white rounded-xl px-6 h-10 font-bold shadow-sm transition-all"
                     >
                         {saving ? (
                             <Loader2 className="w-4 h-4 animate-spin mr-2" />
@@ -321,7 +322,7 @@ function FeaturedBrandShowcaseManagement() {
                             value={item.title}
                             onChange={(event) => updateItem({ title: event.target.value })}
                             placeholder="OMARA APPAREL"
-                            className="w-full h-11 px-4 rounded-xl bg-white border border-gray-100 font-bold text-sm text-gray-900 outline-none focus:border-purple-400 transition-all shadow-sm"
+                            className="w-full h-11 px-4 rounded-xl bg-white border border-gray-100 font-bold text-sm text-gray-900 outline-none focus:border-primary transition-all shadow-sm"
                         />
                     </Field>
 
@@ -332,7 +333,7 @@ function FeaturedBrandShowcaseManagement() {
                             value={item.orderUrl}
                             onChange={(event) => updateItem({ orderUrl: event.target.value })}
                             placeholder="https://example.com/shop"
-                            className="w-full h-11 px-4 rounded-xl bg-white border border-gray-100 font-medium text-sm text-gray-900 outline-none focus:border-purple-400 transition-all shadow-sm"
+                            className="w-full h-11 px-4 rounded-xl bg-white border border-gray-100 font-medium text-sm text-gray-900 outline-none focus:border-primary transition-all shadow-sm"
                         />
                     </Field>
 
@@ -341,7 +342,7 @@ function FeaturedBrandShowcaseManagement() {
                             value={item.altText || ''}
                             onChange={(event) => updateItem({ altText: event.target.value })}
                             placeholder="Featured apparel campaign"
-                            className="w-full h-11 px-4 rounded-xl bg-white border border-gray-100 font-medium text-sm text-gray-900 outline-none focus:border-purple-400 transition-all shadow-sm"
+                            className="w-full h-11 px-4 rounded-xl bg-white border border-gray-100 font-medium text-sm text-gray-900 outline-none focus:border-primary transition-all shadow-sm"
                         />
                     </Field>
 
@@ -351,7 +352,7 @@ function FeaturedBrandShowcaseManagement() {
                                 type="number"
                                 value={item.order ?? 0}
                                 onChange={(event) => updateItem({ order: Number(event.target.value) })}
-                                className="w-full h-11 px-4 rounded-xl bg-white border border-gray-100 font-bold text-sm text-gray-900 outline-none focus:border-purple-400 transition-all shadow-sm"
+                                className="w-full h-11 px-4 rounded-xl bg-white border border-gray-100 font-bold text-sm text-gray-900 outline-none focus:border-primary transition-all shadow-sm"
                             />
                         </Field>
 
@@ -367,7 +368,7 @@ function FeaturedBrandShowcaseManagement() {
                                 </span>
                                 <span className={cn(
                                     'w-11 h-6 rounded-full transition-colors relative shadow-inner',
-                                    item.isActive ? 'bg-purple-600' : 'bg-gray-200'
+                                    item.isActive ? 'bg-primary' : 'bg-gray-200'
                                 )}>
                                     <span className={cn(
                                         'absolute top-0.5 w-5 h-5 rounded-full bg-white transition-all transform shadow-sm',
@@ -413,7 +414,7 @@ function ImageUploadSlot({
         <label className="block space-y-1.5">
             <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider ml-1">{label}</span>
             <span className={cn(
-                'relative flex w-full cursor-pointer flex-col items-center justify-center overflow-hidden rounded-xl border-2 border-dashed border-gray-200 bg-white transition-all hover:border-purple-400',
+                'relative flex w-full cursor-pointer flex-col items-center justify-center overflow-hidden rounded-xl border-2 border-dashed border-gray-200 bg-white transition-all hover:border-primary',
                 aspectClass
             )}>
                 <input
@@ -433,7 +434,7 @@ function ImageUploadSlot({
                 )}
                 {uploading && (
                     <span className="absolute inset-0 bg-white/80 flex items-center justify-center">
-                        <Loader2 className="w-6 h-6 animate-spin text-purple-600" />
+                        <Loader2 className="w-6 h-6 animate-spin text-primary" />
                     </span>
                 )}
                 <span className="absolute inset-0 bg-black/40 opacity-0 hover:opacity-100 transition-opacity flex items-center justify-center">

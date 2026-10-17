@@ -10,6 +10,7 @@ type SubCategory = {
     id: string;
     name: string;
     icon: string | number | { uri: string };
+    sampleImage?: number;
 };
 
 type Props = {
@@ -47,7 +48,7 @@ const SubCategoryChip = memo(({
             return <Image source={icon} style={styles.imageIcon} contentFit="contain" />;
         }
 
-        // Handle remote images; missing Supabase artwork stays empty like the reference.
+        // Published CMS artwork takes precedence over the bundled samples.
         if (typeof icon === 'string') {
             const isRemote = icon.startsWith('http') || icon.includes('/');
             if (isRemote) {
@@ -55,8 +56,8 @@ const SubCategoryChip = memo(({
             }
         }
 
-        // Keep the label baseline consistent when a subcategory has no artwork.
-        return <View style={styles.iconPlaceholder} />;
+        // Sample artwork until subcategory-specific CMS images are supplied.
+        return <Image source={item.sampleImage || require('../../assets/subcategories/shopping.png')} style={styles.imageIcon} contentFit="contain" />;
     };
 
     return (
@@ -143,11 +144,6 @@ const styles = StyleSheet.create({
         marginBottom: 8,
     },
     vectorIcon: { width: ICON_SIZE, height: ICON_SIZE, marginBottom: 8, textAlign: 'center', textAlignVertical: 'center' },
-    iconPlaceholder: {
-        width: ICON_SIZE,
-        height: ICON_SIZE,
-        marginBottom: 8,
-    },
     chipText: {
         fontSize: 12,
         ...Typography.getTextVariantStyle('body'),

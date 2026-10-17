@@ -26,7 +26,7 @@ function TransactionDetailsRoute() {
                     </div>
                     <div>
                         <h1 className="text-3xl font-bold tracking-tight text-gray-900">Transaction Details</h1>
-                        <p className="text-sm text-muted-foreground mt-1">Review full transaction information and redemption stats</p>
+                        <p className="text-sm text-muted-foreground mt-1">Review full transaction information and activity</p>
                     </div>
                 </div>
             </div>
@@ -90,7 +90,7 @@ function TransactionDetailsRoute() {
                                 <Separator className="bg-gray-200" />
                                 <div className="flex justify-between items-center">
                                     <span className="text-muted-foreground text-sm font-medium">
-                                        {transaction.type === 'online_redemption' ? 'Redemption Channel' : 'Original Total'}
+                                        {transaction.type === 'online_redemption' ? 'Transaction channel' : 'Original Total'}
                                     </span>
                                     <span className="font-medium text-gray-700">
                                         {transaction.type === 'online_redemption' ? 'Online store' : transaction.totalAmount}

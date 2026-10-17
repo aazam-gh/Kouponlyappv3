@@ -23,6 +23,8 @@ import ProfileSprites from '@/components/profile/ProfileSprites';
 
 const OFFER_LAYOUT = LinearTransition.duration(220).easing(Easing.bezier(0.22, 1, 0.36, 1)).reduceMotion(ReduceMotion.System);
 const OFFER_DETAILS_EXIT_MS = 180;
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
+const INFO_SHEET_ENTER = SlideInDown.duration(260).reduceMotion(ReduceMotion.System);
 
 export default function DealDetail({ dealId }: { dealId?: string } = {}) {
   const {status} = useCatalogue();
@@ -145,7 +147,7 @@ export default function DealDetail({ dealId }: { dealId?: string } = {}) {
           const expanded = expandedOfferId === offer.id;
           const closing = closingOfferId === offer.id;
           const showDetails = expanded && !closing;
-          const saving = offer.saving || (offer.discountType === 'percentage' && Number.isFinite(offer.discountValue) ? `${offer.discountValue}% off` : '');
+          const saving = offer.discountType && ['fixed_price', 'combo'].includes(offer.discountType) ? `Kouponly Exclusive Price: ${offer.currency || 'INR'} ${offer.discountValue}` : offer.saving || (offer.discountType === 'percentage' && Number.isFinite(offer.discountValue) ? `${offer.discountValue}% off` : '');
           const toggleOfferDetails = () => {
             if (closing) { setClosingOfferId(null); return; }
             if (expanded) { setClosingOfferId(offer.id); return; }
@@ -172,6 +174,7 @@ export default function DealDetail({ dealId }: { dealId?: string } = {}) {
             </View> : null}
             <View style={s.couponLimit}>
               {benefits?.subscription ? <Text accessibilityLabel={`Coupons remaining: ${count ? 0 : 1} of 1`} style={s.couponCount}>{count ? '0/1' : '1/1'} coupon remaining</Text> : null}
+              {count && benefits?.subscription ? <><Text style={s.offerDetailsText}>Available again {new Date(benefits.subscription.endsAt).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })} IST. {benefits.rewardedReferrals < benefits.referralLimit ? 'Invite friends to earn an earlier coupon refresh.' : 'Your referral refresh limit has been reached.'}</Text><AccessiblePressable accessibilityRole="button" onPress={() => router.push('/invite-code')}><Text style={s.offerDetailsTitle}>Invite friends</Text></AccessiblePressable></> : null}
             </View>
             <View style={[s.offerActionsRow, isRTL && s.rowReverse]}>
               <AccessiblePressable accessibilityRole="button" accessibilityLabel={`${state.savedOffers.includes(offer.id) ? 'Remove' : 'Save'} ${offer.title}`} accessibilityState={{ selected: state.savedOffers.includes(offer.id) }} onPress={() => toggleSavedOffer(offer.id)} style={s.saveOffer}><Ionicons name={state.savedOffers.includes(offer.id) ? 'bookmark' : 'bookmark-outline'} size={18} color={C.ink}/><Text style={s.saveOfferText}>{state.savedOffers.includes(offer.id) ? 'Saved' : 'Save'}</Text></AccessiblePressable>
@@ -182,10 +185,9 @@ export default function DealDetail({ dealId }: { dealId?: string } = {}) {
       </View>
     </Screen>
     <Modal visible={locationsOpen && Boolean(deal.locations?.length)} transparent animationType={reduceMotion ? "fade" : "slide"} onRequestClose={()=>setLocationsOpen(false)}><Pressable style={s.modalOverlay} onPress={()=>setLocationsOpen(false)}><Pressable style={[s.branchSheet,{paddingBottom:Math.max(insets.bottom,20)}]} onPress={event=>event.stopPropagation()}><View style={s.handle}/><View style={s.branchHeader}><Text style={s.sectionTitle}>Branches</Text><AccessiblePressable accessibilityLabel="Close branches" onPress={()=>setLocationsOpen(false)} style={s.imageAction}><Ionicons name="close-circle" size={25} color={C.ink}/></AccessiblePressable></View><ScrollView showsVerticalScrollIndicator={false}>{deal.locations?.map((location,index)=><AccessiblePressable key={location.id} accessibilityLabel={`Directions to ${location.name || location.address}`} onPress={()=>{setLocationsOpen(false);openLocation(location)}} pressedScale={1} style={[s.branchRow, isRTL && s.rowReverse]}><View style={s.branchIcon}><Ionicons name="location-outline" size={19} color={C.lime}/></View><View style={{flex:1}}><Text style={[s.locationText, isRTL && s.textRtl]}>{location.name || `Branch ${index+1}`}</Text>{location.address ? <Text style={[s.branchAddress, isRTL && s.textRtl]}>{location.address}</Text>:null}{location.phoneNumber ? <Text style={[s.branchAddress, isRTL && s.textRtl]}>{location.phoneNumber}</Text>:null}</View><Ionicons name="navigate-outline" size={17} color={C.lime}/></AccessiblePressable>)}</ScrollView></Pressable></Pressable></Modal>
-    <Modal visible={infoOpen} transparent animationType="fade" onRequestClose={() => setInfoOpen(false)}>
-      <Pressable style={s.modalOverlay} onPress={() => setInfoOpen(false)}>
-        <Animated.View entering={reduceMotion ? undefined : SlideInDown.duration(260).reduceMotion(ReduceMotion.System)}>
-        <Pressable style={[s.branchSheet, { paddingBottom: Math.max(insets.bottom, 20) }]} onPress={event => event.stopPropagation()}>
+    <Modal testID="vendor-info-modal" visible={infoOpen} transparent animationType="none" onRequestClose={() => setInfoOpen(false)}>
+      <Pressable testID="vendor-info-backdrop" style={s.modalOverlay} onPress={() => setInfoOpen(false)}>
+        <AnimatedPressable testID="vendor-info-sheet" entering={reduceMotion ? undefined : INFO_SHEET_ENTER} style={[s.branchSheet, { paddingBottom: Math.max(insets.bottom, 20) }]} onPress={event => event.stopPropagation()}>
           <View style={s.handle}/>
           <View style={s.branchHeader}>
             <Text style={s.sectionTitle}>{deal.name}</Text>
@@ -200,8 +202,7 @@ export default function DealDetail({ dealId }: { dealId?: string } = {}) {
             {branch?.address ? <View style={s.infoCard}><View style={s.infoHeading}><Ionicons name="location-outline" size={20} color={C.lime}/><Text style={s.infoTitle}>Address</Text></View><Text selectable style={[s.hours, isRTL && s.textRtl]}>{branch.address}</Text></View> : null}
             {!website && !instagram && !formattedHours && !deal.vendorInformation?.message && !deal.description && !branch?.address ? <Text style={s.hours}>More store information will appear here when available.</Text> : null}
           </ScrollView>
-        </Pressable>
-        </Animated.View>
+        </AnimatedPressable>
       </Pressable>
     </Modal>
   </>;
@@ -251,13 +252,13 @@ const styles = (C: ThemeColors) => {
   image: { width: '100%', height: '100%', borderBottomLeftRadius: 24, borderBottomRightRadius: 24 },
   topbar: { position: 'absolute', left: 16, right: 16, flexDirection: 'row', justifyContent: 'flex-end' },
   imageAction: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center', borderRadius: 22, backgroundColor: C.paper, borderWidth: StyleSheet.hairlineWidth, borderColor: outline },
-  logoWrap: { width: 88, height: 88, flexShrink: 0, borderRadius: 16, backgroundColor: C.card, borderWidth: 1, borderColor: outline, overflow: 'hidden', alignItems: 'center', justifyContent: 'center' },
+  logoWrap: { width: 100, height: 100, flexShrink: 0, borderRadius: 16, backgroundColor: C.card, borderWidth: 1, borderColor: outline, overflow: 'hidden', alignItems: 'center', justifyContent: 'center' },
   logo: { width: '100%', height: '100%', borderRadius: 16 },
   rowReverse: { flexDirection: 'row-reverse' },
   textRtl: { textAlign: 'right', writingDirection: 'rtl' },
   content: { paddingHorizontal: 20, paddingBottom: 28 },
-  vendorNameRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  title: { flex: 1, minWidth: 0, fontFamily: F.heading, fontSize: 26, letterSpacing: -.4, color: C.ink },
+  vendorNameRow: { flexDirection: 'row', alignItems: 'center', gap: 16, minHeight: 128, paddingVertical: 14, borderTopWidth: StyleSheet.hairlineWidth, borderBottomWidth: StyleSheet.hairlineWidth, borderColor: outline },
+  title: { flex: 1, minWidth: 0, fontFamily: F.heading, fontSize: 28, lineHeight: 34, letterSpacing: -.4, color: C.ink },
   actionMetaRow:{flexDirection:'row',alignItems:'center',gap:8,marginTop:16}, actionPill:{flex:1,minWidth:0,minHeight:44,flexDirection:'row',alignItems:'center',justifyContent:'center',gap:5,paddingHorizontal:8,borderRadius:22,borderWidth:1,borderColor:outline,backgroundColor:C.soft}, infoPill:{backgroundColor:Colors.brandGreen,borderColor:Colors.brandGreen}, callPillText:{flexShrink:1,textAlign:'center',fontFamily:F.bodySemi,fontSize:13,color:C.ink}, infoPillText:{flexShrink:1,textAlign:'center',fontFamily:F.bodySemi,fontSize:13,color:'#FFFFFF'},
   promosHeader: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginTop: 20, marginBottom: 14 },
   promosHeading:{fontFamily:F.headingSemi,fontSize:23,color:C.ink},

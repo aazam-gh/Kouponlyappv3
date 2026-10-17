@@ -41,6 +41,7 @@ async function request(endpoint, body) {
   for (const deal of catalogue.deals) {
     const vendor = vendors.find(v => v.id === deal.vendorId);
     assert.equal(deal.name, vendor.name);
+    assert.equal(deal.cardLabel, vendor.card_label?.trim() || undefined);
     assert.equal(deal.category, categories.find(c => c.id === vendor.category_id).name);
     assert.equal(deal.image, vendor.cover_image_url || vendor.image_url || vendor.logo_path || vendor.payload?.profilePicture || '');
     assert.equal(deal.description, vendor.description || vendor.payload?.shortDescription || available.find(o => o.vendor_id === vendor.id)?.description || '');
@@ -54,7 +55,7 @@ async function request(endpoint, body) {
       assert.equal(offer.title, row.title);
       assert.equal(offer.description, row.description || '');
       assert.equal(offer.saving, row.saving_label || '');
-      assert.equal(offer.logo, row.image_url || undefined);
+      assert.equal(offer.logo, deal.logo);
       assert.equal(offer.terms, row.terms || undefined);
       assert.equal(offer.redemptionInstructions, row.redemption_instructions || undefined);
       assert(available.some(o => o.id === offer.id));

@@ -2,7 +2,7 @@ import { submitStudentRequest } from '../lib/student-community';
 import { getSupabase } from '../lib/supabase';
 jest.mock('../lib/supabase', () => ({ supabaseConfigured: true, getSupabase: jest.fn() }));
 const invoke = jest.fn();
-const request = { kind: 'school' as const, name: ' Marina University ', domain: ' MARINA.EDU ', email: ' Applicant@Marina.edu ', contact: '', phone: '' };
+const request = { kind: 'school' as const, name: ' Marina University ', domain: ' MARINA.EDU ', email: ' Applicant@Marina.edu ', contact: 'Student Name', phone: '+919876543210' };
 beforeEach(() => { jest.clearAllMocks(); (getSupabase as jest.Mock).mockReturnValue({ functions: { invoke } }); });
 test('submissions use the protected endpoint and preserve the retry id', async () => {
   invoke.mockResolvedValue({ data: { requestId: 'retry-id' }, error: null });

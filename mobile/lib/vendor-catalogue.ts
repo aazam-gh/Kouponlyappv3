@@ -8,10 +8,6 @@ const numberValue = (value: unknown, fallback = 0) => {
   const parsed = typeof value === 'number' ? value : Number(value);
   return Number.isFinite(parsed) ? parsed : fallback;
 };
-const labelValues = (value: unknown, legacyValue: unknown): string[] => {
-  const labels = Array.isArray(value) ? value : [legacyValue];
-  return labels.filter((label): label is string => typeof label === 'string' && label.trim().length > 0).map(label => label.trim()).slice(0, 3);
-};
 
 function isOfferAvailable(offer: MarketplaceOfferRow, now: number) {
   if (offer.active === false) return false;
@@ -84,12 +80,11 @@ export function projectVendorCatalogue(
     const rating = vendor.rating == null ? '' : numberValue(vendor.rating).toFixed(1);
     const redemption: Deal['redemption'] = offer.redemption_mode === 'online' ? 'online' : 'inStore';
     const externalUrl = stringValue(vendor.website, stringValue(payload.website, '')) || undefined;
+    const vendorLogo = stringValue(vendor.logo_path, stringValue(payload.profilePicture, stringValue(payload.logo))) || undefined;
     const deal: Deal = {
       id, vendorId: vendor.id, categoryId: mainCategory.id, subcategoryIds,
       offers: vendorOffers.map(row => ({ currency: stringValue(row.currency) || undefined, id: row.id, index: offerIndexes.get(row.id)!, title: row.title,
-        logo: stringValue(row.image_url) || undefined, description: row.description || '', saving: row.saving_label || '', terms: row.terms || undefined, redemptionInstructions: row.redemption_instructions || undefined,
-        cardLabels: labelValues(row.card_labels ?? row.payload?.cardLabels, row.card_label ?? row.payload?.cardLabel),
-        cardLabel: labelValues(row.card_labels ?? row.payload?.cardLabels, row.card_label ?? row.payload?.cardLabel)[0],
+        logo: vendorLogo, description: row.description || '', saving: row.saving_label || '', terms: row.terms || undefined, redemptionInstructions: row.redemption_instructions || undefined,
         redemption: row.redemption_mode === 'online' ? 'online' : 'inStore', discountType: row.discount_type || row.payload?.discountType, discountValue: numberValue(row.discount_value ?? row.payload?.discountValue, NaN) })),
       galleryImages: Array.isArray(vendor.gallery_images) ? vendor.gallery_images.filter((url: unknown) => typeof url === "string" && url.trim()) : [],
       phoneNumber: stringValue(vendor.phone, stringValue(payload.phoneNumber, stringValue(payload.phone, ''))) || undefined,
@@ -108,13 +103,12 @@ export function projectVendorCatalogue(
       rating,
       offer: offerTitle,
       saving,
-      cardLabels: labelValues(offer.card_labels ?? offer.payload?.cardLabels, offer.card_label ?? offer.payload?.cardLabel),
-      cardLabel: labelValues(offer.card_labels ?? offer.payload?.cardLabels, offer.card_label ?? offer.payload?.cardLabel)[0],
+      cardLabel: stringValue(vendor.card_label).trim() || undefined,
       offerValue,
       newest: numberValue(vendor.newest),
       trend: numberValue(vendor.trend),
       image,
-      logo: stringValue(vendor.logo_path, stringValue(payload.profilePicture, stringValue(payload.logo))) || undefined,
+      logo: vendorLogo,
       color: stringValue(vendor.color, '#eef6ef'),
       description: stringValue(vendor.description, stringValue(payload.shortDescription, description)),
       redemption,
@@ -162,7 +156,7 @@ export function projectVendorCatalogue(
         trend: deal.trend,
         distance: distanceKm,
         image,
-        logo: stringValue(vendorOffer.image_url, deal.logo),
+        logo: vendorLogo,
         dealId: id,
         keywords: `${name} ${category} ${subcategoryNames.join(" ")} ${place} ${title}`,
         description: detail,
