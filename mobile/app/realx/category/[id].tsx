@@ -15,26 +15,12 @@ import { isCouponOfferUsed, useBenefits } from '@/lib/benefits';
 import { sortVendors, type VendorSortMode } from '@/lib/vendor-sorting';
 
 const sampleImages: Record<string, number> = {
-  rice: require('../../../assets/subcategories/rice.png'),
-  biryani: require('../../../assets/subcategories/biryani.png'),
-  mains: require('../../../assets/subcategories/mains.png'),
-  snacks: require('../../../assets/subcategories/snacks.png'),
-  drinks: require('../../../assets/subcategories/drinks.png'),
-  sweets: require('../../../assets/subcategories/sweets.png'),
-  dietary: require('../../../assets/subcategories/dietary.png'),
-  vegetarian: require('../../../assets/subcategories/vegetarian.png'),
-  vegan: require('../../../assets/subcategories/vegan.png'),
-  breakfast: require('../../../assets/subcategories/breakfast.png'),
-  buffet: require('../../../assets/subcategories/buffet.png'),
-  cuisines: require('../../../assets/subcategories/cuisines.png'),
-  cafes: require('../../../assets/subcategories/cafes.png'),
   beauty: require('../../../assets/subcategories/beauty.png'),
   shopping: require('../../../assets/subcategories/shopping.png'),
   fitness: require('../../../assets/subcategories/fitness.png'),
   travel: require('../../../assets/subcategories/travel.png'),
   stays: require('../../../assets/subcategories/stays.png'),
   entertainment: require('../../../assets/subcategories/entertainment.png'),
-  food: require('../../../assets/subcategories/mains.png'),
 };
 
 export default function RealXCategoryScreen() {
@@ -60,11 +46,11 @@ export default function RealXCategoryScreen() {
   ], [category, t]);
   const rows = React.useMemo(() => {
     const matching = deals.filter(deal => {
-      if (deal.categoryId !== category?.id) return false;
+      if (deal.categoryId !== category?.id && !deal.categoryIds?.includes(String(category?.id || ''))) return false;
       if (filter === 'top' && !(deal.trend > 0)) return false;
       if (subcategory !== 'all' && !deal.subcategoryIds?.includes(subcategory)) return false;
       const terms = query.toLocaleLowerCase().split(/\s+/).filter(Boolean);
-      const text = `${deal.name} ${deal.category} ${deal.offer} ${deal.description} ${deal.place}`.toLocaleLowerCase();
+      const text = `${deal.name} ${deal.category} ${deal.keywords || ''} ${deal.offer} ${deal.description} ${deal.place}`.toLocaleLowerCase();
       return terms.every(term => text.includes(term));
     });
     if (filter === 'nearest') return matching.sort((a, b) =>

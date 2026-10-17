@@ -6,7 +6,7 @@ import { StatusBar } from 'expo-status-bar';
 import { ActivityIndicator, ScrollView, Keyboard, Platform, Text, RefreshControl, StatusBar as NativeStatusBar, StyleSheet, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
-import { BrandGrid, CategoryGrid, HomeBackgroundIcons, HomeBannerCarousel, NewDeals, NewDealsSection, PartnerBannerCarousel, TrendingOffers } from '@/components/home';
+import { BrandGrid, CategoryGrid, HomeBannerCarousel, NewDeals, NewDealsSection, PartnerBannerCarousel, TrendingOffers } from '@/components/home';
 import ScalePressable from '@/components/ScalePressable';
 import { RemoteImage } from '@/components/RemoteImage';
 import { searchVendors } from '@/lib/vendor-search';
@@ -95,7 +95,6 @@ export default function HomeScreen() {
     <View style={{ height: top, backgroundColor: theme.background }} />
     <View style={s.wrapper}>
       <Animated.ScrollView ref={listRef} style={{ backgroundColor: theme.background }} keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag" showsVerticalScrollIndicator={false} decelerationRate="fast" contentContainerStyle={[s.content, { paddingBottom: 64 + insets.bottom + 16 }]} refreshControl={refreshControl} {...tabBarScrollVisibility} onScroll={scrollHandler} scrollEventThrottle={16} onLayout={event => viewportHeight.set(event.nativeEvent.layout.height)}>
-        <HomeBackgroundIcons />
         <VerificationStatusBanner />
         {homeSectionOrder.map(id => <React.Fragment key={id}>{sections[id]}</React.Fragment>)}
       </Animated.ScrollView>
@@ -117,7 +116,7 @@ const s = StyleSheet.create({
   screen: { flex: 1 },
   wrapper: { flex: 1, position: 'relative' },
   content: { paddingTop: 68 },
-  refreshing: { position: 'absolute', top: 60, left: 0, right: 0, zIndex: 9, alignItems: 'center', justifyContent: 'center' },
+  refreshing: { position: 'absolute', top: 112, left: 0, right: 0, zIndex: 11, alignItems: 'center', justifyContent: 'center' },
   vendorHeading: { paddingTop: 16 },
   header: { position: 'absolute', top: 0, left: 0, right: 0, zIndex: 10, paddingVertical: 7 },
 });

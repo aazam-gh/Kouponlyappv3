@@ -1,5 +1,5 @@
 export type Deal = {
-  id:number; vendorId?:string; categoryId?:string; subcategoryIds?:string[]; offers?:VendorOffer[]; locations?:VendorLocation[]; galleryImages?:string[]; phoneNumber?:string; openingHours?:unknown; vendorInformation?:{title?:string;message?:string}; name:string; place:string; category:string; distance:string; distanceKm:number; rating:string;
+  id:number; vendorId?:string; categoryId?:string; categoryIds?:string[]; subcategoryIds?:string[]; offers?:VendorOffer[]; locations?:VendorLocation[]; galleryImages?:string[]; phoneNumber?:string; openingHours?:unknown; vendorInformation?:{title?:string;message?:string}; name:string; place:string; category:string; distance:string; distanceKm:number; rating:string;
   offer:string; saving:string; offerValue:number; newest:number; trend:number; image:string; logo?:string; cardLabel?:string;
   color?:string; description:string; redemption?:"online"|"inStore"; externalUrl?:string; instagramUrl?:string; keywords?:string; latitude?:number; longitude?:number; xcard?:boolean;
 };
@@ -7,7 +7,8 @@ export type Deal = {
 export const onlineUrlFor = (name:string, explicitUrl?:string) => explicitUrl || `https://www.google.com/search?q=${encodeURIComponent(name)}`;
 export type VendorOffer = {currency?:string; id:string; index:number; title:string; logo?:string; description:string; saving:string; terms?:string; redemptionInstructions?:string; redemption:"online"|"inStore"; discountType?:string; discountValue?:number};
 export function dealDiscountLabel(deal: Deal): string | undefined {
-  const offer = deal.offers?.[0];
+  const offer = deal.offers?.filter(row => ['percentage', 'amount'].includes(row.discountType || '') && Number.isFinite(row.discountValue) && row.discountValue! > 0)
+    .reduce<VendorOffer | undefined>((highest, row) => !highest || row.discountValue! > highest.discountValue! ? row : highest, undefined) ?? deal.offers?.[0];
   if (offer?.discountType === 'percentage' && Number.isFinite(offer.discountValue) && offer.discountValue! > 0) return `${offer.discountValue}% OFF`;
   if (offer?.discountType === 'amount' && Number.isFinite(offer.discountValue) && offer.discountValue! > 0) return `${offer.currency === 'INR' ? '₹' : offer.currency || 'INR'} ${offer.discountValue} OFF`;
   if (offer?.discountType === 'free') return 'FREE';
@@ -23,7 +24,7 @@ export type Subcategory = { id?:string; label:string; terms:string[]; image?:str
 export type Category = { id?:string; slug?:string; name:string; search:string; icon:string; image:string; description:string; match:string[]; subcategories:Subcategory[] };
 export type DirectoryType = "Vendor"|"Offer"|"Experience"|"Course"|"Internship"|"Freelance"|"Job"|"Prize";
 export type DirectoryItem = {
-  id:string; categoryId?:string; subcategoryIds?:string[]; offerIndex?:number; type:DirectoryType; title:string; subtitle:string; tag:string; offer:number; newest:number; trend:number;
+  id:string; categoryId?:string; categoryIds?:string[]; subcategoryIds?:string[]; offerIndex?:number; type:DirectoryType; title:string; subtitle:string; tag:string; offer:number; newest:number; trend:number;
   distance:number; image:string; logo?:string; dealId?:number; keywords:string; description:string; action:string;
   destination?:"work"|"rewards"; externalUrl?:string; redemption?:"online"|"inStore";
 };
@@ -48,7 +49,7 @@ export const categoryItems=(category:Category,subcategory="All",query="")=>{
   const sub=category.subcategories.find(item=>item.label===subcategory);
   return directoryItems.filter(item=>{
     const hay=`${item.title} ${item.subtitle} ${item.keywords}`.toLowerCase();
-    return item.categoryId===category.id && (subcategory==="All" || !!sub?.id && !!item.subcategoryIds?.includes(sub.id))
+    return (item.categoryId===category.id || item.categoryIds?.includes(category.id || '')) && (subcategory==="All" || !!sub?.id && !!item.subcategoryIds?.includes(sub.id))
       && terms.every(term=>hay.includes(term));
   });
 };

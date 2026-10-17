@@ -16,6 +16,7 @@ export function CatalogueProvider({ children }: { children: React.ReactNode }) {
   const [status, setStatus] = useState<CatalogueStatus>('loading');
   const [error, setError] = useState('');
   const [homeSectionOrder, setHomeSectionOrder] = useState(DEFAULT_HOME_SECTION_ORDER);
+  const [nextValidityChangeAt, setNextValidityChangeAt] = useState<number>();
   const [revision, setRevision] = useState(0);
   const activeRefresh = useRef(0);
 
@@ -23,6 +24,7 @@ export function CatalogueProvider({ children }: { children: React.ReactNode }) {
     const request = ++activeRefresh.current;
     setStatus('loading');
     setError('');
+    setNextValidityChangeAt(undefined);
     try {
       await queryClient.invalidateQueries({ queryKey: queryKeys.catalogueHome(), exact: true, refetchType: 'none' });
       const catalogue = await queryClient.fetchQuery({ queryKey: queryKeys.catalogueHome(), queryFn: fetchCloudCatalogue });
@@ -35,6 +37,7 @@ export function CatalogueProvider({ children }: { children: React.ReactNode }) {
         rewards: catalogue.rewards,
       };
       applyCataloguePatch(patch);
+      setNextValidityChangeAt(catalogue.nextValidityChangeAt);
       setHomeSectionOrder(normalizeHomeSectionOrder(catalogue.homeSectionOrder));
       setRevision(value => value + 1);
       setStatus('cloud');
@@ -45,6 +48,12 @@ export function CatalogueProvider({ children }: { children: React.ReactNode }) {
       }
     }
   }, []);
+
+  useEffect(() => {
+    if (!nextValidityChangeAt) return;
+    const timer = setTimeout(() => { void refresh(); }, Math.max(0, nextValidityChangeAt - Date.now() + 50));
+    return () => clearTimeout(timer);
+  }, [nextValidityChangeAt, refresh]);
 
   useEffect(() => {
     void refresh();

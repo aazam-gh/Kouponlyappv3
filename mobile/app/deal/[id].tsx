@@ -147,7 +147,6 @@ export default function DealDetail({ dealId }: { dealId?: string } = {}) {
           const expanded = expandedOfferId === offer.id;
           const closing = closingOfferId === offer.id;
           const showDetails = expanded && !closing;
-          const saving = offer.discountType && ['fixed_price', 'combo'].includes(offer.discountType) ? `Kouponly Exclusive Price: ${offer.currency || 'INR'} ${offer.discountValue}` : offer.saving || (offer.discountType === 'percentage' && Number.isFinite(offer.discountValue) ? `${offer.discountValue}% off` : '');
           const toggleOfferDetails = () => {
             if (closing) { setClosingOfferId(null); return; }
             if (expanded) { setClosingOfferId(offer.id); return; }
@@ -162,7 +161,6 @@ export default function DealDetail({ dealId }: { dealId?: string } = {}) {
                   <OfferDisclosureArrow expanded={showDetails} reduceMotion={reduceMotion} color={C.ink}/>
                 </ScalePressable>
                 <View style={[s.offerTags, isRTL && s.rowReverse]}>
-                  {saving ? <View style={s.offerTag}><Ionicons name="pricetag-outline" size={14} color={C.success}/><Text selectable style={[s.offerTagText,{color:C.success}]}>{saving}</Text></View> : null}
                   <View style={s.offerTag}><Ionicons name={offer.redemption === 'online' ? 'globe-outline' : 'storefront-outline'} size={15} color={C.muted}/><Text style={s.offerTagText}>{offer.redemption === 'online' ? 'Online' : 'In-store'}</Text></View>
                   {deal.locations?.length ? <View style={s.offerTag}><Ionicons name="location-outline" size={15} color={C.muted}/><Text style={s.offerTagText}>{deal.locations.length === 1 ? '1 branch' : `${deal.locations.length} branches`}</Text></View> : null}
                   {deal.xcard ? <View style={s.offerTag}><Ionicons name="cash-outline" size={14} color={C.success}/><Text style={s.offerTagText}>Cashback</Text></View> : null}

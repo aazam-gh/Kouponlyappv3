@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
-import { ChevronRight, ListOrdered, Image, FolderOpen, Sparkles, Tag, Store, Megaphone } from 'lucide-react'
+import { ChevronRight, ListOrdered, Image, FolderOpen, Sparkles, Tag, Store, Megaphone, TrendingUp } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
 export const Route = createFileRoute('/admin/cms/')({ component: HomeContent })
@@ -8,6 +8,8 @@ const sections = [
   { title: 'Partner banners', description: 'The carousel at the top of Home. Link each mobile image to a vendor.', icon: Image, href: '/admin/cms/banners' },
   { title: 'Categories & subcategories', description: 'The Home category grid and category filters. Vendors have one main category and multiple subcategories.', icon: FolderOpen, href: '/admin/cms/categories' },
   { title: 'Featured showcase', description: 'The large promotional carousel below new deals. Set images, linked vendors and slide order.', icon: Sparkles, href: '/admin/cms/featured-brand-showcase' },
+  { title: 'New Deals', description: 'Choose active vendor offer cards and set their order in the New Deals section.', icon: Sparkles, href: '/admin/cms/new-deals' },
+  { title: 'Trending Vendors', description: 'Choose vendors for the mobile app’s Trending Offers section and set their order.', icon: TrendingUp, href: '/admin/cms/trending-offers' },
   { title: 'App launch poster', description: 'Show a full-screen promotional poster once when a signed-in student opens Home, linked to a vendor.', icon: Megaphone, href: '/admin/cms/app-launch-poster' },
   { title: 'Brand logos', description: 'The Home brand grid. Set active logos and their linked vendors.', icon: Tag, href: '/admin/cms/brands' },
 ] as const
@@ -25,7 +27,7 @@ function HomeContent() {
     </div>
     <section className="flex flex-col gap-4 rounded-xl border border-dashed p-5 sm:flex-row sm:items-center">
       <Store className="size-6 shrink-0 text-muted-foreground" />
-      <div className="flex-1"><h2 className="font-semibold">Nearby vendors, new deals & trending offers</h2><p className="mt-1 max-w-2xl text-sm text-muted-foreground">These sections use vendor details. Edit offers for new deals, branch locations for nearby vendors, and the Trending toggle in a vendor’s profile.</p></div>
+      <div className="flex-1"><h2 className="font-semibold">Nearby vendors</h2><p className="mt-1 max-w-2xl text-sm text-muted-foreground">Nearby cards use vendor branches and location details. Curate New Deals and Trending Vendors in their dedicated sections above.</p></div>
       <Button variant="outline" asChild><Link to="/admin/vendors" search={{ page: 1, pageSize: 10, search: '', sort: 'name-asc' }}>Manage vendors</Link></Button>
     </section>
   </div>

@@ -175,7 +175,7 @@ function TransactionDetailsRoute() {
                                         <Link
                                             to="/admin/students/$studentId/settings"
                                             params={{ studentId: transaction.userId as string }}
-                                            search={{ page: 1, pageSize: 10, search: '' }}
+                                            search={{ page: 1, pageSize: 10, search: '', sort: 'created_desc' }}
                                             className="font-mono text-xs md:text-sm text-blue-600 font-bold break-all bg-white p-3 rounded-xl border border-blue-100 hover:bg-blue-50 transition-colors flex justify-between items-center group"
                                         >
                                             {transaction.userId}

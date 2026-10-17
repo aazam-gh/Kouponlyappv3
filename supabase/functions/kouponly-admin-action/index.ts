@@ -202,14 +202,16 @@ Deno.serve(async (request) => {
       }
       case "createVendorUser": {
         requireAdmin();
-        const categoryId=String(data.categoryId||"").trim();
-        if(!categoryId)fail("Select one active main category");
-        const {data:category,error:categoryError}=await service.from("couponly_categories").select("id").eq("id",categoryId).eq("active",true).maybeSingle();
+        const categoryIds=Array.isArray(data.categoryIds)?[...new Set(data.categoryIds.map((id:unknown)=>String(id).trim()).filter(Boolean))]:[];
+        const categoryId=String(data.categoryId||categoryIds[0]||"").trim();
+        if(!categoryIds.length&&categoryId)categoryIds.push(categoryId);
+        if(!categoryIds.length||categoryIds[0]!==categoryId)fail("Select one or more active main categories; the first is primary");
+        const {data:categories,error:categoryError}=await service.from("couponly_categories").select("id").in("id",categoryIds).eq("active",true);
         if(categoryError)throw categoryError;
-        if(!category)fail("Select one active main category");
+        if((categories||[]).length!==categoryIds.length)fail("Every selected category must be active");
         const created=await createAuthUser(service,data);
         const name=String(data.name||"").trim();
-        const vendor={id:created.id,user_id:created.id,name,category_id:categoryId,status:"Active",vendor_type:"in_store",payload:{name,email:created.email,contact:created.email,vendorType:"in_store",xcard:false,offers:[],locations:[]}};
+        const vendor={id:created.id,user_id:created.id,name,category_id:categoryId,status:"Active",vendor_type:"in_store",payload:{name,email:created.email,contact:created.email,vendorType:"in_store",categoryIds,offers:[],locations:[]}};
         try{
           const {error:vendorError}=await service.from("couponly_vendors").insert(vendor);
           if(vendorError)throw vendorError;

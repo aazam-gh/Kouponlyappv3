@@ -244,8 +244,9 @@ function BrandsManagement() {
 
             {/* Brand Cards */}
             <div className="grid grid-cols-1 gap-4">
-                {brands.map((brand, index) => (
-                    <div key={brand.id} className="bg-[#F8F9F9] rounded-2xl p-6 border border-gray-100 shadow-sm relative group">
+                {brands.map((brand, index) => {
+                    const logo = brand.vendorId ? vendors.find(v => v.id === brand.vendorId)?.logoUrl || '' : brand.logoUrl
+                    return <div key={brand.id} className="bg-[#F8F9F9] rounded-2xl p-6 border border-gray-100 shadow-sm relative group">
                         <div className="flex flex-col md:flex-row items-center gap-6">
                             {/* Logo */}
                             <div className="w-24 h-24 flex-shrink-0">
@@ -255,8 +256,8 @@ function BrandsManagement() {
                                     onClick={() => triggerUpload(brand.id)}
                                     className="relative w-full h-full rounded-xl overflow-hidden bg-white border-2 border-dashed border-gray-200 cursor-pointer hover:border-primary transition-all flex items-center justify-center group/img"
                                 >
-                                    {brand.logoUrl ? (
-                                        <img alt={`Brand ${index + 1} logo`} src={brand.logoUrl} className="w-full h-full object-contain p-2" loading="lazy" />
+                                    {logo ? (
+                                        <img alt={`Brand ${index + 1} logo`} src={logo} className="w-full h-full object-contain p-2" loading="lazy" />
                                     ) : (
                                         <div className="flex flex-col items-center gap-1 opacity-30">
                                             <ImageIcon className="w-6 h-6" />
@@ -281,7 +282,7 @@ function BrandsManagement() {
                                     <select
                                         aria-label={`Vendor for brand ${index + 1}`}
                                         value={brand.vendorId || ''}
-                                        onChange={(e) => handleUpdateBrand(brand.id, { vendorId: e.target.value })}
+                                        onChange={(e) => { const vendor = vendors.find(v => v.id === e.target.value); handleUpdateBrand(brand.id, { vendorId: e.target.value, logoUrl: vendor?.logoUrl || '' }) }}
                                         className="w-full h-11 px-4 rounded-xl bg-white border border-gray-100 font-bold text-sm text-gray-900 outline-none focus:border-primary transition-all shadow-sm appearance-none cursor-pointer"
                                     >
                                         <option value="">— No linked vendor —</option>
@@ -362,7 +363,7 @@ function BrandsManagement() {
                             </div>
                         </div>
                     </div>
-                ))}
+                })}
 
                 {brands.length === 0 && (
                     <div className="py-20 bg-gray-50 rounded-2xl border-2 border-dashed border-gray-200 flex flex-col items-center justify-center text-gray-400 gap-3">

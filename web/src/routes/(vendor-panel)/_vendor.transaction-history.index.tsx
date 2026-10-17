@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query'
 import { vendorTransactionsQueryOptions } from '@/queries'
 import { useAuth } from '@/auth'
 import { Loader2 } from 'lucide-react'
+import { useState } from 'react'
 
 export const Route = createFileRoute('/(vendor-panel)/_vendor/transaction-history/')({
   component: VendorTransactionHistory,
@@ -12,8 +13,10 @@ function VendorTransactionHistory() {
   const { user } = useAuth()
   const vendorId = user?.uid || ''
   const navigate = useNavigate()
+  const [from, setFrom] = useState('')
+  const [to, setTo] = useState('')
 
-  const { data: transactions, isLoading, error } = useQuery(vendorTransactionsQueryOptions(vendorId))
+  const { data: transactions, isLoading, error } = useQuery(vendorTransactionsQueryOptions(vendorId, from, to))
 
   if (isLoading) {
     return <div className="flex justify-center items-center h-64"><Loader2 className="animate-spin" /></div>
@@ -25,19 +28,20 @@ function VendorTransactionHistory() {
 
   return (
     <div className="p-6 space-y-6">
-      <h1 className="text-2xl font-bold">Transaction History</h1>
+      <div className="flex flex-wrap items-end justify-between gap-3"><h1 className="text-2xl font-bold">Transaction History</h1><div className="flex flex-wrap gap-2"><label className="grid gap-1 text-xs text-muted-foreground">From<input type="date" aria-label="Vendor transactions start date" value={from} max={to || undefined} onChange={e => setFrom(e.target.value)} className="rounded-md border px-2 py-1" /></label><label className="grid gap-1 text-xs text-muted-foreground">To<input type="date" aria-label="Vendor transactions end date" value={to} min={from || undefined} onChange={e => setTo(e.target.value)} className="rounded-md border px-2 py-1" /></label>{(from || to) && <button className="self-end text-sm underline" onClick={() => {setFrom('');setTo('')}}>Clear dates</button>}</div></div>
 
       <div className="bg-white rounded-xl shadow-sm border overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm text-left">
             <thead className="bg-muted border-b">
               <tr>
-                <th className="px-6 py-4 font-medium text-foreground">ID</th>
                 <th className="px-6 py-4 font-medium text-foreground">Date</th>
-                <th className="px-6 py-4 font-medium text-foreground">Type</th>
-                <th className="px-6 py-4 font-medium text-foreground">Amount</th>
+                <th className="px-6 py-4 font-medium text-foreground">Student</th>
+                <th className="px-6 py-4 font-medium text-foreground">Phone</th>
+                <th className="px-6 py-4 font-medium text-foreground">Offer</th>
+                <th className="px-6 py-4 font-medium text-foreground">Bill amount</th>
                 <th className="px-6 py-4 font-medium text-foreground">Discount</th>
-                <th className="px-6 py-4 font-medium text-foreground">Final Amount</th>
+                <th className="px-6 py-4 font-medium text-foreground">Amount paid</th>
                 <th className="px-6 py-4 font-medium text-foreground">Status</th>
               </tr>
             </thead>
@@ -48,20 +52,17 @@ function VendorTransactionHistory() {
                   className="hover:bg-muted/50 cursor-pointer transition-colors"
                   onClick={() => navigate({ to: '/transaction-history/$transactionId', params: { transactionId: tx.id } })}
                 >
-                  <td className="px-6 py-4 text-muted-foreground font-mono text-xs">{tx.id.slice(0, 8)}...</td>
                   <td className="px-6 py-4 text-muted-foreground">
-                    {tx.createdAt?.toDate().toLocaleDateString() || 'N/A'}
+                    {new Date(tx.createdAt).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }) || 'N/A'}
                   </td>
-                  <td className="px-6 py-4 capitalize">{tx.type || 'N/A'}</td>
-                  <td className="px-6 py-4">QAR {tx.totalAmount}</td>
+                  <td className="px-6 py-4">{tx.studentName || 'Student'}</td>
+                  <td className="px-6 py-4">{tx.studentPhone || '—'}</td>
+                  <td className="px-6 py-4">{tx.offerTitle}</td>
+                  <td className="px-6 py-4">₹{Number(tx.totalAmount).toLocaleString('en-IN')}</td>
                   <td className="px-6 py-4 text-muted-foreground">
-                    {tx.discountType === 'buy1get1'
-                      ? 'Buy 1 Get 1'
-                      : tx.discountType === 'percentage'
-                        ? `${tx.discountValue ?? tx.discountAmount}%`
-                        : `QAR ${tx.discountAmount}`}
+                    ₹{Number(tx.discountAmount).toLocaleString('en-IN')}
                   </td>
-                  <td className="px-6 py-4 font-medium">QAR {tx.finalAmount}</td>
+                  <td className="px-6 py-4 font-medium">₹{Number(tx.finalAmount).toLocaleString('en-IN')}</td>
                   <td className="px-6 py-4">
                     <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
                       tx.status === 'completed' ? 'bg-green-100 text-green-800' :
@@ -75,7 +76,7 @@ function VendorTransactionHistory() {
               ))}
               {(!transactions || transactions.length === 0) && (
                 <tr>
-                  <td colSpan={7} className="px-6 py-8 text-center text-muted-foreground">
+                  <td colSpan={8} className="px-6 py-8 text-center text-muted-foreground">
                     No transactions found.
                   </td>
                 </tr>

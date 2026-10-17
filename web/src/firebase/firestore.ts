@@ -111,6 +111,7 @@ function normalize(row: any, ref: Ref) {
     data.vendorId=row.id;
     data.phoneNumber=row.phone ?? data.phoneNumber ?? data.phone;
     data.mainCategory=row.couponly_categories?.name ?? data.mainCategory;
+    data.categoryIds=Array.isArray(data.categoryIds) && data.categoryIds.length ? data.categoryIds : [row.category_id].filter(Boolean);
     data.subcategory=(row.couponly_vendor_subcategories || []).map((link:any)=>link.couponly_subcategories?.name).filter(Boolean);
     data.catalogueDealId=row.catalogue_deal_id;
     data.profilePicture=row.logo_path ?? data.profilePicture;
@@ -185,7 +186,7 @@ function serialize(ref: Ref, input: any) {
     }
     if (value.cardLabel != null && (typeof value.cardLabel !== 'string' || value.cardLabel.trim().length > 32)) throw new Error('Vendor card label must be 32 characters or fewer.');
     row.card_label=typeof value.cardLabel === 'string' ? value.cardLabel.trim() || null : null;
-    row.id=value.vendorId||value.id||row.id;row.user_id=value.userId||value.uid||null;row.name=value.name||value.businessName||'';row.status=value.status||'Pending';row.vendor_type='in_store';row.category_id=value.categoryId||null;row.catalogue_deal_id=value.catalogueDealId||null;
+    row.id=value.vendorId||value.id||row.id;row.user_id=value.userId||value.uid||null;row.name=value.name||value.businessName||'';row.status=value.status||'Pending';row.vendor_type='in_store';row.category_id=value.categoryIds?.[0]||value.categoryId||null;row.catalogue_deal_id=value.catalogueDealId||null;
     row.website=value.website||null;row.logo_path=value.profilePicture??value.logoPath??null;row.description=value.shortDescription??value.description??null;row.locations=value.locations||[];row.settings=value.settings||{};
     row.place_label=value.place||value.placeLabel||null;row.image_url=value.imageUrl||value.profilePicture||null;row.cover_image_url=value.coverImage||null;row.color=value.color||null;row.rating=value.rating??null;row.distance_km=value.distanceKm??null;
     row.saving_label=value.savingLabel||null;row.offer_value=value.offerValue??null;row.trend=(value.isTrending ?? value.isFeatured ?? value.featured) ? Math.max(1, Number(value.trend) || 0) : 0;row.newest=value.newest??0;row.sort_order=value.sortOrder??0;row.featured=value.isTrending??value.isFeatured??value.featured??false;

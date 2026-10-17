@@ -35,6 +35,7 @@ function AddBannerPage() {
     const [banner, setBanner] = useState<BannerItem>({
         bannerId: `promo_${Math.random().toString(36).substr(2, 9)}`,
         vendorId: '',
+        vendorIds: [],
         images: {
             mobile: ''
         },
@@ -188,22 +189,20 @@ function AddBannerPage() {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-4">
                     <div className="space-y-2">
-                        <label className="text-sm font-bold text-gray-700 ml-1">Link to Vendor</label>
-                        <select
-                            value={banner.vendorId}
-                            onChange={(e) => setBanner(prev => ({ ...prev, vendorId: e.target.value }))}
-                            className="w-full h-14 px-6 rounded-[1.25rem] bg-white border border-gray-100 font-bold text-gray-900 outline-none focus:border-purple-400 transition-all shadow-sm focus:ring-4 focus:ring-purple-50 appearance-none cursor-pointer"
-                        >
-                            <option value="">— No linked vendor —</option>
-                            {vendors.map(v => (
-                                <option key={v.id} value={v.id}>{v.name}</option>
-                            ))}
-                        </select>
-                        {banner.vendorId && (
-                            <p className="text-xs text-purple-500 font-medium ml-1">
-                                Linked: {vendors.find(v => v.id === banner.vendorId)?.name || banner.vendorId}
-                            </p>
-                        )}
+                        <label className="text-sm font-bold text-gray-700 ml-1">Assign to vendors</label>
+                        <div className="max-h-48 space-y-2 overflow-auto rounded-xl border bg-white p-3">
+                            {vendors.map(v => {
+                                const selected = banner.vendorIds?.includes(v.id) ?? banner.vendorId === v.id
+                                return <label key={v.id} className="flex items-center gap-2 text-sm"><input type="checkbox" checked={selected} onChange={e => setBanner(prev => {
+                                    const ids = new Set(prev.vendorIds?.length ? prev.vendorIds : prev.vendorId ? [prev.vendorId] : [])
+                                    if (e.target.checked) ids.add(v.id); else ids.delete(v.id)
+                                    const vendorIds = [...ids]
+                                    return { ...prev, vendorIds, vendorId: vendorIds[0] || '' }
+                                })} /><span>{v.name}</span></label>
+                            })}
+                            {!vendors.length && <p className="text-sm text-muted-foreground">No vendors available.</p>}
+                        </div>
+                        <p className="text-xs text-purple-500">Selected: {(banner.vendorIds ?? (banner.vendorId ? [banner.vendorId] : [])).map(id => vendors.find(v => v.id === id)?.name || id).join(', ') || 'None'}</p>
                     </div>
                     <div className="space-y-2">
                         <label className="text-sm font-bold text-gray-700 ml-1">Alt Text (Accessibility)</label>

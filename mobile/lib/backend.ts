@@ -85,17 +85,23 @@ export async function applyMutation(mutation: PendingMutation): Promise<void> {
 
 export async function fetchCloudCatalogue(): Promise<CloudCatalogue> {
   const client = getSupabase();
-  const [vendors, offers, locations, categories, subcategories, assignments, bannerDocument, layoutDocument] = await Promise.all([
+  const [vendors, offers, locations, categories, subcategories, assignments, categoryAssignments, bannerDocument, layoutDocument] = await Promise.all([
     rows(client.from('realx_vendors').select('*').eq('status', 'Active').order('sort_order'), 'Vendor catalogue load'),
     rows(client.from('realx_offers').select('*').order('sort_order'), 'Vendor offer load'),
     rows(client.from('realx_vendor_locations').select('*').order('sort_order'), 'Vendor locations load'),
     rows(client.from('realx_categories').select('*').eq('active', true).order('sort_order'), 'Categories load'),
     rows(client.from('realx_subcategories').select('*').order('sort_order'), 'Subcategories load'),
     rows(client.from('realx_vendor_subcategories').select('*'), 'Vendor subcategories load'),
+    rows(client.from('realx_vendor_categories').select('*'), 'Vendor categories load'),
     single<Row>(client.from('realx_cms_documents').select('payload').eq('id', 'banner').maybeSingle(), 'Hero banners load'),
     single<Row>(client.from('realx_cms_documents').select('payload').eq('id', 'homeLayout').maybeSingle(), 'Home layout load'),
   ]);
-  const projected = projectVendorCatalogue(vendors as MarketplaceVendorRow[], offers as MarketplaceOfferRow[], locations, { categories, subcategories, assignments });
+  const now = Date.now();
+  const nextValidityChangeAt = offers.flatMap(offer => [offer.starts_at, offer.ends_at])
+    .map(value => typeof value === 'string' ? Date.parse(value) : NaN)
+    .filter(value => Number.isFinite(value) && value > now)
+    .reduce<number | undefined>((next, value) => next === undefined || value < next ? value : next, undefined);
+  const projected = projectVendorCatalogue(vendors as MarketplaceVendorRow[], offers as MarketplaceOfferRow[], locations, { categories, subcategories, assignments, categoryAssignments });
   const featured = new Set(vendors.filter(vendor => vendor.featured).map(vendor => vendor.id));
   const banners = Array.isArray(bannerDocument?.payload?.banners)
     ? bannerDocument.payload.banners as Row[]
@@ -110,6 +116,7 @@ export async function fetchCloudCatalogue(): Promise<CloudCatalogue> {
   });
   return {
     ...projected,
+    nextValidityChangeAt,
     homeSectionOrder: normalizeHomeSectionOrder(layoutDocument?.payload?.sectionOrder),
     heroSlides: bannerSlides.length ? bannerSlides : projected.deals.filter(deal => featured.has(deal.vendorId)).map(deal => ({
       brand: deal.name, kicker: deal.category, title: deal.offer, copy: deal.description,
@@ -242,7 +249,7 @@ export function subscribeToUser(userId: string, onChange: () => void) {
   return { unsubscribe: () => { void client.removeChannel(channel); } };
 }
 
-const catalogueTables = ['couponly_categories','couponly_subcategories','couponly_vendor_subcategories','couponly_vendors','couponly_offers','couponly_vendor_locations','couponly_cms_documents'] as const;
+const catalogueTables = ['couponly_categories','couponly_subcategories','couponly_vendor_subcategories','couponly_vendor_categories','couponly_vendors','couponly_offers','couponly_vendor_locations','couponly_cms_documents'] as const;
 export function subscribeToCatalogue(onChange: () => void) {
   if (!supabaseConfigured) return { unsubscribe: () => {} };
   const client = getSupabase();

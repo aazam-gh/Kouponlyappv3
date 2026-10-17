@@ -3,8 +3,7 @@ import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Upload, Loader2, X, Tag, Plus, TrendingUp, ArrowLeft, ArrowRight, Trash2 } from "lucide-react"
-import { Checkbox } from "@/components/ui/checkbox"
+import { Upload, Loader2, X, Tag, Plus, ArrowLeft, ArrowRight, Trash2 } from "lucide-react"
 import { useEffect, useState, useRef } from "react"
 import { useQuery } from "@tanstack/react-query"
 import { toast } from "sonner"
@@ -44,8 +43,15 @@ export function BrandingSettings({
         onUploadingChange?.(uploadingProfile || uploadingCover || uploadingGallery)
     }, [onUploadingChange, uploadingCover, uploadingGallery, uploadingProfile])
 
-    const selectedCategory = categories.find(c => c.nameEnglish === formData.mainCategory)
+    const categoryIds = formData.categoryIds?.length ? formData.categoryIds : [formData.categoryId].filter(Boolean) as string[]
+    const selectedCategory = categories.find(c => c.id === (formData.categoryId || categoryIds[0]))
     const availableSubcategories = selectedCategory?.subcategories || []
+
+    const setCategories = (ids: string[]) => {
+        if (!ids.length) return
+        const primary = categories.find(category => category.id === ids[0])
+        setFormData({ ...formData, categoryIds: ids, categoryId: primary?.id, mainCategory: primary?.nameEnglish, subcategory: primary?.id === selectedCategory?.id ? formData.subcategory : [] })
+    }
 
     const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>, type: 'profilePicture' | 'coverImage') => {
         const file = e.target.files?.[0]
@@ -379,24 +385,19 @@ export function BrandingSettings({
                 </div>
 
 
-                {/* Main Category */}
+                {/* Main Categories */}
                 <div className="space-y-4">
-                    <Label className="text-base font-semibold text-slate-700">Main Category</Label>
-                    <Select
-                        value={formData.mainCategory || ""}
-                        onValueChange={(value) => setFormData({ ...formData, mainCategory: value, categoryId: categories.find(cat => cat.nameEnglish === value)?.id, subcategory: [] })}
-                    >
-                        <SelectTrigger className="w-full bg-slate-50 border-none h-14 rounded-2xl px-5 text-sm">
-                            <SelectValue placeholder="Select a category" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            {categories.map((cat) => (
-                                <SelectItem key={cat.id} value={cat.nameEnglish}>
-                                    {cat.nameEnglish}
-                                </SelectItem>
-                            ))}
-                        </SelectContent>
-                    </Select>
+                    <Label className="text-base font-semibold text-slate-700">Main Categories</Label>
+                    <p className="-mt-3 text-sm text-muted-foreground">Select every category this vendor belongs to. The first selected category is the primary category.</p>
+                    <div className="flex flex-wrap gap-2">
+                        {categories.map(category => {
+                            const selected = categoryIds.includes(category.id)
+                            return <label key={category.id} className="flex cursor-pointer items-center gap-2 rounded-xl border bg-slate-50 px-3 py-2 text-sm">
+                                <input type="checkbox" checked={selected} disabled={selected && categoryIds.length === 1} onChange={() => setCategories(selected ? categoryIds.filter(id => id !== category.id) : [...categoryIds, category.id])} />
+                                {category.nameEnglish}{categoryIds[0] === category.id ? ' · Primary' : ''}
+                            </label>
+                        })}
+                    </div>
                 </div>
 
                 {/* Subcategories */}
@@ -515,42 +516,6 @@ export function BrandingSettings({
 
             </div >
 
-            {/* Vendor visibility */}
-            <div className="space-y-6 pt-8 border-t border-slate-100">
-                <div className="grid gap-4 sm:grid-cols-3">
-                    <div className="space-y-2">
-                        <Label htmlFor="vendorStatus">Mobile visibility</Label>
-                        <Select value={formData.status || 'Inactive'} onValueChange={value => setFormData({ ...formData, status: value as 'Active' | 'Inactive' })}>
-                            <SelectTrigger id="vendorStatus"><SelectValue /></SelectTrigger>
-                            <SelectContent><SelectItem value="Active">Active</SelectItem><SelectItem value="Inactive">Inactive</SelectItem></SelectContent>
-                        </Select>
-                    </div>
-                    <div className="space-y-2">
-                        <Label htmlFor="newest">New deals priority</Label>
-                        <Input id="newest" type="number" min="0" step="1" value={formData.newest ?? 0} onChange={e => setFormData({ ...formData, newest: Number(e.target.value) })} />
-                        <p className="text-xs text-muted-foreground">Higher values appear first in New deals.</p>
-                    </div>
-                    <div className="space-y-2">
-                        <Label htmlFor="sortOrder">Catalogue order</Label>
-                        <Input id="sortOrder" type="number" min="0" step="1" value={formData.sortOrder ?? 0} onChange={e => setFormData({ ...formData, sortOrder: Number(e.target.value) })} />
-                        <p className="text-xs text-muted-foreground">Lower values appear first in the catalogue.</p>
-                    </div>
-                </div>
-                <div className="flex items-center space-x-3 bg-slate-50/50 p-4 rounded-2xl border border-slate-100/50">
-                    <Checkbox
-                        id="isTrending"
-                        checked={formData.isTrending || false}
-                        onCheckedChange={(checked) => setFormData({ ...formData, isTrending: !!checked })}
-                        className="h-5 w-5 rounded-md border-border data-[state=checked]:bg-primary data-[state=checked]:border-primary"
-                    />
-                    <div className="flex items-center gap-2">
-                        <TrendingUp className="w-5 h-5 text-slate-400" />
-                        <Label htmlFor="isTrending" className="text-base font-semibold text-slate-700 cursor-pointer">
-                            Trending Vendor
-                        </Label>
-                    </div>
-                </div>
-            </div>
         </div >
     )
 }

@@ -60,7 +60,7 @@ export default function CategoryGrid({ categories: propCategories, onCategoryPre
         >
             <View style={[styles.imageContainer, { width: imageSize, height: imageSize, backgroundColor: theme.surface, borderColor: BorderPalette.border }]}>
                 {item.image ? (
-                    <RemoteImage source={typeof item.image === 'string' ? { uri: item.image } : item.image} style={styles.categoryImage} imageStyle={styles.categoryImageCrop} contentFit="cover" />
+                    <RemoteImage source={typeof item.image === 'string' ? { uri: item.image } : item.image} style={styles.categoryImage} contentFit="contain" />
                 ) : (
                     <Text style={[styles.categoryFallbackIcon, { color: theme.text }]}>{item.icon}</Text>
                 )}
@@ -138,7 +138,6 @@ const styles = StyleSheet.create({
     categoryItem: { alignItems: 'center', paddingHorizontal: 1 },
     imageContainer: { alignItems: 'center', justifyContent: 'center', overflow: 'hidden', borderWidth: StyleSheet.hairlineWidth, borderRadius: 22, marginBottom: 7 },
     categoryImage: { width: '100%', height: '100%' },
-    categoryImageCrop: { width: '160%', height: '160%', left: '-30%', top: '-50%' },
     categoryFallbackIcon: { fontSize: 34, ...Typography.getTextVariantStyle('body') },
     categoryName: { width: '100%', minHeight: 18, fontSize: 13, lineHeight: 16, ...Typography.getTextVariantStyle('body'), textAlign: 'center', textAlignVertical: 'top' },
     categorySkeleton: { borderRadius: 22, opacity: 0.8, overflow: 'hidden', justifyContent: 'flex-end' },

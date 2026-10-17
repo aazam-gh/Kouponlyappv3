@@ -40,14 +40,14 @@ function StudentProfile() {
     {query.isError ? <p role="alert" className="text-destructive">Could not load profile: {query.error.message}</p> : query.isPending ? <p>Loading profile…</p> : !student ? <p>Student not found.</p> : <>
       <div><h1 className="text-2xl font-semibold">{student.name}</h1><p className="text-muted-foreground">{student.email}</p></div>
       <div className="grid gap-4 md:grid-cols-3">
-        <Card><CardHeader><CardTitle>Profile & eligibility</CardTitle></CardHeader><CardContent className="space-y-2 text-sm">
-          <p>{student.eligible ? 'Eligible for free offers' : 'Not eligible for offers'}</p>
+        <Card><CardHeader><CardTitle>Profile</CardTitle></CardHeader><CardContent className="space-y-2 text-sm">
           <p>Email: {student.emailVerifiedAt ? `Verified ${date(student.emailVerifiedAt)}` : 'Awaiting verification'}</p>
-          <p>City: {student.city || 'Not provided'}</p><p>Phone: {student.phone || 'Not provided'}</p><p>Joined: {date(student.createdAt)}</p>
+          <p>City: {student.city || 'Not provided'}</p><p>University: {student.university || 'Not provided'}</p><p>Campus: {student.campus || 'Not provided'}</p>
+          <p>Date of birth: {student.dateOfBirth || 'Not provided'}</p><p>Phone: {student.phone || 'Not provided'}</p><p>Joined: {date(student.createdAt)}</p>
         </CardContent></Card>
         <Card><CardHeader><CardTitle>Monthly offer access</CardTitle></CardHeader><CardContent className="space-y-2 text-sm">
           <p><strong>{student.consumedThisMonth}</strong> transactions this month, across all rounds.</p>
-          {student.couponMonth ? <><p>Current round: {student.couponMonth.roundNumber + 1}</p>{typeof student.couponMonth.usedOffers === 'number' ? <p>{student.couponMonth.usedOffers} offers used in this round.</p> : null}<p>Month ends: {date(student.couponMonth.endsAt)}</p></> : <p>{student.eligible ? 'The month is allocated when this student next opens their offers.' : 'Verified email required.'}</p>}
+          {student.couponMonth ? <><p>Current round: {student.couponMonth.roundNumber + 1}</p>{typeof student.couponMonth.usedOffers === 'number' ? <p>{student.couponMonth.usedOffers} offers used in this round.</p> : null}<p>Month ends: {date(student.couponMonth.endsAt)}</p></> : <p>{student.emailVerifiedAt ? 'The month is allocated when this student next opens their offers.' : 'A verified email is required for offer access.'}</p>}
           <p className="text-muted-foreground">Refresh every offer in the current membership period. Previous transactions stay in history.</p>
           <Button variant="outline" disabled={refreshCoupons.isPending} onClick={confirmCouponRefresh}>
             {refreshCoupons.isPending ? 'Restoring access…' : 'Restore offer access'}

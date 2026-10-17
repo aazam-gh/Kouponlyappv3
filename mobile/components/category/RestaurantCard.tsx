@@ -38,12 +38,12 @@ export default function RestaurantCard({ name, imageUri, logoUri, onPress, style
       </View> : null}
       {distanceOnImage && distance ? <View style={styles.distanceBadge}><MapPin size={13} color="#FFFFFF"/><Text style={[styles.distance, distanceStyle]}>{distance}</Text></View> : null}
       {overlapLogo ? <View style={[styles.logoFrame, { backgroundColor: theme.background, borderColor: cardBorderColor, bottom: logoBottom, width: logoSize, height: logoSize, borderRadius: logoSize * 0.25 }]}>
-        {loading ? <View style={styles.logoImage} /> : logoUri ? <RemoteImage source={{ uri: logoUri }} style={styles.logoImage} contentFit="cover" /> : <Text style={[styles.logoEmoji, { color: theme.text }]}>🏪</Text>}
+        {loading ? <View style={styles.logoImage} /> : logoUri ? <RemoteImage source={{ uri: logoUri }} style={styles.logoImage} imageStyle={styles.logoImageFill} contentFit="cover" /> : <Text style={[styles.logoEmoji, { color: theme.text }]}>🏪</Text>}
       </View> : null}
     </View>
     {offerCard && !overlapLogo ? <View style={styles.offerContent}>
       <View style={[styles.offerLogo, { backgroundColor: theme.background, borderColor: cardBorderColor }]}>
-        {loading ? <View style={styles.logoImage} /> : logoUri ? <RemoteImage source={{ uri: logoUri }} style={styles.logoImage} contentFit="cover" /> : <Text style={[styles.logoEmoji, { color: theme.text }]}>🏪</Text>}
+        {loading ? <View style={styles.logoImage} /> : logoUri ? <RemoteImage source={{ uri: logoUri }} style={styles.logoImage} imageStyle={styles.logoImageFill} contentFit="cover" /> : <Text style={[styles.logoEmoji, { color: theme.text }]}>🏪</Text>}
       </View>
       <View style={styles.offerCopy}>
         <Text allowFontScaling numberOfLines={1} style={[styles.offerName, { color: theme.text, ...Typography.getTextVariantStyle('bodyStrong'), writingDirection: 'ltr' }, nameStyle]}>{displayName}</Text>
@@ -51,7 +51,7 @@ export default function RestaurantCard({ name, imageUri, logoUri, onPress, style
       </View>
     </View> : <View style={[styles.content, contentStyle, !overlapLogo && { paddingRight: 12 }]}>
       {!overlapLogo && <View style={[styles.logoInline, { backgroundColor: theme.background, borderColor: cardBorderColor }]}>
-        {loading ? <View style={styles.logoImage} /> : logoUri ? <RemoteImage source={{ uri: logoUri }} style={styles.logoImage} contentFit="cover" /> : <Text style={[styles.logoEmoji, { color: theme.text }]}>🏪</Text>}
+        {loading ? <View style={styles.logoImage} /> : logoUri ? <RemoteImage source={{ uri: logoUri }} style={styles.logoImage} imageStyle={styles.logoImageFill} contentFit="cover" /> : <Text style={[styles.logoEmoji, { color: theme.text }]}>🏪</Text>}
       </View>}
       <Text allowFontScaling numberOfLines={1} style={[styles.name, { color: theme.text, ...Typography.getTextVariantStyle('bodyStrong'), writingDirection: 'ltr' }, nameStyle]}>{displayName}</Text>
       {!distanceOnImage && distance ? <View style={styles.distanceRow}><MapPin size={14} color={theme.mutedText}/><Text style={[styles.distanceText, distanceStyle]}>{distance}</Text></View> : null}
@@ -76,6 +76,7 @@ const styles = StyleSheet.create({
   logoFrame: { position: 'absolute', right: 12, bottom: -22, zIndex: 3, width: 64, height: 64, borderRadius: 16, justifyContent: 'center', alignItems: 'center', overflow: 'hidden' },
   logoInline: { width: 48, height: 48, borderRadius: 12, borderWidth: 1, overflow: 'hidden' },
   logoImage: { width: '100%', height: '100%' },
+  logoImageFill: { width: '110%', height: '110%', left: '-5%', top: '-5%' },
   logoEmoji: { fontSize: 20, alignSelf: 'center', marginTop: 12 },
   content: { minHeight: 76, justifyContent: 'center', paddingVertical: 10, paddingLeft: 12, paddingRight: 88, backgroundColor: '#FFFFFF' },
   offerContent: { minHeight: 84, flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 12, paddingVertical: 10, backgroundColor: '#FFFFFF' },

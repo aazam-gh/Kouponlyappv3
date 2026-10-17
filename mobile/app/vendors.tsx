@@ -33,7 +33,8 @@ export default function VendorsScreen() {
     if (section === 'nearby') return nearby.position ? [...distanceByVendor.values()].sort((a, b) => a.distanceKm - b.distanceKm).map(row => row.location) : [];
     if (section === 'brands') return (brands.data || []).map(brand => ({ id: brand.vendorId, vendorId: brand.vendorId, name: brand.name, logo: brand.logoUrl, image: deals.find(deal => deal.vendorId === brand.vendorId)?.image }));
     if (section === 'trending') return (trending.data || []).map(card => ({ id: card.id, vendorId: card.vendorId, name: card.vendorName || card.nameEn || '', image: card.coverImage, logo: card.profilePicture }));
-    return [...deals].sort((a, b) => section === 'new' ? b.newest - a.newest : b.trend - a.trend);
+    if (section === 'new') return [...deals].filter(deal => deal.newest > 0).sort((a, b) => a.newest - b.newest || a.name.localeCompare(b.name));
+    return [...deals].sort((a, b) => b.trend - a.trend);
   }, [section, revision, distanceByVendor, nearby.position, brands.data, trending.data]);
   const query = section === 'brands' ? brands : section === 'trending' ? trending : null;
   const visibleItems = React.useMemo(() => {

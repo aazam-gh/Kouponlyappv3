@@ -66,7 +66,7 @@ function AddBrandPage() {
     }
 
     const handleSave = async () => {
-        if (!brand.logoUrl) {
+        if (!brand.logoUrl && !brand.vendorId) {
             toast.error('Please upload a logo')
             return
         }
@@ -181,7 +181,7 @@ function AddBrandPage() {
                         <label className="text-sm font-bold text-gray-700 ml-1">Link to Vendor</label>
                         <select
                             value={brand.vendorId || ''}
-                            onChange={(e) => setBrand(prev => ({ ...prev, vendorId: e.target.value }))}
+                            onChange={(e) => { const vendor = vendors.find(v => v.id === e.target.value); setBrand(prev => ({ ...prev, vendorId: e.target.value, logoUrl: vendor?.logoUrl || '' })) }}
                             className="w-full h-14 px-6 rounded-[1.25rem] bg-white border border-gray-100 font-bold text-gray-900 outline-none focus:border-purple-400 transition-all shadow-sm focus:ring-4 focus:ring-purple-50 appearance-none cursor-pointer"
                         >
                             <option value="">— No linked vendor —</option>
@@ -191,7 +191,7 @@ function AddBrandPage() {
                         </select>
                         {brand.vendorId && (
                             <p className="text-xs text-purple-500 font-medium ml-1">
-                                Linked: {vendors.find(v => v.id === brand.vendorId)?.name || brand.vendorId}
+                                Featured from vendor profile: {vendors.find(v => v.id === brand.vendorId)?.name || brand.vendorId}
                             </p>
                         )}
                     </div>

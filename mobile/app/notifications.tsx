@@ -12,12 +12,14 @@ import { useAuth } from '@/lib/auth';
 import { getSupabase } from '@/lib/supabase';
 import { F, useAppTheme } from '@/lib/theme';
 import { useAppLocale } from '@/context/LocaleContext';
+import { safeWebUrl } from '@/lib/vendor-links';
 
 type NotificationRow = {
   id: string;
   title: string;
   body: string;
   kind: string;
+  data: { buttonLabel?: string; buttonUrl?: string } | null;
   read_at: string | null;
   created_at: string;
 };
@@ -45,7 +47,7 @@ export default function NotificationsRoute() {
     try {
       const { data, error } = await getSupabase()
         .from('notifications')
-        .select('id,title,body,kind,read_at,created_at')
+        .select('id,title,body,kind,data,read_at,created_at')
         .eq('user_id', user.id)
         .order('created_at', { ascending: false })
         .limit(100);
@@ -111,7 +113,7 @@ export default function NotificationsRoute() {
             {!item.read_at ? <View style={[styles.unreadDot, { backgroundColor: C.lime }]} /> : null}
           </View>
           <Text style={[styles.body, { color: C.muted, textAlign: isRTL ? 'right' : 'left' }]}>{item.body}</Text>
-          <>{item.kind === 'prelaunch_welcome' ? <ScalePressable accessibilityRole="link" onPress={() => void Linking.openURL('https://kouponly.in').catch(() => setMessage('Unable to open the website.'))}><Text style={{ color: C.lime }}>Visit Kouponly</Text></ScalePressable> : null}</>
+          {item.kind === 'prelaunch_welcome' && safeWebUrl(item.data?.buttonUrl) ? <ScalePressable accessibilityRole="link" onPress={() => { const url = safeWebUrl(item.data?.buttonUrl); if (url) void Linking.openURL(url).catch(() => setMessage('Unable to open the website.')); }}><Text style={{ color: C.lime }}>{item.data?.buttonLabel || 'Visit Kouponly'}</Text></ScalePressable> : null}
           <View style={[styles.footer, isRTL && styles.rowReverse]}>
             <Text style={[styles.date, { color: C.muted, textAlign: isRTL ? 'right' : 'left' }]}>{date}</Text>
             <ScalePressable accessibilityRole="button" accessibilityLabel={t('clear')} disabled={clearingIds.includes(item.id)} onPress={() => void clearNotification(item.id)}>

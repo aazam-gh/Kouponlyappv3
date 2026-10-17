@@ -10,7 +10,6 @@ const numberValue = (value: unknown, fallback = 0) => {
 };
 
 function isOfferAvailable(offer: MarketplaceOfferRow, now: number) {
-  if (offer.active === false) return false;
   const start = offer.starts_at ? Date.parse(offer.starts_at) : Number.NEGATIVE_INFINITY;
   const end = offer.ends_at ? Date.parse(offer.ends_at) : Number.POSITIVE_INFINITY;
   return start <= now && end > now;
@@ -20,7 +19,7 @@ export function projectVendorCatalogue(
   vendors: MarketplaceVendorRow[],
   offers: MarketplaceOfferRow[],
   locations: Record<string, any>[],
-  taxonomy: { categories: Record<string, any>[]; subcategories: Record<string, any>[]; assignments: Record<string, any>[] },
+  taxonomy: { categories: Record<string, any>[]; subcategories: Record<string, any>[]; assignments: Record<string, any>[]; categoryAssignments?: Record<string, any>[] },
   now = Date.now(),
 ): { deals: Deal[]; partners: DirectoryItem[]; offers: DirectoryItem[]; categories: Category[] } {
   const categories: Category[] = taxonomy.categories.filter(row => row.active !== false).map(row => ({
@@ -51,7 +50,6 @@ export function projectVendorCatalogue(
   const partners: DirectoryItem[] = [];
   const offerItems: DirectoryItem[] = [];
   for (const vendor of vendors) {
-    if (vendor.status && vendor.status !== 'Active') continue;
     const vendorOffers = (activeOffers.get(vendor.id) ?? []).sort((a, b) =>
       numberValue(a.sort_order) - numberValue(b.sort_order) || String(a.id).localeCompare(String(b.id)),
     );
@@ -66,6 +64,9 @@ export function projectVendorCatalogue(
     const name = stringValue(vendor.name, stringValue(payload.name, 'Kouponly partner'));
     const mainCategory = categories.find(category => category.id === vendor.category_id);
     if (!mainCategory) continue;
+    const categoryIds = [...new Set([vendor.category_id, ...(taxonomy.categoryAssignments ?? []).filter(row => row.vendor_id === vendor.id).map(row => row.category_id)].filter((id): id is string => typeof id === 'string' && categories.some(category => category.id === id)))];
+    if (!categoryIds.includes(mainCategory.id!)) categoryIds.unshift(mainCategory.id!);
+    const categoryNames = categories.filter(category => categoryIds.includes(category.id!)).map(category => category.name);
     const category = mainCategory.name;
     const subcategoryIds = taxonomy.assignments.filter(row => row.vendor_id === vendor.id && row.category_id === mainCategory.id).map(row => row.subcategory_id);
     const subcategoryNames = mainCategory.subcategories.filter(sub => sub.id && subcategoryIds.includes(sub.id)).map(sub => sub.label);
@@ -82,7 +83,7 @@ export function projectVendorCatalogue(
     const externalUrl = stringValue(vendor.website, stringValue(payload.website, '')) || undefined;
     const vendorLogo = stringValue(vendor.logo_path, stringValue(payload.profilePicture, stringValue(payload.logo))) || undefined;
     const deal: Deal = {
-      id, vendorId: vendor.id, categoryId: mainCategory.id, subcategoryIds,
+      id, vendorId: vendor.id, categoryId: mainCategory.id, categoryIds, subcategoryIds,
       offers: vendorOffers.map(row => ({ currency: stringValue(row.currency) || undefined, id: row.id, index: offerIndexes.get(row.id)!, title: row.title,
         logo: vendorLogo, description: row.description || '', saving: row.saving_label || '', terms: row.terms || undefined, redemptionInstructions: row.redemption_instructions || undefined,
         redemption: row.redemption_mode === 'online' ? 'online' : 'inStore', discountType: row.discount_type || row.payload?.discountType, discountValue: numberValue(row.discount_value ?? row.payload?.discountValue, NaN) })),
@@ -105,8 +106,8 @@ export function projectVendorCatalogue(
       saving,
       cardLabel: stringValue(vendor.card_label).trim() || undefined,
       offerValue,
-      newest: numberValue(vendor.newest),
-      trend: numberValue(vendor.trend),
+      newest: numberValue(vendor.new_deals_priority),
+      trend: numberValue(vendor.trending_priority),
       image,
       logo: vendorLogo,
       color: stringValue(vendor.color, '#eef6ef'),
@@ -114,7 +115,7 @@ export function projectVendorCatalogue(
       redemption,
       externalUrl,
       instagramUrl: stringValue(payload.instagramUrl, stringValue(payload.instagram, '')) || undefined,
-      keywords: [...(Array.isArray(payload.searchTokens) ? payload.searchTokens : []), ...subcategoryNames].filter(Boolean).join(' '),
+      keywords: [...(Array.isArray(payload.searchTokens) ? payload.searchTokens : []), ...categoryNames, ...subcategoryNames].filter(Boolean).join(' '),
       xcard: payload.xcard === true,
     };
     // Old deal metadata may identify its original subcategory (Dining/Cafes) as category.
@@ -124,7 +125,7 @@ export function projectVendorCatalogue(
     deals.push(deal);
     partners.push({
       id: `couponly-vendor-${vendor.id}`,
-      type: 'Vendor', categoryId: mainCategory.id, subcategoryIds,
+      type: 'Vendor', categoryId: mainCategory.id, categoryIds, subcategoryIds,
       title: name,
       subtitle: `${category} · ${place}`,
       tag: saving,
@@ -135,7 +136,7 @@ export function projectVendorCatalogue(
       image,
       logo: deal.logo,
       dealId: id,
-      keywords: [...(Array.isArray(payload.searchTokens) ? payload.searchTokens : []), name, category, ...subcategoryNames, place, ...vendorOffers.map(row => row.title)].filter(Boolean).join(' '),
+      keywords: [...(Array.isArray(payload.searchTokens) ? payload.searchTokens : []), name, ...categoryNames, ...subcategoryNames, place, ...vendorOffers.map(row => row.title)].filter(Boolean).join(' '),
       description,
       action: 'View offers',
       redemption: deal.redemption,
@@ -147,7 +148,7 @@ export function projectVendorCatalogue(
       const offerSaving = stringValue(vendorOffer.saving_label, stringValue(vendorOffer.payload?.savingLabel, saving));
       offerItems.push({
         id: `couponly-offer-${vendorOffer.id}`,
-        type: 'Offer', categoryId: mainCategory.id, subcategoryIds, offerIndex: offerIndexes.get(vendorOffer.id),
+        type: 'Offer', categoryId: mainCategory.id, categoryIds, subcategoryIds, offerIndex: offerIndexes.get(vendorOffer.id),
         title,
         subtitle: `${name} · ${place}`,
         tag: offerSaving,
@@ -158,7 +159,7 @@ export function projectVendorCatalogue(
         image,
         logo: vendorLogo,
         dealId: id,
-        keywords: `${name} ${category} ${subcategoryNames.join(" ")} ${place} ${title}`,
+        keywords: `${name} ${categoryNames.join(" ")} ${subcategoryNames.join(" ")} ${place} ${title}`,
         description: detail,
         action: 'Unlock offer',
         redemption: vendorOffer.redemption_mode === 'online' ? 'online' : 'inStore',

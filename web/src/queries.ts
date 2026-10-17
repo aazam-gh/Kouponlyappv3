@@ -1,7 +1,7 @@
 import { queryOptions } from '@tanstack/react-query'
 import { db } from '@/firebase/config'
 import { supabase } from '@/lib/supabase'
-import { doc, getDoc, query, collection, where, getDocs, Timestamp, type DocumentReference, orderBy, limit } from 'firebase/firestore'
+import { doc, getDoc, getDocs, query, collection, where, Timestamp, type DocumentReference } from 'firebase/firestore'
 import { STALE_TIME } from '@/lib/constants'
 import type { Category } from '@/types/categories'
 
@@ -16,6 +16,8 @@ export interface EmbeddedOffer {
     offerValue?: number
     termsEn?: string
     redemptionInstructionsEn?: string
+    startsAt?: string
+    endsAt?: string
     active?: boolean
     redemptionMode?: 'inStore'
 }
@@ -53,6 +55,7 @@ export interface Vendor {
     tagsEn?: string[]
     vendorType?: 'in_store'
     categoryId?: string
+    categoryIds?: string[]
     mainCategory?: string
     subcategory?: string[]
     isTrending?: boolean
@@ -98,8 +101,10 @@ export interface Transaction {
 
 export interface VendorStats {
     totalRedemptions: number
+    thisMonthRedemptions: number
     totalRevenue: number
     totalDiscount: number
+    uniqueCustomers: number
     activeOffers: number
     pendingTransactions: number
     redemptionsTrend: number
@@ -113,6 +118,11 @@ export interface DailyChartPoint {
 }
 
 export type ChartRange = '7d' | '30d' | '90d'
+const localDateKey = (date: Date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
+export interface VendorPortalTransaction {
+    id: string; createdAt: string; type: string; totalAmount: number; discountAmount: number
+    finalAmount: number; status: string; offerTitle: string; studentName: string; studentPhone: string | null
+}
 
 export const vendorQueryOptions = (vendorId: string) => queryOptions({
     queryKey: ['vendor', vendorId],
@@ -133,18 +143,15 @@ export const vendorQueryOptions = (vendorId: string) => queryOptions({
     staleTime: STALE_TIME.EXTENDED,
 })
 
-export const vendorTransactionsQueryOptions = (vendorId: string) => queryOptions({
-    queryKey: ['vendor-transactions', vendorId],
+export const vendorTransactionsQueryOptions = (vendorId: string, from = '', to = '') => queryOptions({
+    queryKey: ['vendor-transactions', vendorId, from, to],
     queryFn: async () => {
         if (!vendorId) return []
-        const q = query(
-            collection(db, 'transactions'),
-            where('vendorId', '==', vendorId),
-            orderBy('createdAt', 'desc'),
-            limit(50),
-        )
-        const snapshot = await getDocs(q)
-        return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Transaction[]
+        const { data, error } = await supabase.rpc('kouponly_vendor_transactions', {
+            p_vendor_id: vendorId, p_from: from || null, p_to: to || null, p_offset: 0, p_limit: 100,
+        })
+        if (error) throw error
+        return (data ?? []).map((row: any) => ({ id: row.transaction_id, createdAt: row.created_at, type: row.transaction_type, totalAmount: Number(row.total_amount), discountAmount: Number(row.discount_amount), finalAmount: Number(row.final_amount), status: row.status, offerTitle: row.offer_title, studentName: row.student_name, studentPhone: row.student_phone })) as VendorPortalTransaction[]
     },
     staleTime: STALE_TIME.MEDIUM,
 })
@@ -173,25 +180,25 @@ export const vendorStatsQueryOptions = (vendorId: string) => queryOptions({
     staleTime: STALE_TIME.LONG,
 })
 
-export const vendorChartDataQueryOptions = (vendorId: string, range: ChartRange) => queryOptions({
-    queryKey: ['vendor-chart-data', vendorId, range],
+export const vendorChartDataQueryOptions = (vendorId: string, range: ChartRange, from = '', to = '') => queryOptions({
+    queryKey: ['vendor-chart-data', vendorId, range, from, to],
     queryFn: async () => {
         if (!vendorId) return []
 
         const rangeDays = range === '7d' ? 7 : range === '30d' ? 30 : 90
         const result: Record<string, DailyChartPoint> = {}
 
-        for (let i = rangeDays - 1; i >= 0; i--) {
-            const date = new Date()
-            date.setDate(date.getDate() - i)
-            const dateStr = date.toISOString().split('T')[0]
+        const start = from ? new Date(`${from}T00:00:00`) : to ? new Date(`${to}T00:00:00`) : new Date()
+        const end = to ? new Date(`${to}T00:00:00`) : new Date()
+        if (!from && !to) start.setDate(start.getDate() - rangeDays + 1)
+        for (const date = new Date(start); date <= end; date.setDate(date.getDate() + 1)) {
+            const dateStr = localDateKey(date)
             result[dateStr] = { date: dateStr, redemptions: 0, revenue: 0 }
         }
 
-        const { data, error } = await supabase.rpc('couponly_vendor_dashboard_chart', {
-            p_vendor_id: vendorId,
-            p_range_days: rangeDays,
-        })
+        const { data, error } = from || to
+            ? await supabase.rpc('couponly_vendor_dashboard_range', { p_vendor_id: vendorId, p_from: from || null, p_to: to || null })
+            : await supabase.rpc('couponly_vendor_dashboard_chart', { p_vendor_id: vendorId, p_range_days: rangeDays })
         if (error) throw error
         for (const point of data ?? []) {
             const date = String(point.date)

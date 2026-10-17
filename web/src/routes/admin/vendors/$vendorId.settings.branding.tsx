@@ -37,6 +37,7 @@ function BrandingSettingsComponent() {
 
             const dataToUpdate: Partial<VendorBrandingForm> = { ...vendorData }
             delete dataToUpdate.id
+            dataToUpdate.status = 'Active'
 
             const vendorRef = doc(db, 'vendors', vendorId)
             await updateDoc(vendorRef, dataToUpdate)

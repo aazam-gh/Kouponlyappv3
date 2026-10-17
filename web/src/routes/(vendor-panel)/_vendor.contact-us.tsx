@@ -1,11 +1,18 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { Label } from "@/components/ui/label"
+import { useAuth } from '@/auth'
+import { Button } from '@/components/ui/button'
+import { Textarea } from '@/components/ui/textarea'
+import { supabase } from '@/lib/supabase'
+import { useState } from 'react'
+import { toast } from 'sonner'
 
 export const Route = createFileRoute('/(vendor-panel)/_vendor/contact-us')({
     component: ContactUsPage,
 })
 
 function ContactUsPage() {
+    const { user } = useAuth()
     const contactInfo = {
         fullName: "Aazam",
         phoneNumber: "+974 70450340",
@@ -44,7 +51,31 @@ function ContactUsPage() {
                         </div>
                     </div>
                 </div>
+                <div className="grid gap-6 border-t pt-8 sm:grid-cols-2">
+                    <VendorRequestForm vendorId={user?.uid || ''} kind="staff_visit" title="Request a staff visit" prompt="Tell us when and what kind of training or support you need." />
+                    <VendorRequestForm vendorId={user?.uid || ''} kind="offer" title="Request an offer" prompt="Describe the offer you would like Kouponly to review and publish." />
+                </div>
             </div>
         </div>
     )
+}
+
+function VendorRequestForm({ vendorId, kind, title, prompt }: { vendorId: string; kind: 'staff_visit' | 'offer'; title: string; prompt: string }) {
+    const [details, setDetails] = useState('')
+    const [sending, setSending] = useState(false)
+    const submit = async (event: React.FormEvent<HTMLFormElement>) => {
+        event.preventDefault()
+        if (!vendorId || details.trim().length < 5) { toast.error('Enter a request with at least 5 characters.'); return }
+        setSending(true)
+        const { error } = await supabase.from('kouponly_vendor_support_requests').insert({ vendor_id: vendorId, requester_id: vendorId, request_type: kind, details: details.trim() })
+        setSending(false)
+        if (error) toast.error(`Request was not sent: ${error.message}`)
+        else { setDetails(''); toast.success('Request sent to the Kouponly team.') }
+    }
+    return <form className="space-y-3 rounded-xl border bg-white p-4" onSubmit={submit}>
+        <div><h2 className="font-semibold">{title}</h2><p className="mt-1 text-sm text-muted-foreground">{prompt}</p></div>
+        <Label htmlFor={`request-${kind}`}>Request details</Label>
+        <Textarea id={`request-${kind}`} maxLength={2000} rows={4} value={details} onChange={e => setDetails(e.target.value)} placeholder="Write a short request" required />
+        <Button type="submit" disabled={sending || !vendorId}>{sending ? 'Sending…' : 'Send request'}</Button>
+    </form>
 }

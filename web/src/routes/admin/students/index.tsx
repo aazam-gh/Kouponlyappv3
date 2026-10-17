@@ -5,6 +5,7 @@ export const studentsSearchSchema = z.object({
     pageSize: z.coerce.number().int().min(5).max(50).catch(10),
     page: z.coerce.number().int().min(1).catch(1),
     search: z.string().catch(''),
+    sort: z.enum(['created_desc','spent_desc','referrals_desc']).catch('created_desc'),
 })
 
 export type StudentSearch = z.infer<typeof studentsSearchSchema>

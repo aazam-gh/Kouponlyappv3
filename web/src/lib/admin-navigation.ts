@@ -2,6 +2,8 @@ export const homeContentLinks = [
   { title: 'Section order', url: '/admin/cms/home-layout' },
   { title: 'Partner banners', url: '/admin/cms/banners' },
   { title: 'Featured showcase', url: '/admin/cms/featured-brand-showcase' },
+  { title: 'New Deals', url: '/admin/cms/new-deals' },
+  { title: 'Trending Vendors', url: '/admin/cms/trending-offers' },
   { title: 'App launch poster', url: '/admin/cms/app-launch-poster' },
   { title: 'Brand logos', url: '/admin/cms/brands' },
   { title: 'Categories', url: '/admin/cms/categories' },
@@ -16,6 +18,8 @@ const sections = [
   { title: 'Vendors & offers', url: '/admin/vendors' },
   { title: 'Students', url: '/admin/students' },
   { title: 'Transactions', url: '/admin/transactions' },
+  { title: 'School Domains', url: '/admin/school-domains' },
+  { title: 'Vendor Requests', url: '/admin/vendor-requests' },
   { title: 'Home content', url: '/admin/cms' },
   { title: 'Notifications', url: '/admin/notifications' },
 ]

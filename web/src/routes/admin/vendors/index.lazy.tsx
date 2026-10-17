@@ -31,7 +31,7 @@ import { Label } from '@/components/ui/label'
 import { functions } from '@/firebase/config'
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query'
 import { httpsCallable } from 'firebase/functions'
-import { fetchVendorsPage } from '@/lib/vendor-directory'
+import { fetchAllVendors, fetchVendorsPage } from '@/lib/vendor-directory'
 import { categoriesQueryOptions, type Vendor } from '@/queries'
 import { refreshVendorList } from '@/lib/vendorList'
 import { resetFirestorePaginationCursors } from '@/lib/firestore-pagination'
@@ -46,9 +46,10 @@ function RouteComponent() {
     const { page, pageSize, search: searchQuery, sort } = useSearch({ from: '/admin/vendors/' })
     const [searchInput, setSearchInput] = useState(searchQuery)
     const [open, setOpen] = useState(false)
-    const [form, setForm] = useState({ name: '', email: '', password: '', categoryId: '' })
+    const [form, setForm] = useState({ name: '', email: '', password: '', categoryIds: [] as string[] })
     const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
     const [vendorToDelete, setVendorToDelete] = useState<Vendor | null>(null)
+    const [exporting, setExporting] = useState(false)
 
     useEffect(() => {
         setSearchInput(searchQuery)
@@ -84,14 +85,15 @@ function RouteComponent() {
                 name: formData.name,
                 email: formData.email,
                 password: formData.password,
-                categoryId: formData.categoryId,
+                categoryId: formData.categoryIds[0],
+                categoryIds: formData.categoryIds,
             })
             return result.data
         },
         onSuccess: () => {
             resetFirestorePaginationCursors('vendors:')
             queryClient.invalidateQueries({ queryKey: ['vendors-page'] })
-            setForm({ name: '', email: '', password: '', categoryId: '' })
+            setForm({ name: '', email: '', password: '', categoryIds: [] })
             setOpen(false)
             void refreshVendorList()
         },
@@ -123,7 +125,7 @@ function RouteComponent() {
 
     const handleAddVendor = (event: FormEvent<HTMLFormElement>) => {
         event.preventDefault()
-        if (!form.name || !form.email || !form.password || !form.categoryId) return
+        if (!form.name || !form.email || !form.password || !form.categoryIds.length) return
         addVendorMutation.mutate(form)
     }
 
@@ -136,6 +138,19 @@ function RouteComponent() {
         if (vendorToDelete) {
             deleteVendorMutation.mutate(vendorToDelete.id)
         }
+    }
+
+    const exportCsv = async () => {
+        setExporting(true)
+        try {
+            const vendors = await fetchAllVendors()
+            const fields = ['id','name','status','contact','vendorType','categoryIds','mainCategory','subcategory','website','instagramUrl','address','locations','profilePicture','coverImage','galleryImages','offers'] as const
+            const quote = (value: unknown) => `"${String(value == null ? '' : typeof value === 'object' ? JSON.stringify(value) : value).replaceAll('"','""')}"`
+            const csv = [fields.map(quote).join(','), ...vendors.map(v => fields.map(key => quote(v[key])).join(','))].join('\r\n')
+            const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }))
+            const anchor = document.createElement('a'); anchor.href = url; anchor.download = 'kouponly-vendors.csv'; anchor.click(); URL.revokeObjectURL(url)
+        } catch (error) { alert(`Vendor export failed: ${error instanceof Error ? error.message : 'Unknown error'}`) }
+        finally { setExporting(false) }
     }
 
     return (
@@ -200,6 +215,7 @@ function RouteComponent() {
                     {searchQuery && <Button variant="ghost" onClick={() => { setSearchInput(''); updateFilters({ search: '' }) }}>Clear</Button>}
                 </div>
                 <div className="flex items-center gap-2 w-full sm:w-auto">
+                    <Button type="button" variant="outline" onClick={() => void exportCsv()} disabled={exporting}>{exporting ? 'Preparing…' : 'Export CSV'}</Button>
                     <Dialog open={open} onOpenChange={setOpen}>
                         <DialogTrigger asChild>
                             <Button className="bg-brand-green hover:bg-brand-green/90 text-white gap-2 h-10">
@@ -224,11 +240,17 @@ function RouteComponent() {
                                     />
                                 </div>
                                 <div className="grid gap-2">
-                                    <Label htmlFor="vendor-category">Main category</Label>
-                                    <Select value={form.categoryId} onValueChange={(categoryId) => setForm({ ...form, categoryId })} disabled={addVendorMutation.isPending}>
-                                        <SelectTrigger id="vendor-category"><SelectValue placeholder="Select a category" /></SelectTrigger>
-                                        <SelectContent>{categories.map(category => <SelectItem key={category.id} value={category.id}>{category.nameEnglish}</SelectItem>)}</SelectContent>
-                                    </Select>
+                                    <Label>Main categories</Label>
+                                    <p className="text-xs text-muted-foreground">The first selected category is primary.</p>
+                                    <div className="flex flex-wrap gap-2">
+                                        {categories.map(category => {
+                                            const selected = form.categoryIds.includes(category.id)
+                                            return <label key={category.id} className="flex cursor-pointer items-center gap-2 rounded-md border px-3 py-2 text-sm">
+                                                <input type="checkbox" checked={selected} disabled={addVendorMutation.isPending || (selected && form.categoryIds.length === 1)} onChange={() => setForm({ ...form, categoryIds: selected ? form.categoryIds.filter(id => id !== category.id) : [...form.categoryIds, category.id] })} />
+                                                {category.nameEnglish}{form.categoryIds[0] === category.id ? ' · Primary' : ''}
+                                            </label>
+                                        })}
+                                    </div>
                                 </div>
                                 <div className="grid gap-2">
                                     <Label htmlFor="email">Email Address</Label>
@@ -265,7 +287,7 @@ function RouteComponent() {
                                     className="bg-brand-green hover:bg-brand-green/90 text-white"
                                     type="submit"
                                     form="add-vendor"
-                                    disabled={addVendorMutation.isPending || !form.categoryId}
+                                    disabled={addVendorMutation.isPending || !form.categoryIds.length}
                                 >
                                     {addVendorMutation.isPending ? (
                                         <>
@@ -344,7 +366,7 @@ function RouteComponent() {
                                             <Link to="/admin/vendors/$vendorId/settings/branding" params={{ vendorId: vendor.id }} className="font-medium text-base underline-offset-4 hover:underline">{vendor.name || 'Vendor'}</Link>
                                         </div>
                                     </TableCell>
-                                    <TableCell><p>{vendor.mainCategory || 'Not assigned'}</p><p className="text-xs text-muted-foreground">{vendor.subcategory?.join(', ') || 'No subcategories'}</p></TableCell>
+                                    <TableCell><p>{(vendor.categoryIds?.length ? vendor.categoryIds.map(id => categories.find(category => category.id === id)?.nameEnglish || id) : [vendor.mainCategory || 'Not assigned']).join(', ')}</p><p className="text-xs text-muted-foreground">{vendor.subcategory?.join(', ') || 'No subcategories'}</p></TableCell>
                                     <TableCell>{vendor.status || 'Unknown'}</TableCell>
                                     <TableCell><div className="flex flex-col gap-1">
                                         <Link to="/admin/vendors/$vendorId/settings/offers" params={{ vendorId: vendor.id }} className="w-fit text-sm underline underline-offset-4">{vendor.offers?.length ?? 0} offers</Link>

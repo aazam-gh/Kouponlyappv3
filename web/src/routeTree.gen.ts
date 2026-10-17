@@ -12,6 +12,8 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AdminIndexRouteImport } from './routes/admin/index'
+import { Route as AdminVendorRequestsRouteImport } from './routes/admin/vendor-requests'
+import { Route as AdminSchoolDomainsRouteImport } from './routes/admin/school-domains'
 import { Route as AdminDashboardRouteImport } from './routes/admin/dashboard'
 import { Route as vendorPanelVendorRouteImport } from './routes/(vendor-panel)/_vendor'
 import { Route as authUnauthorizedRouteImport } from './routes/(auth)/unauthorized'
@@ -23,6 +25,8 @@ import { Route as AdminStudentsIndexRouteImport } from './routes/admin/students/
 import { Route as AdminNotificationsIndexRouteImport } from './routes/admin/notifications/index'
 import { Route as AdminCmsIndexRouteImport } from './routes/admin/cms/index'
 import { Route as AdminTransactionsIdRouteImport } from './routes/admin/transactions/$id'
+import { Route as AdminCmsTrendingOffersRouteImport } from './routes/admin/cms/trending-offers'
+import { Route as AdminCmsNewDealsRouteImport } from './routes/admin/cms/new-deals'
 import { Route as vendorPanelVendorTransactionHistoryRouteImport } from './routes/(vendor-panel)/_vendor.transaction-history'
 import { Route as vendorPanelVendorProfileRouteImport } from './routes/(vendor-panel)/_vendor.profile'
 import { Route as vendorPanelVendorPinRouteImport } from './routes/(vendor-panel)/_vendor.pin'
@@ -65,6 +69,16 @@ const IndexRoute = IndexRouteImport.update({
 const AdminIndexRoute = AdminIndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminVendorRequestsRoute = AdminVendorRequestsRouteImport.update({
+  id: '/vendor-requests',
+  path: '/vendor-requests',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminSchoolDomainsRoute = AdminSchoolDomainsRouteImport.update({
+  id: '/school-domains',
+  path: '/school-domains',
   getParentRoute: () => AdminRoute,
 } as any)
 const AdminDashboardRoute = AdminDashboardRouteImport.update({
@@ -132,6 +146,16 @@ const AdminTransactionsIdRoute = AdminTransactionsIdRouteImport.update({
 } as any).lazy(() =>
   import('./routes/admin/transactions/$id.lazy').then((d) => d.Route),
 )
+const AdminCmsTrendingOffersRoute = AdminCmsTrendingOffersRouteImport.update({
+  id: '/cms/trending-offers',
+  path: '/cms/trending-offers',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminCmsNewDealsRoute = AdminCmsNewDealsRouteImport.update({
+  id: '/cms/new-deals',
+  path: '/cms/new-deals',
+  getParentRoute: () => AdminRoute,
+} as any)
 const vendorPanelVendorTransactionHistoryRoute =
   vendorPanelVendorTransactionHistoryRouteImport.update({
     id: '/transaction-history',
@@ -318,6 +342,8 @@ export interface FileRoutesByFullPath {
   '/login': typeof authLoginRoute
   '/unauthorized': typeof authUnauthorizedRoute
   '/admin/dashboard': typeof AdminDashboardRoute
+  '/admin/school-domains': typeof AdminSchoolDomainsRoute
+  '/admin/vendor-requests': typeof AdminVendorRequestsRoute
   '/admin/': typeof AdminIndexRoute
   '/campaign': typeof vendorPanelVendorCampaignRoute
   '/contact-us': typeof vendorPanelVendorContactUsRoute
@@ -325,6 +351,8 @@ export interface FileRoutesByFullPath {
   '/pin': typeof vendorPanelVendorPinRoute
   '/profile': typeof vendorPanelVendorProfileRoute
   '/transaction-history': typeof vendorPanelVendorTransactionHistoryRouteWithChildren
+  '/admin/cms/new-deals': typeof AdminCmsNewDealsRoute
+  '/admin/cms/trending-offers': typeof AdminCmsTrendingOffersRoute
   '/admin/transactions/$id': typeof AdminTransactionsIdRoute
   '/admin/cms/': typeof AdminCmsIndexRoute
   '/admin/notifications/': typeof AdminNotificationsIndexRoute
@@ -360,12 +388,16 @@ export interface FileRoutesByTo {
   '/login': typeof authLoginRoute
   '/unauthorized': typeof authUnauthorizedRoute
   '/admin/dashboard': typeof AdminDashboardRoute
+  '/admin/school-domains': typeof AdminSchoolDomainsRoute
+  '/admin/vendor-requests': typeof AdminVendorRequestsRoute
   '/admin': typeof AdminIndexRoute
   '/campaign': typeof vendorPanelVendorCampaignRoute
   '/contact-us': typeof vendorPanelVendorContactUsRoute
   '/dashboard': typeof vendorPanelVendorDashboardRoute
   '/pin': typeof vendorPanelVendorPinRoute
   '/profile': typeof vendorPanelVendorProfileRoute
+  '/admin/cms/new-deals': typeof AdminCmsNewDealsRoute
+  '/admin/cms/trending-offers': typeof AdminCmsTrendingOffersRoute
   '/admin/transactions/$id': typeof AdminTransactionsIdRoute
   '/admin/cms': typeof AdminCmsIndexRoute
   '/admin/notifications': typeof AdminNotificationsIndexRoute
@@ -403,6 +435,8 @@ export interface FileRoutesById {
   '/(auth)/unauthorized': typeof authUnauthorizedRoute
   '/(vendor-panel)/_vendor': typeof vendorPanelVendorRouteWithChildren
   '/admin/dashboard': typeof AdminDashboardRoute
+  '/admin/school-domains': typeof AdminSchoolDomainsRoute
+  '/admin/vendor-requests': typeof AdminVendorRequestsRoute
   '/admin/': typeof AdminIndexRoute
   '/(vendor-panel)/_vendor/campaign': typeof vendorPanelVendorCampaignRoute
   '/(vendor-panel)/_vendor/contact-us': typeof vendorPanelVendorContactUsRoute
@@ -410,6 +444,8 @@ export interface FileRoutesById {
   '/(vendor-panel)/_vendor/pin': typeof vendorPanelVendorPinRoute
   '/(vendor-panel)/_vendor/profile': typeof vendorPanelVendorProfileRoute
   '/(vendor-panel)/_vendor/transaction-history': typeof vendorPanelVendorTransactionHistoryRouteWithChildren
+  '/admin/cms/new-deals': typeof AdminCmsNewDealsRoute
+  '/admin/cms/trending-offers': typeof AdminCmsTrendingOffersRoute
   '/admin/transactions/$id': typeof AdminTransactionsIdRoute
   '/admin/cms/': typeof AdminCmsIndexRoute
   '/admin/notifications/': typeof AdminNotificationsIndexRoute
@@ -448,6 +484,8 @@ export interface FileRouteTypes {
     | '/login'
     | '/unauthorized'
     | '/admin/dashboard'
+    | '/admin/school-domains'
+    | '/admin/vendor-requests'
     | '/admin/'
     | '/campaign'
     | '/contact-us'
@@ -455,6 +493,8 @@ export interface FileRouteTypes {
     | '/pin'
     | '/profile'
     | '/transaction-history'
+    | '/admin/cms/new-deals'
+    | '/admin/cms/trending-offers'
     | '/admin/transactions/$id'
     | '/admin/cms/'
     | '/admin/notifications/'
@@ -490,12 +530,16 @@ export interface FileRouteTypes {
     | '/login'
     | '/unauthorized'
     | '/admin/dashboard'
+    | '/admin/school-domains'
+    | '/admin/vendor-requests'
     | '/admin'
     | '/campaign'
     | '/contact-us'
     | '/dashboard'
     | '/pin'
     | '/profile'
+    | '/admin/cms/new-deals'
+    | '/admin/cms/trending-offers'
     | '/admin/transactions/$id'
     | '/admin/cms'
     | '/admin/notifications'
@@ -532,6 +576,8 @@ export interface FileRouteTypes {
     | '/(auth)/unauthorized'
     | '/(vendor-panel)/_vendor'
     | '/admin/dashboard'
+    | '/admin/school-domains'
+    | '/admin/vendor-requests'
     | '/admin/'
     | '/(vendor-panel)/_vendor/campaign'
     | '/(vendor-panel)/_vendor/contact-us'
@@ -539,6 +585,8 @@ export interface FileRouteTypes {
     | '/(vendor-panel)/_vendor/pin'
     | '/(vendor-panel)/_vendor/profile'
     | '/(vendor-panel)/_vendor/transaction-history'
+    | '/admin/cms/new-deals'
+    | '/admin/cms/trending-offers'
     | '/admin/transactions/$id'
     | '/admin/cms/'
     | '/admin/notifications/'
@@ -599,6 +647,20 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/admin/'
       preLoaderRoute: typeof AdminIndexRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/vendor-requests': {
+      id: '/admin/vendor-requests'
+      path: '/vendor-requests'
+      fullPath: '/admin/vendor-requests'
+      preLoaderRoute: typeof AdminVendorRequestsRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/school-domains': {
+      id: '/admin/school-domains'
+      path: '/school-domains'
+      fullPath: '/admin/school-domains'
+      preLoaderRoute: typeof AdminSchoolDomainsRouteImport
       parentRoute: typeof AdminRoute
     }
     '/admin/dashboard': {
@@ -676,6 +738,20 @@ declare module '@tanstack/react-router' {
       path: '/transactions/$id'
       fullPath: '/admin/transactions/$id'
       preLoaderRoute: typeof AdminTransactionsIdRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/cms/trending-offers': {
+      id: '/admin/cms/trending-offers'
+      path: '/cms/trending-offers'
+      fullPath: '/admin/cms/trending-offers'
+      preLoaderRoute: typeof AdminCmsTrendingOffersRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/cms/new-deals': {
+      id: '/admin/cms/new-deals'
+      path: '/cms/new-deals'
+      fullPath: '/admin/cms/new-deals'
+      preLoaderRoute: typeof AdminCmsNewDealsRouteImport
       parentRoute: typeof AdminRoute
     }
     '/(vendor-panel)/_vendor/transaction-history': {
@@ -906,7 +982,11 @@ const AdminVendorsVendorIdSettingsRouteWithChildren =
 
 interface AdminRouteChildren {
   AdminDashboardRoute: typeof AdminDashboardRoute
+  AdminSchoolDomainsRoute: typeof AdminSchoolDomainsRoute
+  AdminVendorRequestsRoute: typeof AdminVendorRequestsRoute
   AdminIndexRoute: typeof AdminIndexRoute
+  AdminCmsNewDealsRoute: typeof AdminCmsNewDealsRoute
+  AdminCmsTrendingOffersRoute: typeof AdminCmsTrendingOffersRoute
   AdminTransactionsIdRoute: typeof AdminTransactionsIdRoute
   AdminCmsIndexRoute: typeof AdminCmsIndexRoute
   AdminNotificationsIndexRoute: typeof AdminNotificationsIndexRoute
@@ -933,7 +1013,11 @@ interface AdminRouteChildren {
 
 const AdminRouteChildren: AdminRouteChildren = {
   AdminDashboardRoute: AdminDashboardRoute,
+  AdminSchoolDomainsRoute: AdminSchoolDomainsRoute,
+  AdminVendorRequestsRoute: AdminVendorRequestsRoute,
   AdminIndexRoute: AdminIndexRoute,
+  AdminCmsNewDealsRoute: AdminCmsNewDealsRoute,
+  AdminCmsTrendingOffersRoute: AdminCmsTrendingOffersRoute,
   AdminTransactionsIdRoute: AdminTransactionsIdRoute,
   AdminCmsIndexRoute: AdminCmsIndexRoute,
   AdminNotificationsIndexRoute: AdminNotificationsIndexRoute,

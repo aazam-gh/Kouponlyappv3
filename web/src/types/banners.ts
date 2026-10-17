@@ -5,6 +5,7 @@ export interface BannerImage {
 export interface BannerItem {
     bannerId: string
     vendorId: string
+    vendorIds?: string[]
     images: BannerImage
     altText: string
     isActive: boolean

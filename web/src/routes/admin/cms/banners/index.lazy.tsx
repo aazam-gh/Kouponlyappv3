@@ -287,18 +287,19 @@ function BannersManagement() {
                             <div className="flex-1 space-y-4">
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <div className="space-y-1.5">
-                                        <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider ml-1">Vendor</label>
-                                        <select
-                                            aria-label={`Vendor for banner ${index + 1}`}
-                                            value={banner.vendorId}
-                                            onChange={(e) => handleUpdateBanner(banner.bannerId, { vendorId: e.target.value })}
-                                            className="w-full h-11 px-4 rounded-xl bg-white border border-gray-100 font-bold text-sm text-gray-900 outline-none focus:border-primary transition-all shadow-sm appearance-none cursor-pointer"
-                                        >
-                                            <option value="">— No linked vendor —</option>
-                                            {vendors.map(v => (
-                                                <option key={v.id} value={v.id}>{v.name}</option>
-                                            ))}
-                                        </select>
+                                        <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider ml-1">Assign to vendors</label>
+                                        <div className="max-h-40 space-y-2 overflow-auto rounded-xl border bg-white p-3">
+                                            {vendors.map(v => {
+                                                const assigned = banner.vendorIds?.length ? banner.vendorIds : banner.vendorId ? [banner.vendorId] : []
+                                                return <label key={v.id} className="flex items-center gap-2 text-sm"><input type="checkbox" checked={assigned.includes(v.id)} onChange={e => {
+                                                    const ids = new Set(assigned)
+                                                    if (e.target.checked) ids.add(v.id); else ids.delete(v.id)
+                                                    const vendorIds = [...ids]
+                                                    handleUpdateBanner(banner.bannerId, { vendorIds, vendorId: vendorIds[0] || '' })
+                                                }} /><span>{v.name}</span></label>
+                                            })}
+                                        </div>
+                                        <p className="text-xs text-muted-foreground">Selected: {(banner.vendorIds?.length ? banner.vendorIds : banner.vendorId ? [banner.vendorId] : []).map(id => vendors.find(v => v.id === id)?.name || id).join(', ') || 'None'}</p>
                                     </div>
                                     <div className="space-y-1.5">
                                         <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider ml-1">Alt Text</label>
