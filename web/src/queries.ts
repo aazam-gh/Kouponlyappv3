@@ -125,9 +125,9 @@ export const vendorQueryOptions = (vendorId: string) => queryOptions({
     queryKey: ['vendor', vendorId],
     queryFn: async () => {
         if (!vendorId) throw new Error('No vendor ID provided')
-        const { data: row, error } = await supabase.from('couponly_vendors').select('*,couponly_categories(name),couponly_vendor_subcategories(subcategory_id,couponly_subcategories(name))').eq('id', vendorId).maybeSingle()
+        const { data: row, error } = await supabase.from('couponly_vendors').select('*,couponly_categories!couponly_vendors_category_id_fkey(name),couponly_vendor_subcategories(subcategory_id,couponly_subcategories(name))').eq('id', vendorId).maybeSingle()
         if (error) throw error
-        if (!row) throw new Error('Vendor not found')
+        if (!row) return null
         return mapVendor(row as any)
     },
     staleTime: STALE_TIME.EXTENDED,

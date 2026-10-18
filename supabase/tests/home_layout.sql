@@ -5,9 +5,9 @@ begin
   select payload into original from public.couponly_cms_documents where id='homeLayout';
   assert original is not null, 'Default layout must exist';
   update public.couponly_cms_documents set payload=jsonb_set(payload,'{sectionOrder}',
-    '["top-brands","brand-logos","trending-offers","featured-showcase","new-deals","nearby-vendors","categories","partner-banners"]') where id='homeLayout';
-  assert (select payload->'sectionOrder'->>0='top-brands' from public.couponly_cms_documents where id='homeLayout'), 'Valid order must save';
-  for invalid in select value from jsonb_array_elements('[null, {}, [], ["categories"], ["partner-banners","categories","nearby-vendors","new-deals","featured-showcase","trending-offers","brand-logos","categories"], ["unknown","categories","nearby-vendors","new-deals","featured-showcase","trending-offers","brand-logos","top-brands"]]'::jsonb)
+    '["brand-logos","trending-offers","featured-showcase","new-deals","nearby-vendors","categories","partner-banners"]') where id='homeLayout';
+  assert (select payload->'sectionOrder'->>0='brand-logos' from public.couponly_cms_documents where id='homeLayout'), 'Valid order must save';
+  for invalid in select value from jsonb_array_elements('[null, {}, [], ["categories"], ["partner-banners","categories","nearby-vendors","new-deals","featured-showcase","trending-offers","categories"], ["top-brands","categories","nearby-vendors","new-deals","featured-showcase","trending-offers","brand-logos"]]'::jsonb)
   loop
     begin
       update public.couponly_cms_documents set payload=jsonb_build_object('sectionOrder',invalid) where id='homeLayout';

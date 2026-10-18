@@ -431,6 +431,8 @@ export function OffersSettings({ vendorId }: OffersSettingsProps) {
         )
     }
 
+    if (!vendor) return <p className="py-8 text-center text-sm text-muted-foreground">Vendor not found.</p>
+
     return (
         <section className="space-y-5 py-2">
             <div className="flex flex-wrap items-center justify-between gap-3">
