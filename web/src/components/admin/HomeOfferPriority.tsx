@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Check, Loader2, Sparkles, TrendingUp } from 'lucide-react'
+import { Check, Loader2, Search, Sparkles, TrendingUp, X } from 'lucide-react'
 import { useState } from 'react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
@@ -54,6 +54,7 @@ export function HomeOfferPriority({ section }: { section: Section }) {
   const queryClient = useQueryClient()
   const definition = definitions[section]
   const [drafts, setDrafts] = useState<Record<string, Draft>>({})
+  const [search, setSearch] = useState('')
   const { data: rows = [], isPending, error } = useQuery({
     queryKey: ['admin-home-offer-priority', section],
     queryFn: () => loadRows(section),
@@ -79,6 +80,10 @@ export function HomeOfferPriority({ section }: { section: Section }) {
     const priority = draft ? (draft.included ? Number(draft.priority) : 0) : (row.priority ?? 0)
     return Number.isFinite(priority) ? priority : 0
   })) + 1
+  const normalizedSearch = search.trim().toLocaleLowerCase()
+  const filteredRows = normalizedSearch
+    ? rows.filter(row => row.name.toLocaleLowerCase().includes(normalizedSearch))
+    : rows
   const Icon = section === 'new-deals' ? Sparkles : TrendingUp
 
   return <div className="space-y-6">
@@ -90,8 +95,24 @@ export function HomeOfferPriority({ section }: { section: Section }) {
     {isPending ? <div className="rounded-xl border p-8 text-center text-sm text-muted-foreground">Loading active vendors…</div>
       : error ? <div role="alert" className="rounded-xl border border-destructive/30 bg-destructive/5 p-5 text-sm text-destructive">Could not load vendors: {error.message}</div>
         : rows.length === 0 ? <div className="rounded-xl border p-8 text-center text-sm text-muted-foreground">No active vendors found.</div>
-          : <div className="divide-y rounded-xl border bg-card">
-            {rows.map(row => {
+          : <>
+            <div className="relative max-w-md">
+              <Search aria-hidden="true" className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                aria-label={`Search vendors in ${definition.title}`}
+                placeholder="Search vendors…"
+                value={search}
+                onChange={event => setSearch(event.target.value)}
+                className="pl-9 pr-9"
+              />
+              {search && <button type="button" aria-label="Clear vendor search" onClick={() => setSearch('')} className="absolute right-2 top-1/2 -translate-y-1/2 rounded-sm p-1 text-muted-foreground hover:text-foreground">
+                <X aria-hidden="true" className="size-4" />
+              </button>}
+            </div>
+            {filteredRows.length === 0
+              ? <div className="rounded-xl border p-8 text-center text-sm text-muted-foreground">No vendors match “{search.trim()}”.</div>
+              : <div className="divide-y rounded-xl border bg-card">
+            {filteredRows.map(row => {
               const original: Draft = { included: row.priority != null, priority: String(row.priority ?? nextPriority) }
               const draft = drafts[row.id] ?? original
               const changed = draft.included !== original.included || (draft.included && Number(draft.priority) !== row.priority)
@@ -115,6 +136,7 @@ export function HomeOfferPriority({ section }: { section: Section }) {
                 </Button>
               </div>
             })}
-          </div>}
+              </div>}
+          </>}
   </div>
 }
