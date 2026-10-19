@@ -35,6 +35,7 @@ export interface VendorLocation {
 export interface Vendor {
     id: string
     name?: string
+    username?: string
     email?: string
     phoneNumber?: string
     website?: string

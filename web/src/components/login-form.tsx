@@ -17,21 +17,21 @@ export function LoginForm({
   const router = useRouter()
   const navigate = useNavigate()
   const search = useSearch({ from: '/(auth)/login' })
-  const { loginWithEmail } = useAuth()
+  const { loginWithIdentifier } = useAuth()
   const [error, setError] = React.useState<string | null>(null)
   const [isLoading, setIsLoading] = React.useState(false)
 
-  const handleEmailLogin = async (e: React.FormEvent<HTMLFormElement>) => {
+  const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     setError(null)
     setIsLoading(true)
 
     const formData = new FormData(e.currentTarget)
-    const email = formData.get("email") as string
+    const identifier = formData.get("identifier") as string
     const password = formData.get("password") as string
 
     try {
-      const role = await loginWithEmail(email, password)
+      const role = await loginWithIdentifier(identifier, password)
       await router.invalidate()
       const fallback = role.admin ? '/admin/dashboard' : '/dashboard'
       await navigate({ to: search.redirect || fallback })
@@ -45,12 +45,12 @@ export function LoginForm({
 
 
   return (
-    <form className={cn("flex flex-col gap-6", className)} {...props} onSubmit={handleEmailLogin}>
+    <form className={cn("flex flex-col gap-6", className)} {...props} onSubmit={handleLogin}>
       <FieldGroup>
         <div className="flex flex-col items-center gap-1 text-center">
           <h1 className="text-2xl font-bold">Login to your account</h1>
           <p className="text-muted-foreground text-sm text-balance">
-            Enter your email below to login to your account
+            Enter your email or username below to log in to your account
           </p>
         </div>
         {error && (
@@ -59,8 +59,8 @@ export function LoginForm({
           </div>
         )}
         <Field>
-          <FieldLabel htmlFor="email">Email</FieldLabel>
-          <Input id="email" name="email" type="email" placeholder="m@example.com" required disabled={isLoading} autoComplete="username" />
+          <FieldLabel htmlFor="identifier">Email or username</FieldLabel>
+          <Input id="identifier" name="identifier" type="text" placeholder="Email or username" required disabled={isLoading} autoComplete="username" />
         </Field>
         <Field>
           <div className="flex items-center">

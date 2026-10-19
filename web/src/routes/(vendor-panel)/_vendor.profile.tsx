@@ -28,6 +28,7 @@ function VendorProfile() {
 
   const info = [
     ['Name', vendor.name],
+    ['Username', vendor.username],
     ['Email', vendor.email],
     ['Phone', vendor.phoneNumber],
     ['Website', vendor.website],

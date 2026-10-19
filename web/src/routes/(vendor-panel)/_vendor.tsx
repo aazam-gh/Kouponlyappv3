@@ -38,7 +38,7 @@ function AuthLayout() {
 
   const sidebarUser = {
     name: user?.displayName || 'User',
-    email: user?.email || '',
+    email: String(user?.user_metadata?.username || user?.email || ''),
     avatar: user?.photoURL || '',
   }
 

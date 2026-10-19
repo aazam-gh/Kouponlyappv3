@@ -43,7 +43,7 @@ function RouteComponent() {
     const { page, pageSize, search: searchQuery, sort } = useSearch({ from: '/admin/vendors/' })
     const [searchInput, setSearchInput] = useState(searchQuery)
     const [open, setOpen] = useState(false)
-    const [form, setForm] = useState({ name: '', email: '', password: '', categoryIds: [] as string[] })
+    const [form, setForm] = useState({ name: '', username: '', password: '', categoryIds: [] as string[] })
     const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
     const [vendorToDelete, setVendorToDelete] = useState<Vendor | null>(null)
     const [exporting, setExporting] = useState(false)
@@ -79,7 +79,7 @@ function RouteComponent() {
         mutationFn: async (formData: typeof form) => {
             return invokeAdminAction('createVendorUser', {
                 name: formData.name,
-                email: formData.email,
+                username: formData.username,
                 password: formData.password,
                 categoryId: formData.categoryIds[0],
                 categoryIds: formData.categoryIds,
@@ -87,7 +87,7 @@ function RouteComponent() {
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['vendors-page'] })
-            setForm({ name: '', email: '', password: '', categoryIds: [] })
+            setForm({ name: '', username: '', password: '', categoryIds: [] })
             setOpen(false)
         },
         onError: (error) => {
@@ -115,7 +115,7 @@ function RouteComponent() {
 
     const handleAddVendor = (event: FormEvent<HTMLFormElement>) => {
         event.preventDefault()
-        if (!form.name || !form.email || !form.password || !form.categoryIds.length) return
+        if (!form.name || !form.username || !form.password || !form.categoryIds.length) return
         addVendorMutation.mutate(form)
     }
 
@@ -243,16 +243,18 @@ function RouteComponent() {
                                     </div>
                                 </div>
                                 <div className="grid gap-2">
-                                    <Label htmlFor="email">Email Address</Label>
+                                    <Label htmlFor="username">Username</Label>
                                     <Input
-                                        id="email"
-                                        type="email"
+                                        id="username"
+                                        type="text"
                                         required
-                                        value={form.email}
-                                        onChange={(e) => setForm({ ...form, email: e.target.value })}
-                                        placeholder="Enter email address"
+                                        value={form.username}
+                                        onChange={(e) => setForm({ ...form, username: e.target.value })}
+                                        placeholder="Enter username"
+                                        autoComplete="off"
                                         disabled={addVendorMutation.isPending}
                                     />
+                                    <p className="text-xs text-muted-foreground">Any username is accepted; it does not need to be an email address.</p>
                                 </div>
                                 <div className="grid gap-2">
                                     <Label htmlFor="password">Password</Label>

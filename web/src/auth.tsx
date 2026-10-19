@@ -15,7 +15,7 @@ export type AuthContextType = {
   isAuthenticated: boolean;
   isInitialLoading: boolean;
   isAdmin: boolean;
-  loginWithEmail: (email: string, password: string) => Promise<{admin:boolean}>;
+  loginWithIdentifier: (identifier: string, password: string) => Promise<{admin:boolean}>;
   logout: () => Promise<void>;
   user: AdminUser | null;
 };
@@ -34,6 +34,12 @@ async function loadRole(user: SupabaseUser | null) {
   }
   if (error) throw error;
   return {admin:data?.role==='admin'};
+}
+async function vendorUsernameAuthEmail(username: string) {
+  const bytes = new TextEncoder().encode(username);
+  const digest = await crypto.subtle.digest('SHA-256', bytes);
+  const localPart = Array.from(new Uint8Array(digest), byte => byte.toString(16).padStart(2, '0')).join('');
+  return `${localPart}@vendor.kouponly.invalid`;
 }
 export function AuthContextProvider({children}:{children:React.ReactNode}) {
   const queryClient=useQueryClient();
@@ -64,8 +70,14 @@ export function AuthContextProvider({children}:{children:React.ReactNode}) {
     resetAnalyticsUser();
     setUser(null);setAdmin(false);setInitialLoading(false);
   },[queryClient]);
-  const loginWithEmail=React.useCallback(async(email:string,password:string)=>{
-    const {data,error}=await supabase.auth.signInWithPassword({email,password});
+  const loginWithIdentifier=React.useCallback(async(identifier:string,password:string)=>{
+    let {data,error}=await supabase.auth.signInWithPassword({email:identifier,password});
+    if(error){
+      const usernameEmail=await vendorUsernameAuthEmail(identifier);
+      const usernameLogin=await supabase.auth.signInWithPassword({email:usernameEmail,password});
+      data=usernameLogin.data;
+      error=usernameLogin.error;
+    }
     if(error)throw error;
     const request=++roleRequest.current;
     const role=await loadRole(data.user);
@@ -73,7 +85,7 @@ export function AuthContextProvider({children}:{children:React.ReactNode}) {
     setUser(asAdminUser(data.user));setAdmin(role.admin);setInitialLoading(false);
     return role;
   },[]);
-  const value=React.useMemo(()=>({isAuthenticated:Boolean(user),isInitialLoading,isAdmin,user,loginWithEmail,logout}),[user,isInitialLoading,isAdmin,loginWithEmail,logout]);
+  const value=React.useMemo(()=>({isAuthenticated:Boolean(user),isInitialLoading,isAdmin,user,loginWithIdentifier,logout}),[user,isInitialLoading,isAdmin,loginWithIdentifier,logout]);
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 export function useAuth() {

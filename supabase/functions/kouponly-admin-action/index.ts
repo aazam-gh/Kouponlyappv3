@@ -78,11 +78,26 @@ const getExistingAuthUser = async (service: any, email: string) => {
   }
   return null;
 };
+const getExistingVendorUsername = async (service: any, username: string) => {
+  for (let page=1;page<=10;page++) {
+    const {data,error}=await service.auth.admin.listUsers({page,perPage:1000});
+    if(error)throw error;
+    const found=data.users.find((item:any)=>item.user_metadata?.username===username);
+    if(found)return found;
+    if(data.users.length<1000)break;
+  }
+  return null;
+};
+const vendorUsernameAuthEmail = async (username: string) => {
+  const digest=await crypto.subtle.digest("SHA-256",new TextEncoder().encode(username));
+  const localPart=Array.from(new Uint8Array(digest),(byte)=>byte.toString(16).padStart(2,"0")).join("");
+  return `${localPart}@vendor.kouponly.invalid`;
+};
 const createAuthUser = async (service: any,input: any) => {
   const {data,error}=await service.auth.admin.createUser({
     email:String(input.email||"").trim().toLowerCase(),
     password:input.password||randomPassword(),email_confirm:true,
-    user_metadata:{full_name:input.displayName||[input.firstName,input.lastName].filter(Boolean).join(" ")||input.name||""},
+    user_metadata:{full_name:input.displayName||[input.firstName,input.lastName].filter(Boolean).join(" ")||input.name||"",...(typeof input.username==="string"?{username:input.username}:{})},
   });
   if(error)throw error;
   return data.user;
@@ -202,6 +217,9 @@ Deno.serve(async (request) => {
       }
       case "createVendorUser": {
         requireAdmin();
+        const username=String(data.username??"");
+        if(!username)fail("Enter a username");
+        if(await getExistingVendorUsername(service,username))fail("That username is already in use");
         const categoryIds=Array.isArray(data.categoryIds)?[...new Set(data.categoryIds.map((id:unknown)=>String(id).trim()).filter(Boolean))]:[];
         const categoryId=String(data.categoryId||categoryIds[0]||"").trim();
         if(!categoryIds.length&&categoryId)categoryIds.push(categoryId);
@@ -209,9 +227,9 @@ Deno.serve(async (request) => {
         const {data:categories,error:categoryError}=await service.from("couponly_categories").select("id").in("id",categoryIds).eq("active",true);
         if(categoryError)throw categoryError;
         if((categories||[]).length!==categoryIds.length)fail("Every selected category must be active");
-        const created=await createAuthUser(service,data);
         const name=String(data.name||"").trim();
-        const vendor={id:created.id,user_id:created.id,name,category_id:categoryId,status:"Active",vendor_type:"in_store",payload:{name,email:created.email,contact:created.email,vendorType:"in_store",categoryIds,offers:[],locations:[]}};
+        const created=await createAuthUser(service,{...data,email:await vendorUsernameAuthEmail(username),username,name});
+        const vendor={id:created.id,user_id:created.id,name,category_id:categoryId,status:"Active",vendor_type:"in_store",payload:{name,username,contact:username,vendorType:"in_store",categoryIds,offers:[],locations:[]}};
         try{
           const {error:vendorError}=await service.from("couponly_vendors").insert(vendor);
           if(vendorError)throw vendorError;
@@ -219,7 +237,7 @@ Deno.serve(async (request) => {
           if(membershipError)throw membershipError;
           const {error:roleError}=await service.from("couponly_user_roles").insert({user_id:created.id,role:"vendor",vendor_id:created.id});
           if(roleError)throw roleError;
-          await insertAudit(service,user.id,action,"vendor",created.id,{email:created.email});
+          await insertAudit(service,user.id,action,"vendor",created.id,{username});
           return response({uid:created.id,success:true});
         }catch(error){
           await service.from("couponly_vendors").delete().eq("id",created.id);
