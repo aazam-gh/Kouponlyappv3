@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Check, Loader2, Search, Sparkles, TrendingUp, X } from 'lucide-react'
+import { Loader2, Search, Save, Sparkles, TrendingUp, X } from 'lucide-react'
 import { useState } from 'react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
@@ -59,19 +59,25 @@ export function HomeOfferPriority({ section }: { section: Section }) {
     queryKey: ['admin-home-offer-priority', section],
     queryFn: () => loadRows(section),
   })
-  const save = useMutation({
-    mutationFn: async ({ id, draft }: { id: string; draft: Draft }) => {
-      const priority = draft.included ? Number(draft.priority) : null
-      if (draft.included && (!Number.isInteger(priority) || priority! < 1 || priority! > 99999)) {
-        throw new Error('Priority must be a whole number from 1 to 99999.')
-      }
-      const { error: updateError } = await supabase.from('couponly_vendors').update({ [definition.column]: priority }).eq('id', id)
-      if (updateError) throw updateError
+  const saveAll = useMutation({
+    mutationFn: async (changes: Array<{ id: string; draft: Draft }>) => {
+      const updates = changes.map(({ id, draft }) => {
+        const priority = draft.included ? Number(draft.priority) : null
+        if (draft.included && (!Number.isInteger(priority) || priority! < 1 || priority! > 99999)) {
+          throw new Error('Priority must be a whole number from 1 to 99999.')
+        }
+        return { id, priority }
+      })
+      const results = await Promise.all(updates.map(({ id, priority }) =>
+        supabase.from('couponly_vendors').update({ [definition.column]: priority }).eq('id', id),
+      ))
+      const failedUpdate = results.find(result => result.error)?.error
+      if (failedUpdate) throw failedUpdate
     },
-    onSuccess: (_result, variables) => {
-      setDrafts(current => { const next = { ...current }; delete next[variables.id]; return next })
+    onSuccess: () => {
+      setDrafts({})
       void queryClient.invalidateQueries({ queryKey: ['admin-home-offer-priority', section] })
-      toast.success(`${definition.title} priority saved`)
+      toast.success(`${definition.title} changes saved`)
     },
     onError: (mutationError) => toast.error(mutationError instanceof Error ? mutationError.message : 'Could not save priority'),
   })
@@ -84,6 +90,12 @@ export function HomeOfferPriority({ section }: { section: Section }) {
   const filteredRows = normalizedSearch
     ? rows.filter(row => row.name.toLocaleLowerCase().includes(normalizedSearch))
     : rows
+  const changes = rows.flatMap(row => {
+    const original: Draft = { included: row.priority != null, priority: String(row.priority ?? nextPriority) }
+    const draft = drafts[row.id] ?? original
+    const changed = draft.included !== original.included || (draft.included && Number(draft.priority) !== row.priority)
+    return changed && !(section === 'new-deals' && !row.offer) ? [{ id: row.id, draft }] : []
+  })
   const Icon = section === 'new-deals' ? Sparkles : TrendingUp
 
   return <div className="space-y-6">
@@ -96,18 +108,24 @@ export function HomeOfferPriority({ section }: { section: Section }) {
       : error ? <div role="alert" className="rounded-xl border border-destructive/30 bg-destructive/5 p-5 text-sm text-destructive">Could not load vendors: {error.message}</div>
         : rows.length === 0 ? <div className="rounded-xl border p-8 text-center text-sm text-muted-foreground">No active vendors found.</div>
           : <>
-            <div className="relative max-w-md">
-              <Search aria-hidden="true" className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                aria-label={`Search vendors in ${definition.title}`}
-                placeholder="Search vendors…"
-                value={search}
-                onChange={event => setSearch(event.target.value)}
-                className="pl-9 pr-9"
-              />
-              {search && <button type="button" aria-label="Clear vendor search" onClick={() => setSearch('')} className="absolute right-2 top-1/2 -translate-y-1/2 rounded-sm p-1 text-muted-foreground hover:text-foreground">
-                <X aria-hidden="true" className="size-4" />
-              </button>}
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div className="relative w-full max-w-md">
+                <Search aria-hidden="true" className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  aria-label={`Search vendors in ${definition.title}`}
+                  placeholder="Search vendors…"
+                  value={search}
+                  onChange={event => setSearch(event.target.value)}
+                  className="pl-9 pr-9"
+                />
+                {search && <button type="button" aria-label="Clear vendor search" onClick={() => setSearch('')} className="absolute right-2 top-1/2 -translate-y-1/2 rounded-sm p-1 text-muted-foreground hover:text-foreground">
+                  <X aria-hidden="true" className="size-4" />
+                </button>}
+              </div>
+              <Button disabled={changes.length === 0 || saveAll.isPending} onClick={() => saveAll.mutate(changes)}>
+                {saveAll.isPending ? <Loader2 className="animate-spin" /> : <Save />}
+                Save All{changes.length > 0 ? ` (${changes.length})` : ''}
+              </Button>
             </div>
             {filteredRows.length === 0
               ? <div className="rounded-xl border p-8 text-center text-sm text-muted-foreground">No vendors match “{search.trim()}”.</div>
@@ -115,25 +133,20 @@ export function HomeOfferPriority({ section }: { section: Section }) {
             {filteredRows.map(row => {
               const original: Draft = { included: row.priority != null, priority: String(row.priority ?? nextPriority) }
               const draft = drafts[row.id] ?? original
-              const changed = draft.included !== original.included || (draft.included && Number(draft.priority) !== row.priority)
               const id = `${section}-${row.id}`
-              return <div key={row.id} className="grid gap-4 p-4 sm:grid-cols-[minmax(0,1fr)_auto_auto_auto] sm:items-center">
+              return <div key={row.id} className="grid gap-4 p-4 sm:grid-cols-[minmax(0,1fr)_auto_auto] sm:items-center">
                 <div className="flex min-w-0 items-center gap-3">
                   {row.logo ? <img src={row.logo} alt="" className="size-11 rounded-lg border object-cover" /> : <div className="grid size-11 shrink-0 place-items-center rounded-lg bg-muted font-semibold">{row.name.slice(0, 1).toUpperCase()}</div>}
                   <div className="min-w-0"><p className="truncate font-medium">{row.name}</p><p className="truncate text-sm text-muted-foreground">{row.offer || 'No active offer currently'}</p></div>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Checkbox id={`${id}-included`} checked={draft.included} disabled={section === 'new-deals' && !row.offer} onCheckedChange={checked => setDrafts(current => ({ ...current, [row.id]: { ...draft, included: checked === true, priority: checked === true && !draft.included ? String(nextPriority) : draft.priority } }))} />
+                  <Checkbox id={`${id}-included`} checked={draft.included} disabled={saveAll.isPending || (section === 'new-deals' && !row.offer)} onCheckedChange={checked => setDrafts(current => ({ ...current, [row.id]: { ...draft, included: checked === true, priority: checked === true && !draft.included ? String(nextPriority) : draft.priority } }))} />
                   <Label htmlFor={`${id}-included`} className={section === 'new-deals' && !row.offer ? 'text-muted-foreground' : ''}>Include</Label>
                 </div>
                 <div className="flex items-center gap-2">
                   <Label htmlFor={`${id}-priority`} className="whitespace-nowrap">Priority</Label>
-                  <Input id={`${id}-priority`} type="number" min="1" max="99999" step="1" disabled={!draft.included || (section === 'new-deals' && !row.offer)} value={draft.priority} onChange={event => setDrafts(current => ({ ...current, [row.id]: { ...draft, priority: event.target.value } }))} className="w-24" />
+                  <Input id={`${id}-priority`} type="number" min="1" max="99999" step="1" disabled={saveAll.isPending || !draft.included || (section === 'new-deals' && !row.offer)} value={draft.priority} onChange={event => setDrafts(current => ({ ...current, [row.id]: { ...draft, priority: event.target.value } }))} className="w-24" />
                 </div>
-                <Button size="sm" variant="outline" disabled={(section === 'new-deals' && !row.offer) || !changed || save.isPending} onClick={() => save.mutate({ id: row.id, draft })}>
-                  {save.isPending && save.variables?.id === row.id ? <Loader2 className="animate-spin" /> : <Check />}
-                  Save
-                </Button>
               </div>
             })}
               </div>}
