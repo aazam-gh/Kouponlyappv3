@@ -246,6 +246,7 @@ function RouteComponent() {
                                     <Label htmlFor="username">Username</Label>
                                     <Input
                                         id="username"
+                                        maxLength={128}
                                         type="text"
                                         required
                                         value={form.username}
@@ -261,12 +262,13 @@ function RouteComponent() {
                                     <Input
                                         id="password"
                                         type="password"
+                                        minLength={12}
+                                        maxLength={128}
                                         required
-                                        minLength={6}
                                         autoComplete="new-password"
                                         value={form.password}
                                         onChange={(e) => setForm({ ...form, password: e.target.value })}
-                                        placeholder="At least 6 characters"
+                                        placeholder="At least 12 characters"
                                         disabled={addVendorMutation.isPending}
                                     />
                                 </div>

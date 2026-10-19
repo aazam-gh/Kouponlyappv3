@@ -1,4 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router'
+import { VendorCredentials } from '@/components/vendor-credentials'
 import { useQuery } from '@tanstack/react-query'
 import { vendorQueryOptions } from '@/queries'
 import { useAuth } from '@/auth'
@@ -74,6 +75,7 @@ function VendorProfile() {
           ))}
         </div>
       </div>
+      <VendorCredentials />
     </div>
   )
 }

@@ -9,8 +9,9 @@ The Vendor Panel is a separate, vendor-only web build. It shares the existing Su
 - Read-only transaction history with date filters.
 - Read-only business profile.
 - Sign out.
+- Verified recovery email enrollment and password reset through Resend. See [credential setup](../docs/vendor-credentials.md).
 
-The signed-in Supabase user must have one `owner` or `manager` row in `couponly_vendor_memberships`. The reporting RPCs independently check vendor membership before returning data. The browser derives the vendor ID from that membership instead of accepting a vendor ID from a URL or form. The Vendor Panel does not expose admin routes, support-request forms, or vendor write actions.
+The signed-in Supabase user must have one `owner` or `manager` row in `couponly_vendor_memberships`. The reporting RPCs independently check vendor membership before returning data. The browser derives the vendor ID from that membership instead of accepting a vendor ID from a URL or form. The Vendor Panel does not expose admin routes, support-request forms, or vendor catalogue write actions.
 
 ## Local development
 

@@ -4,8 +4,10 @@ import { useQuery } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { vendorChartDataQueryOptions, vendorQueryOptions, vendorStatsQueryOptions, vendorTransactionsQueryOptions, type ChartRange } from '@/queries'
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
-import { BarChart3, Building2, CalendarDays, CircleDollarSign, Clock3, LayoutDashboard, LogOut, ReceiptText, ShieldCheck, UserRound } from 'lucide-react'
+import { ArrowLeft, BarChart3, Building2, CalendarDays, CircleDollarSign, Clock3, KeyRound, LayoutDashboard, LogOut, Mail, ReceiptText, ShieldCheck, UserRound } from 'lucide-react'
 import type { User } from '@supabase/supabase-js'
+import { VendorCredentials, VendorCredentialLink } from '@/components/vendor-credentials'
+import { vendorCredentials } from '@/lib/vendor-credentials'
 
 type VendorSession = { user: User; vendorId: string }
 type VendorPanelAppProps = { queryClient: QueryClient }
@@ -32,6 +34,11 @@ async function getVendorMembership(userId: string) {
 }
 
 export function VendorPanelApp({ queryClient }: VendorPanelAppProps) {
+  if (window.location.pathname === '/credentials') return <VendorCredentialLink />
+  return <AuthenticatedVendorPanel queryClient={queryClient} />
+}
+
+function AuthenticatedVendorPanel({ queryClient }: VendorPanelAppProps) {
   const [session, setSession] = useState<VendorSession | null>(null)
   const [loading, setLoading] = useState(true)
   const [path, setPath] = useState(window.location.pathname)
@@ -75,28 +82,29 @@ export function VendorPanelApp({ queryClient }: VendorPanelAppProps) {
     window.history.replaceState({}, '', '/dashboard')
   }} />
 
-  const page = path.startsWith('/transactions') ? 'transactions' : path.startsWith('/profile') ? 'profile' : 'dashboard'
+  const page = path.startsWith('/transactions') ? 'transactions' : path.startsWith('/profile') ? 'profile' : path.startsWith('/password') ? 'password' : 'dashboard'
   return <VendorShell session={session} page={page} navigate={navigate} onLogout={async () => {
     await supabase.auth.signOut()
     queryClient.clear()
     setSession(null)
     navigate('/login')
   }}>
-    {page === 'transactions' ? <TransactionsPage vendorId={session.vendorId} /> : page === 'profile' ? <ProfilePage vendorId={session.vendorId} /> : <DashboardPage vendorId={session.vendorId} />}
+    {page === 'transactions' ? <TransactionsPage vendorId={session.vendorId} /> : page === 'profile' ? <ProfilePage vendorId={session.vendorId} /> : page === 'password' ? <VendorCredentials /> : <DashboardPage vendorId={session.vendorId} />}
   </VendorShell>
 }
 
 function LoginPage({ onSuccess }: { onSuccess: (user: User) => Promise<void> }) {
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
+  const [showForgotPassword, setShowForgotPassword] = useState(false)
   const [error, setError] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const submit = async (event: React.FormEvent) => {
     event.preventDefault(); setError(''); setSubmitting(true)
     try {
-      let { data, error: loginError } = await supabase.auth.signInWithPassword({ email: username, password })
+      let { data, error: loginError } = await supabase.auth.signInWithPassword({ email: await usernameEmail(username), password })
       if (loginError) {
-        const byUsername = await supabase.auth.signInWithPassword({ email: await usernameEmail(username), password })
+        const byUsername = await supabase.auth.signInWithPassword({ email: username, password })
         data = byUsername.data
         loginError = byUsername.error
       }
@@ -109,6 +117,7 @@ function LoginPage({ onSuccess }: { onSuccess: (user: User) => Promise<void> }) 
       setError(cause instanceof Error ? cause.message : 'Unable to sign in. Check your username and password.')
     } finally { setSubmitting(false) }
   }
+  if (showForgotPassword) return <ForgotPasswordPage onBack={() => setShowForgotPassword(false)} />
   return <main className="flex min-h-screen items-center justify-center bg-[#f5f7f5] p-4">
     <section className="w-full max-w-md rounded-2xl border bg-white p-8 shadow-sm">
       <div className="mb-7 flex items-center gap-3"><div className="rounded-xl bg-green-100 p-3 text-green-700"><Building2 /></div><div><p className="m-0 text-xs font-semibold uppercase tracking-[.16em] text-green-700">Vendor Panel</p><h1 className="m-0 mt-1 text-2xl font-bold">Sign in to your account</h1></div></div>
@@ -116,10 +125,47 @@ function LoginPage({ onSuccess }: { onSuccess: (user: User) => Promise<void> }) 
       <form onSubmit={submit} className="space-y-4">
         <label className="grid gap-1.5 text-sm font-medium">Username<input autoComplete="username" required value={username} onChange={e => setUsername(e.target.value)} className="h-11 rounded-lg border px-3 font-normal" /></label>
         <label className="grid gap-1.5 text-sm font-medium">Password<input autoComplete="current-password" type="password" required value={password} onChange={e => setPassword(e.target.value)} className="h-11 rounded-lg border px-3 font-normal" /></label>
+        <div className="-mt-2 text-right"><button type="button" onClick={() => setShowForgotPassword(true)} className="text-sm font-medium text-green-700 hover:underline">Forgot password?</button></div>
         {error && <p role="alert" className="rounded-lg bg-red-50 p-3 text-sm text-red-700">{error}</p>}
         <button className="h-11 w-full rounded-lg bg-green-600 font-semibold text-white hover:bg-green-700 disabled:opacity-60" disabled={submitting}>{submitting ? 'Signing in…' : 'Sign in'}</button>
       </form>
       <p className="mt-5 flex items-start gap-2 text-xs text-muted-foreground"><ShieldCheck className="mt-0.5 size-4 shrink-0" />Vendor data is available only to accounts assigned to that vendor.</p>
+    </section>
+  </main>
+}
+
+function ForgotPasswordPage({ onBack }: { onBack: () => void }) {
+  const [identifier, setIdentifier] = useState('')
+  const [message, setMessage] = useState('')
+  const [error, setError] = useState('')
+  const [submitting, setSubmitting] = useState(false)
+
+  const submit = async (event: React.FormEvent) => {
+    event.preventDefault()
+    setError('')
+    setMessage('')
+    setSubmitting(true)
+    try {
+      const result = await vendorCredentials('requestReset', { username: identifier })
+      setMessage(result.message)
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'Unable to send a password reset link.')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  return <main className="flex min-h-screen items-center justify-center bg-[#f5f7f5] p-4">
+    <section className="w-full max-w-md rounded-2xl border bg-white p-8 shadow-sm">
+      <button type="button" onClick={onBack} className="mb-6 flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground"><ArrowLeft className="size-4" />Back to sign in</button>
+      <div className="mb-6 flex items-center gap-3"><div className="rounded-xl bg-green-100 p-3 text-green-700"><Mail /></div><div><p className="m-0 text-xs font-semibold uppercase tracking-[.16em] text-green-700">Vendor Panel</p><h1 className="m-0 mt-1 text-2xl font-bold">Reset your password</h1></div></div>
+      <p className="mb-6 text-sm text-muted-foreground">Enter your username. We’ll send a link to your verified recovery email. If you haven’t verified a recovery email, contact your Kouponly administrator.</p>
+      <form onSubmit={submit} className="space-y-4">
+        <label className="grid gap-1.5 text-sm font-medium">Username<input autoComplete="username" required maxLength={128} value={identifier} onChange={e => setIdentifier(e.target.value)} className="h-11 rounded-lg border px-3 font-normal" /></label>
+        {message && <p role="status" className="rounded-lg bg-green-50 p-3 text-sm text-green-800">{message}</p>}
+        {error && <p role="alert" className="rounded-lg bg-red-50 p-3 text-sm text-red-700">{error}</p>}
+        <button className="h-11 w-full rounded-lg bg-green-600 font-semibold text-white hover:bg-green-700 disabled:opacity-60" disabled={submitting}>{submitting ? 'Sending…' : 'Send reset link'}</button>
+      </form>
     </section>
   </main>
 }
@@ -129,6 +175,7 @@ function VendorShell({ session, page, navigate, onLogout, children }: { session:
     { id: 'dashboard', label: 'Overview', href: '/dashboard', Icon: LayoutDashboard },
     { id: 'transactions', label: 'Transactions', href: '/transactions', Icon: ReceiptText },
     { id: 'profile', label: 'Business profile', href: '/profile', Icon: UserRound },
+    { id: 'password', label: 'Password', href: '/password', Icon: KeyRound },
   ]
   const name = String(session.user.user_metadata?.full_name || session.user.user_metadata?.username || 'Vendor')
   return <div className="min-h-screen bg-[#f5f7f5] md:flex">

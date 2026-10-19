@@ -2,6 +2,7 @@
 @import "tw-animate-css";
 
 @source "./vendor-panel.tsx";
+@source "./components/vendor-credentials.tsx";
 
 @plugin "tailwindcss-animate";
 

@@ -1,5 +1,6 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { summarizeTickets, processNotificationReceipts } from "../_shared/push.ts";
+import { validatePassword, validateUsername } from '../_shared/vendor-credentials.ts';
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
@@ -73,16 +74,6 @@ const getExistingAuthUser = async (service: any, email: string) => {
     const {data,error}=await service.auth.admin.listUsers({page,perPage:1000});
     if(error)throw error;
     const found=data.users.find((item:any)=>item.email?.toLowerCase()===email.toLowerCase());
-    if(found)return found;
-    if(data.users.length<1000)break;
-  }
-  return null;
-};
-const getExistingVendorUsername = async (service: any, username: string) => {
-  for (let page=1;page<=10;page++) {
-    const {data,error}=await service.auth.admin.listUsers({page,perPage:1000});
-    if(error)throw error;
-    const found=data.users.find((item:any)=>item.user_metadata?.username===username);
     if(found)return found;
     if(data.users.length<1000)break;
   }
@@ -217,9 +208,8 @@ Deno.serve(async (request) => {
       }
       case "createVendorUser": {
         requireAdmin();
-        const username=String(data.username??"");
-        if(!username)fail("Enter a username");
-        if(await getExistingVendorUsername(service,username))fail("That username is already in use");
+        const username=validateUsername(data.username);
+        validatePassword(data.password);
         const categoryIds=Array.isArray(data.categoryIds)?[...new Set(data.categoryIds.map((id:unknown)=>String(id).trim()).filter(Boolean))]:[];
         const categoryId=String(data.categoryId||categoryIds[0]||"").trim();
         if(!categoryIds.length&&categoryId)categoryIds.push(categoryId);

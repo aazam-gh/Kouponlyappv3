@@ -2,6 +2,7 @@ import { createFileRoute, Link, Outlet, useLocation } from '@tanstack/react-rout
 import { useQuery } from '@tanstack/react-query'
 import { ArrowLeft } from 'lucide-react'
 import { vendorQueryOptions, type Vendor } from '@/queries'
+import { VendorCredentials } from '@/components/vendor-credentials'
 
 export type { Vendor }
 
@@ -82,6 +83,7 @@ function VendorSettingsLayout() {
             </div>
 
             <Outlet />
+            <VendorCredentials key={vendorId} vendorId={vendorId} />
         </div>
     )
 }
