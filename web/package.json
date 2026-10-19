@@ -4,11 +4,14 @@
   "type": "module",
   "scripts": {
     "dev": "vite --mode development --port 3001 --strictPort",
+    "dev:vendor": "vite --config vite.vendor.config.js --port 3002 --strictPort",
     "dev:prod": "vite --mode production --port 3001 --strictPort",
     "build": "npm run build:prod",
+    "build:vendor": "vite build --config vite.vendor.config.js && tsc --noEmit",
     "build:dev": "vite build --mode development && tsc --noEmit",
     "build:prod": "vite build --mode production && tsc --noEmit",
     "deploy": "npm run build && CLOUDFLARE_ACCOUNT_ID=14d099a698f8fa918f9711f75daedd64 wrangler pages deploy dist --project-name kouponly-admin --branch main",
+    "deploy:vendor": "npm run build:vendor && CLOUDFLARE_ACCOUNT_ID=14d099a698f8fa918f9711f75daedd64 wrangler pages deploy dist-vendor --project-name kouponly-vendor-panel --branch main",
     "preview": "vite preview --port 3001 --strictPort",
     "check": "tsc --noEmit"
   },

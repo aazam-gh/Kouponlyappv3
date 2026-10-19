@@ -1,6 +1,8 @@
 @import 'tailwindcss';
 @import "tw-animate-css";
 
+@source "./vendor-panel.tsx";
+
 @plugin "tailwindcss-animate";
 
 @custom-variant dark (&:is(.dark *));

@@ -134,12 +134,12 @@ export const vendorQueryOptions = (vendorId: string) => queryOptions({
     staleTime: STALE_TIME.EXTENDED,
 })
 
-export const vendorTransactionsQueryOptions = (vendorId: string, from = '', to = '') => queryOptions({
-    queryKey: ['vendor-transactions', vendorId, from, to],
+export const vendorTransactionsQueryOptions = (vendorId: string, from = '', to = '', offset = 0) => queryOptions({
+    queryKey: ['vendor-transactions', vendorId, from, to, offset],
     queryFn: async () => {
         if (!vendorId) return []
         const { data, error } = await supabase.rpc('kouponly_vendor_transactions', {
-            p_vendor_id: vendorId, p_from: from || null, p_to: to || null, p_offset: 0, p_limit: 100,
+            p_vendor_id: vendorId, p_from: from || null, p_to: to || null, p_offset: offset, p_limit: 100,
         })
         if (error) throw error
         return (data ?? []).map((row: any) => ({ id: row.transaction_id, createdAt: row.created_at, type: row.transaction_type, totalAmount: Number(row.total_amount), discountAmount: Number(row.discount_amount), finalAmount: Number(row.final_amount), status: row.status, offerTitle: row.offer_title, studentName: row.student_name, studentPhone: row.student_phone })) as VendorPortalTransaction[]
