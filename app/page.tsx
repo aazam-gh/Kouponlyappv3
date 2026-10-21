@@ -90,7 +90,7 @@ export default function HomePage() {
         {view === 'account' && <>
           <div className="page-heading"><h1>My account</h1><p>Your savings, in one place.</p></div>
           <div className="account-summary"><div><strong>{saved.length}</strong><span>Saved places</span></div><div><strong>Save</strong><span>Available now</span></div></div>
-          <div className="account-links"><button onClick={() => go('saved')}>Saved places <ChevronRight size={17}/></button><button onClick={() => openSearch()}>Explore offers <ChevronRight size={17}/></button><a href="mailto:hello@kouponly.com">Help & support <ChevronRight size={17}/></a></div>
+          <div className="account-links"><button onClick={() => go('saved')}>Saved places <ChevronRight size={17}/></button><button onClick={() => openSearch()}>Explore offers <ChevronRight size={17}/></button><a href="mailto:info@kouponly.in">Help & support <ChevronRight size={17}/></a></div>
         </>}
       </>}
     </main>

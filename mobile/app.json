@@ -21,9 +21,10 @@
     },
     "android": {
       "package": "com.kouponly.app",
+      "icon": "./assets/images/android-adaptive-icon-safe.png",
       "adaptiveIcon": {
         "backgroundColor": "#FFFFFF",
-        "foregroundImage": "./assets/images/android-adaptive-icon.png"
+        "foregroundImage": "./assets/images/android-adaptive-icon-safe.png"
       },
       "predictiveBackGestureEnabled": true,
       "permissions": [

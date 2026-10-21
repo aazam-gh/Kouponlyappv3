@@ -42,7 +42,7 @@ async function sendResendEmail(email:string,code:string,purpose:string){
 async function sendContactMessage(name:string,email:string,message:string){
   const apiKey=Deno.env.get("RESEND_API_KEY");if(!apiKey)throw Object.assign(new Error("Contact email is not configured."),{status:503});
   const from=Deno.env.get("RESEND_FROM_EMAIL")||"Kouponly <verification@kouponly.com>";
-  const result=await fetch("https://api.resend.com/emails",{method:"POST",headers:{"Authorization":"Bearer "+apiKey,"Content-Type":"application/json"},body:JSON.stringify({from,to:["hello@kouponly.com"],reply_to:email,subject:"Kouponly contact form",text:`From: ${name}\nEmail: ${email}\n\n${message}`})});
+  const result=await fetch("https://api.resend.com/emails",{method:"POST",headers:{"Authorization":"Bearer "+apiKey,"Content-Type":"application/json"},body:JSON.stringify({from,to:["info@kouponly.in"],reply_to:email,subject:"Kouponly contact form",text:`From: ${name}\nEmail: ${email}\n\n${message}`})});
   if(!result.ok){console.error("Resend contact message failed with status",result.status);throw Object.assign(new Error("Unable to send your message right now. Please try again later."),{status:502});}
 }
 Deno.serve(async(request)=>{

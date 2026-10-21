@@ -176,6 +176,7 @@ export function OffersSettings({ vendorId }: OffersSettingsProps) {
                 id: data.id,
                 titleEn: data.titleEn.trim(),
                 descriptionEn: data.descriptionEn,
+                badgeLabel: data.badgeLabel?.trim() || undefined,
                 discountType: data.discountType || 'percentage',
                 discountValue: data.discountType === 'buy1get1' ? undefined : data.discountValue || 0,
                 currency: data.currency || 'INR',
@@ -302,6 +303,11 @@ export function OffersSettings({ vendorId }: OffersSettingsProps) {
                                     className="bg-slate-50 h-12"
                                 />
                             </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="badgeLabel">Mobile badge text</Label>
+                                <Input id="badgeLabel" maxLength={60} value={formData.badgeLabel || ''} onChange={e => setFormData(prev => ({ ...prev, badgeLabel: e.target.value }))} placeholder="e.g. 50% OFF TOTAL BILL" className="bg-slate-50 h-12" />
+                                <p className="text-xs text-muted-foreground">Shown on the green offer badge. Leave blank to generate it from the discount.</p>
+                            </div>
                         </div>
 
                         {/* Descriptions */}
@@ -322,7 +328,7 @@ export function OffersSettings({ vendorId }: OffersSettingsProps) {
                     {/* Right Column: Discount Settings */}
                     <div className="space-y-6">
                         <div className="rounded-xl border bg-secondary/50 p-4 text-sm text-muted-foreground">
-                            All offers use this vendor’s logo and card label. <Link to="/admin/vendors/$vendorId/settings/branding" params={{ vendorId: vendorId! }} className="font-medium text-primary underline underline-offset-4">Edit vendor profile</Link>
+                            All offers use this vendor’s logo. Set each offer’s green badge text here, or <Link to="/admin/vendors/$vendorId/settings/branding" params={{ vendorId: vendorId! }} className="font-medium text-primary underline underline-offset-4">edit the vendor-wide card label</Link>.
                         </div>
                         {/* Discount Settings */}
                         <div className="grid grid-cols-2 gap-4 p-5 bg-slate-50 rounded-2xl border border-slate-100">

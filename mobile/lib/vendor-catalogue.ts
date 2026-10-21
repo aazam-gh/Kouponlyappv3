@@ -86,9 +86,12 @@ export function projectVendorCatalogue(
     const vendorLogo = stringValue(vendor.logo_path, stringValue(payload.profilePicture, stringValue(payload.logo))) || undefined;
     const deal: Deal = {
       id, vendorId: vendor.id, categoryId: mainCategory.id, categoryIds, subcategoryIds,
-      offers: vendorOffers.map(row => ({ currency: stringValue(row.currency) || undefined, id: row.id, index: offerIndexes.get(row.id)!, title: row.title,
-        logo: vendorLogo, description: row.description || '', saving: row.saving_label || '', terms: row.terms || undefined, redemptionInstructions: row.redemption_instructions || undefined,
-        redemption: row.redemption_mode === 'online' ? 'online' : 'inStore', discountType: row.discount_type || row.payload?.discountType, discountValue: numberValue(row.discount_value ?? row.payload?.discountValue, NaN) })),
+      offers: vendorOffers.map(row => {
+        const badgeLabel = stringValue(row.payload?.badgeLabel);
+        return { currency: stringValue(row.currency) || undefined, id: row.id, index: offerIndexes.get(row.id)!, title: row.title, ...(badgeLabel ? { badgeLabel } : {}),
+          logo: vendorLogo, description: row.description || '', saving: row.saving_label || '', terms: row.terms || undefined, redemptionInstructions: row.redemption_instructions || undefined,
+          redemption: row.redemption_mode === 'online' ? 'online' : 'inStore', discountType: row.discount_type || row.payload?.discountType, discountValue: numberValue(row.discount_value ?? row.payload?.discountValue, NaN) };
+      }),
       galleryImages: Array.isArray(vendor.gallery_images) ? vendor.gallery_images.filter((url: unknown) => typeof url === "string" && url.trim()) : [],
       phoneNumber: stringValue(vendor.phone, stringValue(payload.phoneNumber, stringValue(payload.phone, ''))) || undefined,
       openingHours: payload.openingHours ?? payload.opening_hours,

@@ -33,25 +33,29 @@ async function isCouponlyStudent(userId: string) {
   return Boolean(data);
 }
 
-export function syncCouponlyPushToken(userId: string, requestPermission = false) {
+export function syncCouponlyPushToken(userId: string, requestPermission = false, repeatPermissionPrompt = false): Promise<string | null> {
   const existingSync = syncsInFlight.get(userId);
-  if (existingSync) return existingSync;
-  const sync = performCouponlyPushTokenSync(userId, requestPermission).finally(() => {
+  if (existingSync) {
+    return requestPermission && repeatPermissionPrompt
+      ? existingSync.then(() => syncCouponlyPushToken(userId, requestPermission, repeatPermissionPrompt))
+      : existingSync;
+  }
+  const sync = performCouponlyPushTokenSync(userId, requestPermission, repeatPermissionPrompt).finally(() => {
     syncsInFlight.delete(userId);
   });
   syncsInFlight.set(userId, sync);
   return sync;
 }
 
-async function performCouponlyPushTokenSync(userId: string, requestPermission: boolean) {
+async function performCouponlyPushTokenSync(userId: string, requestPermission: boolean, repeatPermissionPrompt: boolean) {
   try {
     if ((Platform.OS !== 'ios' && Platform.OS !== 'android') || !Device.isDevice || !(await isCouponlyStudent(userId))) return null;
     await setupCouponlyNotificationChannels();
     let permissions = await Notifications.getPermissionsAsync();
     let { status } = permissions;
     if (status !== 'granted' && requestPermission && permissions.canAskAgain) {
-      const alreadyPrompted = await AsyncStorage.getItem(PERMISSION_PROMPTED_KEY);
-      if (alreadyPrompted !== 'true') {
+      const alreadyPrompted = repeatPermissionPrompt ? null : await AsyncStorage.getItem(PERMISSION_PROMPTED_KEY);
+      if (repeatPermissionPrompt || alreadyPrompted !== 'true') {
         permissions = await Notifications.requestPermissionsAsync();
         status = permissions.status;
         await AsyncStorage.setItem(PERMISSION_PROMPTED_KEY, 'true');

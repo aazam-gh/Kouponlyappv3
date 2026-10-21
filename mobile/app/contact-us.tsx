@@ -2,13 +2,11 @@ import React from 'react';
 import { Keyboard, TextInput, View } from 'react-native';
 import { AppHeader, AppText, PrimaryButton, Screen } from '@/components/ui';
 import { useAppTheme } from '@/lib/theme';
-import { useAuth } from '@/lib/auth';
 import { sendContactMessage, type ContactMessage } from '@/lib/contact';
 
 export default function ContactUsScreen() {
-  const { user } = useAuth();
   const { colors: C } = useAppTheme();
-  const [draft, setDraft] = React.useState<ContactMessage>({ name: '', email: user?.email || '', message: '' });
+  const [draft, setDraft] = React.useState<ContactMessage>({ name: '', email: '', message: '' });
   const [busy, setBusy] = React.useState(false);
   const [error, setError] = React.useState('');
   const [sent, setSent] = React.useState(false);

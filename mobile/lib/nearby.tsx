@@ -1,5 +1,5 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
-import { AppState } from 'react-native';
+import { AppState, Platform } from 'react-native';
 import * as Location from 'expo-location';
 import { fetchVendorMapLocations, type VendorMapLocation } from '@/lib/nearby-vendors';
 import { getCurrentPosition } from '@/lib/location';
@@ -38,7 +38,7 @@ export function NearbyProvider({ children }: { children: React.ReactNode }) {
     const task = (async () => {
       try {
         let permission = await Location.getForegroundPermissionsAsync();
-        if (permission.status !== 'granted' && (askForPermission || (permission.status === 'undetermined' && permission.canAskAgain))) {
+        if (permission.status !== 'granted' && permission.canAskAgain && (askForPermission || permission.status === 'undetermined')) {
           permission = await Location.requestForegroundPermissionsAsync();
         }
         setCanAskAgain(permission.canAskAgain);
@@ -76,6 +76,10 @@ export function NearbyProvider({ children }: { children: React.ReactNode }) {
     return () => subscription.remove();
   }, [load]);
 
+  useEffect(() => {
+    if (Platform.OS === 'android' || Platform.OS === 'ios') void load({ askForPermission: true });
+  }, [load]);
+
   return <Context.Provider value={value}>{children}</Context.Provider>;
 }
 
@@ -86,11 +90,7 @@ export const useNearby = () => {
 };
 
 export function useNearbyDistances() {
-  const { locations, position, status, load } = useNearby();
-
-  useEffect(() => {
-    if (status === 'idle') void load({ askForPermission: true });
-  }, [load, status]);
+  const { locations, position, status } = useNearby();
 
   const distanceByVendor = useMemo(
     () => position ? nearestLocationsByVendor(locations, position) : new Map(),

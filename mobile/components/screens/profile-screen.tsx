@@ -199,7 +199,6 @@ export default function ProfileScreen() {
             isRTL={isRTL}
           />
           <MenuItem icon="gift-outline" label="Referrals · Invite friends" onPress={() => router.push('/invite-code')} isRTL={isRTL} />
-          <MenuItem icon="people-outline" label="Friends and activity" onPress={() => router.push('/friends' as any)} isRTL={isRTL} />
           <MenuItem icon="restaurant-outline" label="Request a restaurant" onPress={() => router.push({ pathname: '/student-request', params: { kind: 'restaurant' } } as any)} isRTL={isRTL} />
           <MenuItem icon="school-outline" label="Suggest a school domain" onPress={() => router.push({ pathname: '/student-request', params: { kind: 'school' } } as any)} isRTL={isRTL} />
           <MenuItem

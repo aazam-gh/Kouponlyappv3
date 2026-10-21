@@ -8,6 +8,7 @@ export interface EmbeddedOffer {
     id?: string
     titleEn: string
     descriptionEn?: string
+    badgeLabel?: string
     discountType: 'percentage' | 'amount' | 'buy1get1' | 'free' | 'combo' | 'fixed_price'
     discountValue?: number
     currency?: string

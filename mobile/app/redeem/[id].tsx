@@ -20,6 +20,7 @@ import ProfileSprites from '@/components/profile/ProfileSprites';
 import { OnboardingField } from '@/components/onboarding/OnboardingUI';
 import { offerAmounts } from '@/utils/offer-amounts';
 import { parseBillAmount } from '@/utils/bill-amount';
+import { syncCouponlyPushToken } from '@/lib/couponlyPush';
 
 export default function RedeemScreen() {
   const posthog = usePostHog();
@@ -49,6 +50,7 @@ export default function RedeemScreen() {
       if (currentContext.current !== context) return;
       setReceipt(result);
       try { posthog?.capture('coupon_redeemed'); } catch {}
+      if (user) void syncCouponlyPushToken(user.id, true, true);
       await Promise.allSettled([refresh(), retrySync()]);
     } catch (e) { if (currentContext.current === context) { const message = e instanceof Error ? e.message : 'Unable to confirm this coupon. Try again.'; setError(message); if (message === benefitsError('ROUND_CHANGED')) request.current = { round: '', mutation: '', billAmount: null }; await refresh().catch(() => {}); } }
     finally { if (currentContext.current === context) { setBusy(false); inFlight.current = false; } }

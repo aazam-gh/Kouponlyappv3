@@ -72,7 +72,7 @@ export default function CategoryGrid({ categories: propCategories, onCategoryPre
     );
 
     if (!propCategories && isLoading) {
-        return <ZigzagSection width={width} cutoutColor={theme.background} contentStyle={styles.sectionContent} collapseCompletely>
+        return <ZigzagSection width={width} cutoutColor={theme.background} contentStyle={styles.sectionContent} collapseCompletely backgroundColor="transparent">
             <View style={[styles.container, styles.grid]}>
                 {Array.from({ length: 10 }, (_, index) => (
                     <View key={`category-skeleton-${index}`} style={[styles.categoryItem, { width: columnWidth }]}>
@@ -96,10 +96,10 @@ export default function CategoryGrid({ categories: propCategories, onCategoryPre
     }, []);
 
     return <>
-        <ZigzagSection width={width} cutoutColor={theme.background} contentStyle={styles.sectionContent} collapseCompletely>
+        <ZigzagSection width={width} cutoutColor={theme.background} contentStyle={styles.sectionContent} collapseCompletely backgroundColor="transparent">
             <View style={[styles.container, { minHeight: rowHeight }]}>
                 <View style={styles.homeRow}>
-                    {visibleCategories.map(item => renderCategory(item, columnWidth, '#FFFFFF'))}
+                    {visibleCategories.map(item => renderCategory(item))}
                     {hasMore ? (
                         <ScalePressable
                             style={[styles.categoryItem, { width: columnWidth }]}
@@ -111,7 +111,7 @@ export default function CategoryGrid({ categories: propCategories, onCategoryPre
                             <View style={[styles.moreButton, { width: imageSize, height: imageSize, backgroundColor: theme.surface, borderColor: BorderPalette.border }]}>
                                 <Ellipsis size={28} color={theme.text} />
                             </View>
-                            <Text style={[styles.categoryName, { color: '#FFFFFF' }]} numberOfLines={1}>{t('more')}</Text>
+                            <Text style={[styles.categoryName, { color: theme.text }]} numberOfLines={1}>{t('more')}</Text>
                         </ScalePressable>
                     ) : null}
                 </View>

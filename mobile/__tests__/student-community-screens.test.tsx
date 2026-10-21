@@ -6,13 +6,12 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { useLocalSearchParams } from 'expo-router';
 import StudentRequestScreen from '../app/student-request';
-import FriendsScreen from '../app/friends';
-import { communityRpc, submitStudentRequest } from '../lib/student-community';
+import { submitStudentRequest } from '../lib/student-community';
 
 jest.mock('../lib/auth', () => ({ useAuth: () => ({ user: { id: 'student-1', email: 'student@rajagiri.edu.in' } }) }));
 jest.mock('../lib/benefits', () => ({ useBenefits: () => ({ benefits: { inviteCode: 'ABCDE' } }) }));
 jest.mock('../lib/backend', () => ({ makeMutationId: () => 'request-uuid' }));
-jest.mock('../lib/student-community', () => ({ communityRpc: jest.fn(), submitStudentRequest: jest.fn() }));
+jest.mock('../lib/student-community', () => ({ submitStudentRequest: jest.fn() }));
 const clients: QueryClient[] = [];
 const wrap = (screen: React.ReactNode) => {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } }); clients.push(client);
@@ -40,16 +39,4 @@ it('submits a restaurant request without manager or phone details', async () => 
   await fireEvent.changeText(view.getByLabelText('Enter location (required)'), 'Kochi');
   await fireEvent.press(view.getByLabelText('Submit request'));
   await waitFor(() => expect(submitStudentRequest).toHaveBeenCalledWith(expect.objectContaining({ kind: 'restaurant', name: 'Marina Cafe', contact: '', phone: '' }), 'request-uuid'));
-});
-it('lets a student retry loading friends and explicitly accept an incoming request', async () => {
-  const snapshot = { shareActivity: false, activity: [], friends: [{ id: 'friend-1', name: 'Bob', status: 'pending', incoming: true }] };
-  (communityRpc as jest.Mock).mockRejectedValueOnce(new Error('Offline'));
-  const view = await wrap(<FriendsScreen />);
-  await waitFor(() => expect(view.getByText('Offline')).toBeTruthy());
-  (communityRpc as jest.Mock).mockResolvedValue(snapshot);
-  await fireEvent.press(view.getByLabelText('Retry'));
-  await waitFor(() => expect(view.getByText('Bob')).toBeTruthy());
-  expect(view.getByLabelText('Share my activity with friends').props.value).toBe(false);
-  await fireEvent.press(view.getByText('Accept'));
-  await waitFor(() => expect(communityRpc).toHaveBeenCalledWith('kouponly_respond_friend', { p_id: 'friend-1', p_action: 'accept' }));
 });

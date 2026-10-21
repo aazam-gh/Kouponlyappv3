@@ -79,6 +79,7 @@ export default function RealXCategoryScreen() {
         distance={distanceByVendor.get(String(item.vendorId || item.id))?.label}
         xcardEnabled={item.xcard}
         badgeLabel={item.cardLabel}
+        offerBadgeLabel={item.offers?.[0]?.badgeLabel?.trim()}
         distanceOnImage
         overlapLogo
         titleCaseName

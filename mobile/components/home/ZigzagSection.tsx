@@ -29,7 +29,7 @@ function ZigzagEdge({ width, bottom = false }: { width: number; bottom?: boolean
     return <Svg width={width} height={EDGE_HEIGHT} viewBox={`0 0 ${width} ${EDGE_HEIGHT}`} style={bottom ? { transform: [{ rotate: '180deg' }] } : undefined}><Path d={path} fill={Colors.brandGreen} stroke={Colors.brandGreen} strokeWidth={bottom ? 4 : 1} /></Svg>;
 }
 
-export default function ZigzagSection({ width, cutoutColor, children, contentStyle, collapseCompletely = false }: { width: number; cutoutColor: string; children: ReactNode; contentStyle?: StyleProp<ViewStyle>; collapseCompletely?: boolean }) {
+export default function ZigzagSection({ width, cutoutColor, children, contentStyle, collapseCompletely = false, backgroundColor = Colors.brandGreen }: { width: number; cutoutColor: string; children: ReactNode; contentStyle?: StyleProp<ViewStyle>; collapseCompletely?: boolean; backgroundColor?: string }) {
     const reveal = useContext(ZigzagRevealContext);
     const height = useSharedValue(0);
     const [contentVisible, setContentVisible] = useState(true);
@@ -50,7 +50,7 @@ export default function ZigzagSection({ width, cutoutColor, children, contentSty
     return <View testID="zigzag-section" pointerEvents="box-none" style={styles.clip} onLayout={event => height.set(event.nativeEvent.layout.height)}>
         <Animated.View testID="zigzag-clip" pointerEvents="box-none" style={[styles.clip, clipStyle]}>
             <Animated.View testID="zigzag-anchored-content" style={anchoredStyle} pointerEvents={contentVisible ? 'auto' : 'none'} accessibilityElementsHidden={!contentVisible} importantForAccessibility={contentVisible ? 'auto' : 'no-hide-descendants'}>
-                <View testID="zigzag-background" accessible={false} pointerEvents="none" style={[StyleSheet.absoluteFill, collapseCompletely && { backgroundColor: Colors.brandGreen }]}>
+                <View testID="zigzag-background" accessible={false} pointerEvents="none" style={[StyleSheet.absoluteFill, collapseCompletely && { backgroundColor }]}>
                     {!collapseCompletely ? <>
                     <View testID="zigzag-top-edge"><ZigzagEdge width={width} cutoutColor={cutoutColor} /></View>
                     <View style={{ flex: 1, backgroundColor: Colors.brandGreen }} />

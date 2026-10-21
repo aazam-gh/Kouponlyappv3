@@ -4,7 +4,7 @@ import Animated, { Easing, FadeInDown, FadeOutUp, LinearTransition, ReduceMotion
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import React, { useMemo, useState } from 'react';
-import { AppState, Image, Linking, Share, Modal, Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import { AppState, Image, Linking, Share, Modal, Platform, Pressable, ScrollView, StatusBar as NativeStatusBar, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import { AccessiblePressable, Empty, Screen, safeGoBack } from '@/components/ui';
@@ -35,6 +35,7 @@ export default function DealDetail({ dealId }: { dealId?: string } = {}) {
   const { t } = useTranslation();
   const s = useMemo(() => styles(C), [C]);
   const insets = useSafeAreaInsets();
+  const headerTopInset = Math.max(insets.top, Platform.OS === 'android' ? NativeStatusBar.currentHeight || 40 : 0);
   const { reduceMotion } = useMotionPreferences();
   const { width } = useWindowDimensions();
   const params = useLocalSearchParams<{ id: string; offer?: string }>();
@@ -123,11 +124,11 @@ export default function DealDetail({ dealId }: { dealId?: string } = {}) {
             <Image testID={index === 0 ? 'offer-image' : undefined} accessible={false} source={{ uri }} style={s.image} />
           </View>)}
         </ScrollView>
-        <AccessiblePressable accessibilityLabel="Go back" onPress={() => safeGoBack()} style={[s.imageAction, { position: 'absolute', left: 16, top: insets.top + 10 }]}><Ionicons name={isRTL ? 'arrow-forward' : 'arrow-back'} size={24} color={C.ink} /></AccessiblePressable>
-        <View style={[s.topbar, { top: insets.top + 10 }]}>
+        <AccessiblePressable accessibilityLabel="Go back" onPress={() => safeGoBack()} style={[s.imageAction, { position: 'absolute', left: 16, top: insets.top + headerTopInset + 10 }]}><Ionicons name={isRTL ? 'arrow-forward' : 'arrow-back'} size={24} color={C.ink} /></AccessiblePressable>
+        <View style={[s.topbar, { top: insets.top + headerTopInset + 10 }]}>
           <AccessiblePressable accessibilityLabel="Share vendor" onPress={() => void share()} style={s.imageAction}><Ionicons name="share-outline" size={22} color={C.ink} /></AccessiblePressable>
         </View>
-        {headerImages.length > 1 ? <View pointerEvents="none" style={s.imageCounter}><Ionicons name="images-outline" size={14} color={C.ink}/><Text style={s.galleryCount}>{activeGalleryIndex + 1} / {headerImages.length}</Text></View> : null}
+        {headerImages.length > 1 ? <View pointerEvents="none" style={s.imageCounter}><Text style={s.galleryCount}>{activeGalleryIndex + 1} / {headerImages.length}</Text></View> : null}
       </View>
       <View style={s.content}>
         <View style={[s.vendorNameRow, isRTL && s.rowReverse]}>
@@ -184,7 +185,7 @@ export default function DealDetail({ dealId }: { dealId?: string } = {}) {
       </View>
     </Screen>
     <Modal visible={locationsOpen && Boolean(deal.locations?.length)} transparent animationType={reduceMotion ? "fade" : "slide"} onRequestClose={()=>setLocationsOpen(false)}><Pressable style={s.modalOverlay} onPress={()=>setLocationsOpen(false)}><Pressable style={[s.branchSheet,{paddingBottom:Math.max(insets.bottom,20)}]} onPress={event=>event.stopPropagation()}><View style={s.handle}/><View style={s.branchHeader}><Text style={s.sectionTitle}>Branches</Text><AccessiblePressable accessibilityLabel="Close branches" onPress={()=>setLocationsOpen(false)} style={s.imageAction}><Ionicons name="close-circle" size={25} color={C.ink}/></AccessiblePressable></View><ScrollView showsVerticalScrollIndicator={false}>{deal.locations?.map((location,index)=><AccessiblePressable key={location.id} accessibilityLabel={`Directions to ${location.name || location.address}`} onPress={()=>{setLocationsOpen(false);openLocation(location)}} pressedScale={1} style={[s.branchRow, isRTL && s.rowReverse]}><View style={s.branchIcon}><Ionicons name="location-outline" size={19} color={C.lime}/></View><View style={{flex:1}}><Text style={[s.locationText, isRTL && s.textRtl]}>{location.name || `Branch ${index+1}`}</Text>{location.address ? <Text style={[s.branchAddress, isRTL && s.textRtl]}>{location.address}</Text>:null}{location.phoneNumber ? <Text style={[s.branchAddress, isRTL && s.textRtl]}>{location.phoneNumber}</Text>:null}</View><Ionicons name="navigate-outline" size={17} color={C.lime}/></AccessiblePressable>)}</ScrollView></Pressable></Pressable></Modal>
-    <Modal testID="vendor-info-modal" visible={infoOpen} transparent animationType="none" onRequestClose={() => setInfoOpen(false)}>
+    <Modal testID="vendor-info-modal" visible={infoOpen} transparent animationType="none" statusBarTranslucent navigationBarTranslucent onRequestClose={() => setInfoOpen(false)}>
       <Pressable testID="vendor-info-backdrop" style={s.modalOverlay} onPress={() => setInfoOpen(false)}>
         <AnimatedPressable testID="vendor-info-sheet" entering={reduceMotion ? undefined : INFO_SHEET_ENTER} style={[s.branchSheet, { paddingBottom: Math.max(insets.bottom, 20) }]} onPress={event => event.stopPropagation()}>
           <View style={s.handle}/>
@@ -267,7 +268,7 @@ const styles = (C: ThemeColors) => {
   sectionTitle: { fontFamily: F.headingSemi, fontSize: 21, color: C.ink },
   infoTitle:{flex:1,fontFamily:F.bodyBold,fontSize:16,color:C.ink},
   infoContent:{gap:12,paddingBottom:12}, infoLink:{minHeight:52,flexDirection:'row',alignItems:'center',gap:12,paddingHorizontal:14,borderRadius:16,borderWidth:1,borderColor:outline,backgroundColor:C.soft},
-  imageCounter:{position:'absolute',right:12,bottom:12,minHeight:32,paddingHorizontal:11,borderRadius:16,borderWidth:1,borderColor:outline,flexDirection:'row',alignItems:'center',gap:6,backgroundColor:C.card}, galleryCount: { fontFamily:F.body, fontSize:13, color:C.muted },
+  imageCounter:{position:'absolute',right:12,bottom:12,minHeight:32,paddingHorizontal:11,borderRadius:16,borderWidth:1,borderColor:outline,alignItems:'center',justifyContent:'center',backgroundColor:C.card}, galleryCount: { fontFamily:F.body, fontSize:13, color:C.muted },
   vendorInfo:{ padding:16, marginTop:18, borderRadius:20, borderWidth:1, borderColor:outline, backgroundColor:C.soft, gap:8 },
   offersList: { gap:16 },
   infoCard: { padding:16, marginTop:20, borderRadius:20, borderWidth:StyleSheet.hairlineWidth, borderColor:outline, backgroundColor:C.soft, gap:12 },
