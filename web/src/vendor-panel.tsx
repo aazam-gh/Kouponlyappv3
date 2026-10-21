@@ -4,7 +4,7 @@ import { useQuery } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { vendorChartDataQueryOptions, vendorQueryOptions, vendorStatsQueryOptions, vendorTransactionsQueryOptions, type ChartRange } from '@/queries'
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
-import { ArrowLeft, BarChart3, Building2, CalendarDays, CircleDollarSign, Clock3, KeyRound, LayoutDashboard, LogOut, Mail, ReceiptText, ShieldCheck, UserRound } from 'lucide-react'
+import { ArrowLeft, BarChart3, Building2, CalendarDays, CircleDollarSign, Clock3, KeyRound, LayoutDashboard, LogOut, Mail, ReceiptText, ShieldCheck, Tag, UserRound } from 'lucide-react'
 import type { User } from '@supabase/supabase-js'
 import { VendorCredentials, VendorCredentialLink } from '@/components/vendor-credentials'
 import { vendorCredentials } from '@/lib/vendor-credentials'
@@ -82,14 +82,14 @@ function AuthenticatedVendorPanel({ queryClient }: VendorPanelAppProps) {
     window.history.replaceState({}, '', '/dashboard')
   }} />
 
-  const page = path.startsWith('/transactions') ? 'transactions' : path.startsWith('/profile') ? 'profile' : path.startsWith('/password') ? 'password' : 'dashboard'
+  const page = path.startsWith('/transactions') ? 'transactions' : path.startsWith('/offers') ? 'offers' : path.startsWith('/profile') ? 'profile' : path.startsWith('/password') ? 'password' : 'dashboard'
   return <VendorShell session={session} page={page} navigate={navigate} onLogout={async () => {
     await supabase.auth.signOut()
     queryClient.clear()
     setSession(null)
     navigate('/login')
   }}>
-    {page === 'transactions' ? <TransactionsPage vendorId={session.vendorId} /> : page === 'profile' ? <ProfilePage vendorId={session.vendorId} /> : page === 'password' ? <VendorCredentials /> : <DashboardPage vendorId={session.vendorId} />}
+    {page === 'transactions' ? <TransactionsPage vendorId={session.vendorId} /> : page === 'offers' ? <OffersPage vendorId={session.vendorId} queryClient={queryClient} /> : page === 'profile' ? <ProfilePage vendorId={session.vendorId} /> : page === 'password' ? <VendorCredentials /> : <DashboardPage vendorId={session.vendorId} />}
   </VendorShell>
 }
 
@@ -174,6 +174,7 @@ function VendorShell({ session, page, navigate, onLogout, children }: { session:
   const links = [
     { id: 'dashboard', label: 'Overview', href: '/dashboard', Icon: LayoutDashboard },
     { id: 'transactions', label: 'Transactions', href: '/transactions', Icon: ReceiptText },
+    { id: 'offers', label: 'Offers', href: '/offers', Icon: Tag },
     { id: 'profile', label: 'Business profile', href: '/profile', Icon: UserRound },
     { id: 'password', label: 'Password', href: '/password', Icon: KeyRound },
   ]
@@ -233,6 +234,30 @@ function ProfilePage({ vendorId }: { vendorId: string }) {
   if (query.isError) return <ErrorPanel message="Business profile could not be loaded." onRetry={() => void query.refetch()} />
   if (!query.data) return <p className="rounded-xl border bg-white p-6 text-sm text-muted-foreground">Business profile not found.</p>
   return <section className="space-y-5"><div><h2 className="m-0 text-2xl font-bold">Business profile</h2><p className="mb-0 mt-1 text-sm text-muted-foreground">Profile information visible to your vendor account.</p></div><div className="flex items-center gap-4 rounded-xl border bg-white p-5 shadow-sm">{query.data.profilePicture ? <img className="size-16 rounded-xl border object-cover" src={query.data.profilePicture} alt="Business logo" /> : <div className="flex size-16 items-center justify-center rounded-xl bg-green-50 text-green-700"><Building2 /></div>}<div><h3 className="m-0 text-lg font-bold">{query.data.name || 'Vendor'}</h3><p className="mb-0 mt-1 text-sm text-muted-foreground">Read-only business details</p></div></div><div className="grid gap-3 sm:grid-cols-2">{entries.map(([label, value]) => <div key={label} className="rounded-xl border bg-white p-4"><p className="m-0 text-xs text-muted-foreground">{label}</p><p className="mb-0 mt-1 break-words text-sm font-medium">{value || '—'}</p></div>)}</div></section>
+}
+
+function OffersPage({ vendorId, queryClient }: { vendorId: string; queryClient: QueryClient }) {
+  const query = useQuery(vendorQueryOptions(vendorId))
+  const [badgeLabels, setBadgeLabels] = useState<Record<string, string>>({})
+  const [saving, setSaving] = useState<string | null>(null)
+  const [error, setError] = useState('')
+  if (query.isLoading) return <Loading />
+  if (query.isError) return <ErrorPanel message="Offers could not be loaded." onRetry={() => void query.refetch()} />
+  const offers = query.data?.offers ?? []
+  const save = async (offerId: string, label: string) => {
+    setSaving(offerId)
+    setError('')
+    try {
+      const { error: saveError } = await supabase.rpc('couponly_vendor_set_offer_badge_label', { p_offer_id: offerId, p_badge_label: label.trim() || null })
+      if (saveError) throw saveError
+      await queryClient.invalidateQueries({ queryKey: vendorQueryOptions(vendorId).queryKey })
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'Badge text could not be saved.')
+    } finally {
+      setSaving(null)
+    }
+  }
+  return <section className="space-y-5"><div><h2 className="m-0 text-2xl font-bold">Offers</h2><p className="mb-0 mt-1 text-sm text-muted-foreground">Set the text shown on each offer’s green badge in the mobile app.</p></div>{error && <p role="alert" className="rounded-lg bg-red-50 p-3 text-sm text-red-700">{error}</p>}{offers.map((offer, index) => <form key={offer.id ?? index} onSubmit={event => { event.preventDefault(); if (offer.id) void save(offer.id, badgeLabels[offer.id] ?? offer.badgeLabel ?? '') }} className="flex flex-wrap items-end gap-3 rounded-xl border bg-white p-4 shadow-sm"><div className="min-w-0 flex-1"><h3 className="m-0 font-semibold">{offer.titleEn}</h3><label htmlFor={`vendor-badge-${offer.id ?? index}`} className="mt-3 block text-sm font-medium">Mobile badge text</label><input id={`vendor-badge-${offer.id ?? index}`} maxLength={60} value={offer.id ? badgeLabels[offer.id] ?? offer.badgeLabel ?? '' : ''} onChange={event => offer.id && setBadgeLabels(current => ({ ...current, [offer.id!]: event.target.value }))} placeholder="e.g. 50% OFF TOTAL BILL" className="mt-1 h-10 w-full rounded-md border px-3 text-sm"/><p className="mb-0 mt-1 text-xs text-muted-foreground">Leave blank to generate it from the discount.</p></div><button type="submit" disabled={!offer.id || saving !== null} className="h-10 rounded-md bg-green-700 px-4 text-sm font-semibold text-white disabled:opacity-50">{saving === offer.id ? 'Saving…' : 'Save'}</button></form>)}{offers.length === 0 && <p className="rounded-xl border bg-white p-6 text-sm text-muted-foreground">No offers found.</p>}</section>
 }
 
 function Loading() { return <div className="flex h-64 items-center justify-center gap-2 text-sm text-muted-foreground"><Clock3 className="size-4 animate-pulse" />Loading your data…</div> }
