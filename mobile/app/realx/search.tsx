@@ -39,13 +39,13 @@ export default function RealXSearchScreen() {
   }, [q]);
 
   const results = React.useMemo(() => searchVendors(deals, committed), [committed, revision]);
-  const recommendations = React.useMemo(() => [...deals].sort((a, b) => b.trend - a.trend).slice(0, RECOMMENDATION_LIMIT), [revision]);
+  const recommendations = React.useMemo(() => deals.filter(deal => deal.isSuggested).sort((a, b) => b.trend - a.trend || a.name.localeCompare(b.name)).slice(0, RECOMMENDATION_LIMIT), [revision]);
 
   const submit = () => { setCommitted(input.trim().toLocaleLowerCase()); if (input.trim()) posthog.capture('search_submitted'); Keyboard.dismiss(); };
   const tryAnother = () => { triggerSubtleHaptic(); setInput(''); setCommitted(''); requestAnimationFrame(() => inputRef.current?.focus()); };
   const openVendor = (item: Deal) => router.push({ pathname: '/realx/vendor/[id]', params: { id: String(item.vendorId || item.id) } } as any);
   const renderCard = ({ item }: { item: Deal }) => <View style={s.cardWrap}>
-    <RestaurantCard id={String(item.vendorId || item.id)} name={item.name} imageUri={item.image} logoUri={item.logo} distance={distanceByVendor.get(String(item.vendorId || item.id))?.label} xcardEnabled={item.xcard} badgeLabel={item.cardLabel} distanceOnImage overlapLogo onPress={() => openVendor(item)} />
+    <RestaurantCard id={String(item.vendorId || item.id)} name={item.name} imageUri={item.image} logoUri={item.logo} distance={distanceByVendor.get(String(item.vendorId || item.id))?.label} xcardEnabled={item.xcard} badgeLabel={item.cardLabel} distanceOnImage overlapLogo contentStyle={{ minHeight: 32, justifyContent: 'flex-start', paddingTop: 0, paddingBottom: 8 }} onPress={() => openVendor(item)} />
   </View>;
   const noMatches = !!committed && results.length === 0;
 
@@ -78,7 +78,6 @@ export default function RealXSearchScreen() {
         <ScalePressable style={s.tryAnother} onPress={tryAnother}><Ionicons name="refresh-outline" size={16} color={theme.brand} /><Text style={[s.tryAnotherText, { color: theme.brand }]}>{t('search_try_another')}</Text></ScalePressable>
         {recommendations.length ? <Text style={[s.recommendationsTitle, { color: theme.text, alignSelf: 'flex-start' }]}>{t('search_recommendations_title')}</Text> : null}
       </View>}
-      ListEmptyComponent={<View style={s.center}><EmptyState icon="search-outline" title={t('search_offers_no_results_title')} body={t('search_offers_no_results_hint', { query: committed })} color={theme} /></View>}
     /> : status === 'loading' && !results.length ? <View style={s.center}><ActivityIndicator size="large" color={theme.brand} /></View> : results.length ? <FlatList
       keyboardShouldPersistTaps="handled"
       keyboardDismissMode="on-drag"
@@ -108,5 +107,5 @@ const s = StyleSheet.create({
   emptyTitle: { fontSize: 18, textAlign: 'center', lineHeight: 24, fontWeight: '600' }, emptyBody: { fontSize: 14, textAlign: 'center', lineHeight: 20, maxWidth: 280, marginTop: 6 },
   noResultHeader: { alignItems: 'center', paddingHorizontal: 20, paddingTop: 20 }, tryAnother: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 16, paddingVertical: 6 }, tryAnotherText: { fontSize: 14, fontWeight: '600' },
   recommendationsTitle: { alignSelf: 'flex-start', fontSize: 18, fontWeight: '600', paddingTop: 28, paddingBottom: 16 }, resultCountRow: { width: '100%', alignItems: 'flex-start', paddingHorizontal: 20 }, resultCount: { fontSize: 14, paddingTop: 8, paddingBottom: 16 },
-  cardWrap: { flex: 1, paddingHorizontal: 20, marginBottom: 16 }, listBottom: { paddingBottom: 40 },
+  cardWrap: { flex: 1, paddingHorizontal: 20, marginBottom: 8 }, listBottom: { paddingBottom: 24 },
 });

@@ -1,6 +1,6 @@
 export type Deal = {
   id:number; vendorId?:string; categoryId?:string; categoryIds?:string[]; subcategoryIds?:string[]; offers?:VendorOffer[]; locations?:VendorLocation[]; galleryImages?:string[]; phoneNumber?:string; openingHours?:unknown; vendorInformation?:{title?:string;message?:string}; name:string; place:string; category:string; distance:string; distanceKm:number; rating:string;
-  offer:string; saving:string; offerValue:number; newest:number; trend:number; image:string; logo?:string; cardLabel?:string;
+  offer:string; saving:string; offerValue:number; newest:number; trend:number; image:string; logo?:string; cardLabel?:string; isSuggested?:boolean;
   color?:string; description:string; redemption?:"online"|"inStore"; externalUrl?:string; instagramUrl?:string; keywords?:string; latitude?:number; longitude?:number; xcard?:boolean;
 };
 

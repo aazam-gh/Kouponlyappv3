@@ -110,6 +110,7 @@ export function projectVendorCatalogue(
       offer: offerTitle,
       saving,
       cardLabel: stringValue(vendor.card_label).trim() || undefined,
+      isSuggested: vendor.is_suggested === true,
       offerValue,
       newest: numberValue(vendor.new_deals_priority),
       trend: numberValue(vendor.trending_priority),

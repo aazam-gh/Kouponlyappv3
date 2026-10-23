@@ -38,6 +38,7 @@ export function mapVendor(row: VendorRow): Vendor {
         mainCategory: row.couponly_categories?.name || payload.mainCategory,
         subcategory: row.couponly_vendor_subcategories?.map((link: any) => link.couponly_subcategories?.name).filter(Boolean) || payload.subcategory || [],
         isTrending: Number(row.trend) > 0,
+        isSuggested: row.is_suggested === true,
         sortOrder: row.sort_order,
         offers: Array.isArray(payload.offers) ? payload.offers.map((offer: Record<string, unknown>, index: number) => ({ ...offer, id: typeof offer.id === 'string' && offer.id ? offer.id : `${row.id}:embedded:${index + 1}` })) : [],
         shortDescription: row.description || payload.shortDescription,
@@ -96,6 +97,7 @@ export async function updateVendor(vendorId: string, updates: Record<string, unk
         place: 'place_label', imageUrl: 'image_url', coverImage: 'cover_image_url',
         savingLabel: 'saving_label', offerValue: 'offer_value', sortOrder: 'sort_order', newest: 'newest',
         phoneNumber: 'phone', galleryImages: 'gallery_images',
+        isSuggested: 'is_suggested',
         businessHours: 'business_hours', locations: 'locations', rating: 'rating',
     }
     if (Array.isArray(updates.categoryIds) && updates.categoryIds.length) row.category_id = updates.categoryIds[0]

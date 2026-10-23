@@ -2,6 +2,7 @@ import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
+import { Checkbox } from "@/components/ui/checkbox"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Upload, Loader2, X, Tag, Plus, ArrowLeft, ArrowRight, Trash2 } from "lucide-react"
 import { useEffect, useState, useRef } from "react"
@@ -176,6 +177,10 @@ export function BrandingSettings({
                 <div><Label htmlFor="vendor-card-label" className="text-base font-semibold">Vendor card label</Label><p className="mt-1 text-sm text-muted-foreground">One optional badge for this vendor in New Deals, Trending, search and category listings. It stays the same across all offers.</p></div>
                 <Input id="vendor-card-label" maxLength={32} value={formData.cardLabel || ''} onChange={event => setFormData({ ...formData, cardLabel: event.target.value })} placeholder="e.g. Student favourite" className="max-w-md" />
                 <p className="text-xs text-muted-foreground">Leave blank to hide the badge. Offer savings are managed separately in Offers.</p>
+            </section>
+            <section className="flex items-start gap-3 rounded-xl border bg-white p-5">
+                <Checkbox id="vendor-suggested-offers" checked={formData.isSuggested === true} onCheckedChange={checked => setFormData({ ...formData, isSuggested: checked === true })} />
+                <div><Label htmlFor="vendor-suggested-offers" className="text-base font-semibold">Show in suggested offers</Label><p className="mt-1 text-sm text-muted-foreground">Include this vendor’s active offers when a mobile search has no matches. Only active vendors with a current offer appear.</p></div>
             </section>
             <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-2"><Label htmlFor="vendor-phone">Phone</Label><Input id="vendor-phone" type="tel" inputMode="tel" autoComplete="tel" placeholder="+974 5000 0000" value={formData.phoneNumber || ''} onChange={e => setFormData({ ...formData, phoneNumber: e.target.value })} /></div>

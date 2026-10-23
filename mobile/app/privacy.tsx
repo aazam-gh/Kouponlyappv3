@@ -6,131 +6,48 @@ import { Typography } from '../constants/Typography';
 import AppHeader from '../components/navigation/AppHeader';
 import ProfileSprites from '@/components/profile/ProfileSprites';
 
+const sections = [
+    ['1. Who We Are and What This Notice Covers', 'Kouponly Private Limited ("Kouponly", "we", or "us"), based in India, provides an app for discovering participating vendors and offers, saving offers, managing referrals, and recording redemptions. This notice explains how Kouponly handles information through the app and related support services. For privacy requests or complaints, contact info@kouponly.in.'],
+    ['2. Information You Provide', 'Depending on the features you use, we receive your name, email address, and profile details you choose to provide, such as your phone number, date of birth, city, profile photo, language, and preferences. Our authentication provider manages your sign-in credential; Kouponly does not receive your password in readable form. We also process saved vendors and offers, referral codes and rewards, and coupon and redemption records. If you submit a student eligibility request, we process the school email, application details, student ID image, and review outcome you submit. If you contact us, we receive your name, reply email address, and message.'],
+    ['3. Location', 'On iOS and Android, the app may request foreground location permission when it starts if permission has not already been granted. If you allow it, the app uses your current location to find nearby vendors and calculate distances. The current app processes these coordinates on your device and does not upload them to Kouponly servers through this nearby-offers feature. We do not request background location. You can deny or revoke access in device settings; nearby results or distance information may then be unavailable.'],
+    ['4. Notifications and Device Information', 'The app may request notification permission around sign-up and again after an offer redemption if permission is still unavailable and your device allows another prompt. If you grant permission, we receive and store your push token, account association, and device platform so Kouponly can send notifications through Expo and Apple or Google notification services. Notifications may include offer updates, redemption or account messages, and service announcements. You can turn them off in device settings. Signing out asks our service to unregister the device token; a temporary network failure may delay removal.'],
+    ['5. How We Use Information', 'We use information to create and secure accounts; verify student eligibility; show and save offers; calculate nearby results; manage referrals; confirm redemptions and rewards; send notifications you permit; answer questions; troubleshoot and improve the app; prevent fraud and abuse; and meet legal obligations. Where applicable law requires consent, we ask for it and explain how to withdraw it. Other processing relies on a lawful basis available under the laws that apply.'],
+    ['6. Analytics', 'When analytics are enabled, PostHog receives app screen names and high-level events such as a search being submitted or a coupon being redeemed. Analytics may be associated with your account identifier when you sign in. The current app does not send the text of your search in those events, and screen and touch autocapture, session replay, and GeoIP enrichment are disabled. Analytics may also receive basic app or device information needed to operate the analytics service.'],
+    ['7. When We Share Information', 'We use service providers to host account and app data (Supabase), deliver email (Resend), provide product analytics (PostHog), and deliver push notifications (Expo, Apple, and Google). They process information for Kouponly under their service terms. When you choose to redeem an offer, we share the redemption details needed for the participating vendor to verify and honor that offer. A vendor’s own handling of information is governed by its privacy notice. We may also disclose information when required by law, to protect users or the service, or as part of a business transfer subject to applicable law. We do not sell personal information.'],
+    ['8. Student Documents and Retention', 'Student ID images and review details are accessible to authorized reviewers for eligibility decisions. We retain information only while reasonably needed for the purposes described here, service records, security, dispute resolution, and legal requirements. We do not promise a fixed deletion date for every record. Cancelling a pending student request does not automatically delete its uploaded image; email info@kouponly.in to request removal. Account deletion removes your authentication account and account-owned avatar files through the current deletion service. Some redemption, referral, security, or legally required records may need to be retained, and provider backups may persist until their normal deletion cycle.'],
+    ['9. Information Stored on Your Device', 'The app stores some information locally, such as saved items, profile or app state, and pending changes needed to sync when connectivity returns. This information remains in the app’s private device storage. After account deletion, local copies may remain until the app or device removes them; you can clear app storage or uninstall the app to remove local data.'],
+    ['10. Security and International Processing', 'We use reasonable technical and organizational safeguards designed to protect information. No internet transmission or storage system can be guaranteed completely secure. Our service providers may process information in countries where they or their infrastructure operate. Where required, we use safeguards for cross-border processing and respond to valid legal requests.'],
+    ['11. Your Choices and Requests', 'You can update available profile details in the app, manage location and notification permissions in device settings, and delete your account from Profile Details. You may contact info@kouponly.in to ask to access, correct, or delete your information; withdraw consent where processing is based on consent; ask about a student document; or make a privacy complaint. We may ask for information needed to verify your identity. We will handle requests under applicable law, including any lawful retention limits.'],
+    ['12. Children', 'Kouponly accounts are for people aged 18 or older. The service is not directed to children, and we do not knowingly invite children to create accounts. If you believe a child has provided personal information, contact info@kouponly.in so we can review it and take appropriate steps.'],
+    ['13. Changes and Contact', 'We may update this notice when the app, our processing, or applicable law changes. We will update the date below and provide any notice required by law. Questions, requests, and complaints can be sent to info@kouponly.in.'],
+] as const;
+
 export default function PrivacyScreen() {
     const router = useRouter();
     const { theme } = useAppTheme();
 
-    const handleBack = () => {
-        router.back();
-    };
-
     return (
         <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]} edges={['top']}>
             <ProfileSprites />
-            <AppHeader
-                title={'Privacy Policy'}
-                onBackPress={handleBack}
-            />
-
-            <ScrollView
-                showsVerticalScrollIndicator={false}
-                contentContainerStyle={styles.scrollContent}
-            >
-                <Text style={[styles.lastUpdated, { color: theme.subtleText }]}>
-                    {'Last updated: October 21, 2026'}
-                </Text>
-
-                <View style={styles.section}>
-                    <Text style={[styles.sectionTitle, { color: theme.text }]}>
-                        {'1. Information We Collect'}
-                    </Text>
-                    <Text style={[styles.paragraph, { color: theme.mutedText }]}>
-                        {'We collect account and profile information you provide, such as your email address, name, phone number, date of birth, city, profile photo, and preferences. We also process saved offers, redemption records, and friend requests. If you request student verification, we collect your school email, student ID image, and review details so an authorized reviewer can assess your request.'}
-                    </Text>
-                </View>
-
-                <View style={styles.section}>
-                    <Text style={[styles.sectionTitle, { color: theme.text }]}>
-                        {'2. Location and Device Permissions'}
-                    </Text>
-                    <Text style={[styles.paragraph, { color: theme.mutedText }]}>
-                        {'On iOS and Android, Kouponly may request foreground location access when you open the app if permission is not already granted. If you allow it, we use your current location to find nearby vendors and calculate distances. We do not request background location access. You can deny or revoke location permission in your device settings; nearby results may then be limited.'}
-                    </Text>
-                </View>
-
-                <View style={styles.section}>
-                    <Text style={[styles.sectionTitle, { color: theme.text }]}>
-                        {'3. Notifications'}
-                    </Text>
-                    <Text style={[styles.paragraph, { color: theme.mutedText }]}>
-                        {'We may ask for notification permission during sign-up or after a redemption. If you allow notifications, we register your device push token and platform with our services so we can send app notifications. You can change this permission in your device settings. Signing out asks our service to remove the device registration.'}
-                    </Text>
-                </View>
-
-                <View style={styles.section}>
-                    <Text style={[styles.sectionTitle, { color: theme.text }]}>
-                        {'4. How We Use and Share Information'}
-                    </Text>
-                    <Text style={[styles.paragraph, { color: theme.mutedText }]}>
-                        {'We use information to create and manage accounts, verify student eligibility, provide offers and redemptions, support the app, and protect our services. Kouponly uses service providers for its backend and storage (Supabase), product analytics (PostHog), email delivery (Resend), and push notifications (Expo and the platform notification services). These providers process information to provide services to Kouponly. If activity sharing was enabled, accepted friends may see vendors where you saved or redeemed offers during the last 30 days; contact us to request that existing sharing be disabled. You may also choose to show a redemption confirmation to a vendor. External vendor websites and apps have their own privacy practices.'}
-                    </Text>
-                </View>
-
-                <View style={styles.section}>
-                    <Text style={[styles.sectionTitle, { color: theme.text }]}>
-                        {'5. Analytics'}
-                    </Text>
-                    <Text style={[styles.paragraph, { color: theme.mutedText }]}>
-                        {'We use PostHog to understand app use. Our current analytics include app screen navigation, submitted searches, and coupon redemption events; when you are signed in, analytics may be associated with your account identifier. Screen and touch autocapture, session replay, and GeoIP enrichment are disabled in our current configuration.'}
-                    </Text>
-                </View>
-
-                <View style={styles.section}>
-                    <Text style={[styles.sectionTitle, { color: theme.text }]}>
-                        {'6. Your Choices and Data Retention'}
-                    </Text>
-                    <Text style={[styles.paragraph, { color: theme.mutedText }]}>
-                        {'You can review or update profile information in the app and manage location and notification permissions in your device settings. Contact us to request access, correction, or deletion of information, or to disable activity sharing that was enabled previously. You can delete your account from Profile Details. We keep information for as long as needed to provide the service, handle account and redemption history, complete verification, and meet applicable obligations. Student ID images are available to authorized reviewers. Rejected and expired requests have their images removed during review or scheduled cleanup; approved images are kept for seven days after review before cleanup. Cancelling a pending request does not remove its image automatically; email us to request removal.'}
-                    </Text>
-                </View>
-
-                <View style={styles.section}>
-                    <Text style={[styles.sectionTitle, { color: theme.text }]}>
-                        {'7. Data Security'}
-                    </Text>
-                    <Text style={[styles.paragraph, { color: theme.mutedText }]}>
-                        {'We take reasonable measures to help protect information about you from loss, misuse, and unauthorized access, disclosure, alteration, or destruction.'}
-                    </Text>
-                </View>
-
-                <View style={styles.section}>
-                    <Text style={[styles.sectionTitle, { color: theme.text }]}>
-                        {'8. Contact Us'}
-                    </Text>
-                    <Text style={[styles.paragraph, { color: theme.mutedText }]}>
-                        {'For privacy questions or requests, contact info@kouponly.in.'}
-                    </Text>
-                </View>
+            <AppHeader title="Privacy Policy" onBackPress={() => router.back()} />
+            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+                <Text style={[styles.lastUpdated, { color: theme.subtleText }]}>Last updated: October 23, 2026</Text>
+                {sections.map(([title, body]) => (
+                    <View key={title} style={styles.section}>
+                        <Text style={[styles.sectionTitle, { color: theme.text }]}>{title}</Text>
+                        <Text style={[styles.paragraph, { color: theme.mutedText }]}>{body}</Text>
+                    </View>
+                ))}
             </ScrollView>
         </SafeAreaView>
     );
 }
 
 const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-    },
-    scrollContent: {
-        paddingHorizontal: 24,
-        paddingTop: 10,
-        paddingBottom: 40,
-    },
-    lastUpdated: {
-        fontSize: 14,
-        ...Typography.getTextVariantStyle('body'),
-        marginBottom: 24,
-    },
-    section: {
-        marginBottom: 24,
-    },
-    sectionTitle: {
-        fontSize: 18,
-        ...Typography.getTextVariantStyle('bodyStrong'),
-        marginBottom: 12,
-    },
-    paragraph: {
-        fontSize: 16,
-        ...Typography.getTextVariantStyle('body'),
-        lineHeight: 28,
-    },
+    container: { flex: 1 },
+    scrollContent: { paddingHorizontal: 24, paddingTop: 10, paddingBottom: 40 },
+    lastUpdated: { fontSize: 14, ...Typography.getTextVariantStyle('body'), marginBottom: 24 },
+    section: { marginBottom: 24 },
+    sectionTitle: { fontSize: 18, ...Typography.getTextVariantStyle('bodyStrong'), marginBottom: 12 },
+    paragraph: { fontSize: 16, ...Typography.getTextVariantStyle('body'), lineHeight: 28 },
 });

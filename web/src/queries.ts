@@ -45,6 +45,7 @@ export interface Vendor {
     contact?: string
     profilePicture?: string
     cardLabel?: string | null
+    isSuggested?: boolean
     coverImage?: string
     galleryImages?: string[]
     rating?: number

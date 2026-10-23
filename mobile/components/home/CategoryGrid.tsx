@@ -144,5 +144,5 @@ const styles = StyleSheet.create({
     moreButton: { alignItems: 'center', justifyContent: 'center', overflow: 'hidden', borderWidth: StyleSheet.hairlineWidth, borderRadius: 22, marginBottom: 7 },
     drawerTitle: { marginHorizontal: 24, marginBottom: 12, fontSize: 20, fontWeight: '700' },
     drawerRows: { paddingHorizontal: 20, paddingBottom: 16, gap: 8 },
-    drawerRow: { flexDirection: 'row', justifyContent: 'space-between' },
+    drawerRow: { flexDirection: 'row', justifyContent: 'flex-start' },
 });
