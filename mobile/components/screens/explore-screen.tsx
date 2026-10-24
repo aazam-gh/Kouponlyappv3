@@ -24,15 +24,9 @@ import { MAP_PANEL_TAB_BAR_GAP, TAB_BAR_BASE_HEIGHT } from '@/constants/Layout';
 import { distanceBetweenKm } from '@/lib/vendor-distance';
 
 const DEFAULT_LOCATION = { latitude: 9.9932, longitude: 76.3576 };
-const FILTERS = [{ label: 'Cafe', key: 'map_filter_cafe', icon: 'cafe-outline' }, { label: 'Gym', key: 'map_filter_gym', icon: 'barbell-outline' }, { label: 'Food', key: 'map_filter_restaurant', icon: 'restaurant-outline' }, { label: 'Salon', key: 'map_filter_salon', icon: 'cut-outline' }];
 const MARKER_COLORS = { food: '#FF7A00', cafe: '#A66A2C', gym: '#246BFE', salon: '#D93D8B', services: '#5856D6', other: '#6C63FF', deal: '#111111', xcard: Colors.brandGreen };
 type LocatedVendor = VendorMapLocation & { latitude: number; longitude: number };
 type MapPointProps = { id: string };
-
-function matchesCategory(item: LocatedVendor, filter: string) {
-  const category = item.category.toLocaleLowerCase();
-  return filter === 'All' || (filter === 'Food' ? /food|restaurant|cafe|coffee|dining/.test(category) : filter === 'Cafe' ? /cafe|coffee/.test(category) : filter === 'Gym' ? /fitness|gym|sport/.test(category) : /beauty|salon/.test(category));
-}
 
 function markerColor(item: LocatedVendor) {
   if (item.offers?.some(offer => offer.discountType === 'buy1get1')) return MARKER_COLORS.deal;
@@ -62,7 +56,6 @@ export default function RealXMapScreen() {
   const [loading, setLoading] = React.useState(true);
   const [message, setMessage] = React.useState('');
   const [query, setQuery] = React.useState('');
-  const [filter, setFilter] = React.useState('All');
   const [selected, setSelected] = React.useState<LocatedVendor | null>(null);
   const [clusterPreview, setClusterPreview] = React.useState<LocatedVendor[]>([]);
   const [bottomPanelHeight, setBottomPanelHeight] = React.useState(0);
@@ -126,8 +119,8 @@ export default function RealXMapScreen() {
   }, [user?.id]);
   const visible = React.useMemo(() => locations.filter(item => {
     const text = `${item.name} ${item.category} ${item.place} ${item.description}`.toLocaleLowerCase();
-    return matchesCategory(item, filter) && (!query.trim() || text.includes(query.trim().toLocaleLowerCase()));
-  }), [locations, filter, query]);
+    return !query.trim() || text.includes(query.trim().toLocaleLowerCase());
+  }), [locations, query]);
   const refreshSearch = React.useCallback(async () => {
     fetchedMapKey.current = '';
     setLoading(true);
@@ -151,11 +144,6 @@ export default function RealXMapScreen() {
   const submitSearch = () => {
     Keyboard.dismiss();
     fitLocations(visible);
-  };
-  const selectFilter = (label: string) => {
-    const next = filter === label ? 'All' : label;
-    setFilter(next); setSelected(null); setClusterPreview([]);
-    fitLocations(locations.filter(item => matchesCategory(item, next)));
   };
   const selectCluster = (cluster: ClusterFeature<MapPointProps>) => {
     const leaves = clusterIndex.getLeaves(cluster.properties.cluster_id, 4).map(point => vendorsById.get(point.properties.id)).filter((item): item is LocatedVendor => !!item);
@@ -215,8 +203,8 @@ export default function RealXMapScreen() {
         if (properties.cluster) return <Marker key={`cluster-${properties.cluster_id}`} coordinate={{ latitude, longitude }} accessibilityRole="button" accessibilityLabel={`${properties.point_count} nearby places`} onPress={() => selectCluster(feature as ClusterFeature<MapPointProps>)}><View style={[s.cluster, { backgroundColor: (properties.point_count || 0) >= 40 ? '#111' : (properties.point_count || 0) >= 15 ? '#FF7A00' : C.lime }, (properties.point_count || 0) > 20 && s.clusterLarge]}><Text style={[s.clusterCount, { color: (properties.point_count || 0) >= 15 ? '#FFFFFF' : C.inkOnAccent }]}>{properties.point_count}</Text></View></Marker>;
         const item = vendorsById.get(properties.id);
         if (!item) return null;
-        const color = markerColor(item); const highlighted = filter !== 'All'; const dealPin = item.xcard || item.offers?.some(offer => offer.discountType === 'buy1get1');
-        return <Marker key={properties.id} coordinate={{ latitude, longitude }} onPress={() => { setClusterPreview([]); setSelected(item); }} accessibilityLabel={`View ${item.name}`}><View style={[s.pin, highlighted && s.pinHighlighted, { borderColor: color }]}>{dealPin ? <View style={[s.pinCore, { backgroundColor: color }]} /> : null}</View></Marker>;
+        const color = markerColor(item); const dealPin = item.xcard || item.offers?.some(offer => offer.discountType === 'buy1get1');
+        return <Marker key={properties.id} coordinate={{ latitude, longitude }} onPress={() => { setClusterPreview([]); setSelected(item); }} accessibilityLabel={`View ${item.name}`}><View style={[s.pin, { borderColor: color }]}>{dealPin ? <View style={[s.pinCore, { backgroundColor: color }]} /> : null}</View></Marker>;
       })}
     </MapView>
     <SafeAreaView edges={['top']} pointerEvents="box-none" style={s.overlay}>
@@ -224,9 +212,6 @@ export default function RealXMapScreen() {
         <Ionicons name="search" size={20} color={C.muted} />
         <TextInput testID="map-search" accessibilityLabel={'Search partners on map'} value={query} onChangeText={setQuery} onSubmitEditing={() => { submitSearch(); void refreshSearch(); }} placeholder={t('search_placeholder')} placeholderTextColor={C.muted} returnKeyType="search" style={[s.input, { color: C.ink, textAlign: isRTL ? 'right' : 'left', writingDirection: isRTL ? 'rtl' : 'ltr' }]} />
         {query ? <ScalePressable accessibilityLabel="Clear search" onPress={() => setQuery('')}><Ionicons name="close-circle" size={18} color={C.muted} /></ScalePressable> : null}
-      </View>
-      <View style={[s.filters, isRTL && { flexDirection: 'row-reverse' }]}>
-        {FILTERS.map(({ label, key, icon }) => { const active = filter === label; return <ScalePressable key={label} accessibilityRole="button" accessibilityLabel={`Filter ${label}`} accessibilityState={{ selected: active }} onPress={() => selectFilter(label)} style={[s.filter, { backgroundColor: active ? C.lime : C.card, borderColor: BorderPalette.border }]}><Ionicons name={icon as any} size={16} color={active ? C.inkOnAccent : C.muted} /><Text style={[s.filterText, { color: active ? C.inkOnAccent : C.ink }]}>{t(key)}</Text></ScalePressable>; })}
       </View>
       {loading ? <View style={[s.searchEmpty, { backgroundColor: C.card }]}><ActivityIndicator color={C.lime} /><Text style={[s.statusText, { color: C.ink }]}>{t('map_loading')}</Text></View> : null}
       {!loading && !message && !visible.length && query.trim() ? <View style={[s.searchEmpty, { backgroundColor: C.card }]}><Ionicons name="search-outline" size={18} color={C.muted} /><Text style={[s.statusText, { color: C.ink }]}>{t('no_search_results')}</Text></View> : null}
@@ -247,7 +232,7 @@ export default function RealXMapScreen() {
   </View>;
 }
 const s = StyleSheet.create({
-  root: { flex: 1 }, overlay: { position: 'absolute', left: 0, right: 0, top: 0, paddingHorizontal: 20, zIndex: 10 }, search: { minHeight: 56, marginTop: 10, borderWidth: 1, borderRadius: 28, paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center', gap: 10, shadowColor: '#000', shadowOpacity: .1, shadowRadius: 9, shadowOffset: { width: 0, height: 3 }, elevation: 4 }, input: { flex: 1, fontFamily: F.body, fontSize: 15, padding: 0 }, filters: { flexDirection: 'row', justifyContent: 'center', gap: 6, marginTop: 8 }, filter: { minHeight: 38, flex: 1, borderWidth: 1, borderRadius: 18, paddingHorizontal: 6, flexDirection: 'row', gap: 6, alignItems: 'center', justifyContent: 'center' }, filterText: { fontFamily: F.bodySemi, fontSize: 13 }, searchEmpty: { minHeight: 46, marginTop: 10, borderRadius: 16, borderWidth: 1, borderColor: BorderPalette.border, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 9, paddingHorizontal: 14, elevation: 3 }, locate: { position: 'absolute', right: 16, width: 44, height: 44, borderRadius: 22, borderWidth: 1, borderColor: BorderPalette.border, alignItems: 'center', justifyContent: 'center', elevation: 4, shadowColor: '#000', shadowOpacity: .15, shadowRadius: 8 }, statusText: { fontFamily: F.body, fontSize: 12 }, empty: { position: 'absolute', top: 14, left: 14, right: 14, paddingHorizontal: 12, paddingVertical: 10, borderRadius: 12, borderWidth: 1, borderColor: BorderPalette.border, elevation: 3, zIndex: 11 }, emptyTitle: { fontFamily: F.headingSemi, fontSize: 14, marginBottom: 3 },
+  root: { flex: 1 }, overlay: { position: 'absolute', left: 0, right: 0, top: 0, paddingHorizontal: 20, zIndex: 10 }, search: { minHeight: 56, marginTop: 10, borderWidth: 1, borderRadius: 28, paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center', gap: 10, shadowColor: '#000', shadowOpacity: .1, shadowRadius: 9, shadowOffset: { width: 0, height: 3 }, elevation: 4 }, input: { flex: 1, fontFamily: F.body, fontSize: 15, padding: 0 }, searchEmpty: { minHeight: 46, marginTop: 10, borderRadius: 16, borderWidth: 1, borderColor: BorderPalette.border, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 9, paddingHorizontal: 14, elevation: 3 }, locate: { position: 'absolute', right: 16, width: 44, height: 44, borderRadius: 22, borderWidth: 1, borderColor: BorderPalette.border, alignItems: 'center', justifyContent: 'center', elevation: 4, shadowColor: '#000', shadowOpacity: .15, shadowRadius: 8 }, statusText: { fontFamily: F.body, fontSize: 12 }, empty: { position: 'absolute', top: 14, left: 14, right: 14, paddingHorizontal: 12, paddingVertical: 10, borderRadius: 12, borderWidth: 1, borderColor: BorderPalette.border, elevation: 3, zIndex: 11 }, emptyTitle: { fontFamily: F.headingSemi, fontSize: 14, marginBottom: 3 },
   cluster: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center', opacity: 0.88 }, clusterLarge: { width: 52, height: 52, borderRadius: 26 }, clusterCount: { color: '#fff', fontFamily: F.bodyBold, fontSize: 14 }, clusterPreview: { position: 'absolute', left: 14, right: 14, borderRadius: 20, borderWidth: 1, borderColor: BorderPalette.border, padding: 14, gap: 8, elevation: 8, shadowColor: '#000', shadowOpacity: .1, shadowRadius: 8 }, clusterHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }, clusterTitle: { fontFamily: F.bodyBold, fontSize: 14 }, clusterRow: { minHeight: 34, flexDirection: 'row', alignItems: 'center', gap: 10 }, clusterDot: { width: 10, height: 10, borderRadius: 5 }, clusterName: { flex: 1, fontFamily: F.body, fontSize: 13 }, clusterDistance: { fontFamily: F.bodyBold, fontSize: 12 },
-  calloutCard: { position: 'absolute', left: 14, right: 14, borderRadius: 24, borderWidth: 1, borderColor: BorderPalette.border, paddingHorizontal: 20, paddingTop: 16, paddingBottom: 20, gap: 10, elevation: 8, shadowColor: '#000', shadowOpacity: .15, shadowRadius: 10 }, calloutHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }, offerPill: { minHeight: 34, alignSelf: 'flex-start', borderRadius: 17, borderWidth: 1, borderColor: BorderPalette.border, paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', gap: 7 }, offerText: { fontFamily: F.bodySemi, fontSize: 14, flex: 1 }, distanceRow: { flexDirection: 'row', alignItems: 'center', alignSelf: 'flex-start', gap: 6, minHeight: 24, marginBottom: 2 }, phonePill: { alignSelf: 'flex-start', minHeight: 34, borderRadius: 16, paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 2 }, calloutActions: { flexDirection: 'row', alignItems: 'center', gap: 8 }, calloutIcon: { width: 44, height: 44, borderRadius: 22, borderWidth: 1, borderColor: BorderPalette.border, alignItems: 'center', justifyContent: 'center' }, viewButton: { flex: 1, minHeight: 44, borderRadius: 24, borderWidth: 1, borderColor: BorderPalette.border, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 }, directionsButton: { flex: 1, minHeight: 44, borderRadius: 24, backgroundColor: Colors.brandGreen, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 }, pin: { width: 24, height: 24, borderRadius: 12, borderWidth: 4, alignItems: 'center', justifyContent: 'center', elevation: 4, backgroundColor: 'transparent' }, pinHighlighted: { width: 32, height: 32, borderRadius: 16, borderWidth: 5 }, pinCore: { width: 8, height: 8, borderRadius: 4 }, placeName: { fontFamily: F.headingSemi, fontSize: 20, lineHeight: 26 }, placeInfo: { fontFamily: F.body, fontSize: 13, lineHeight: 18, marginTop: 3 }, action: { fontFamily: F.bodyBold, fontSize: 14 }, close: { width: 28, height: 28, alignItems: 'center', justifyContent: 'center' }
+  calloutCard: { position: 'absolute', left: 14, right: 14, borderRadius: 24, borderWidth: 1, borderColor: BorderPalette.border, paddingHorizontal: 20, paddingTop: 16, paddingBottom: 20, gap: 10, elevation: 8, shadowColor: '#000', shadowOpacity: .15, shadowRadius: 10 }, calloutHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }, offerPill: { minHeight: 34, alignSelf: 'flex-start', borderRadius: 17, borderWidth: 1, borderColor: BorderPalette.border, paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', gap: 7 }, offerText: { fontFamily: F.bodySemi, fontSize: 14, flex: 1 }, distanceRow: { flexDirection: 'row', alignItems: 'center', alignSelf: 'flex-start', gap: 6, minHeight: 24, marginBottom: 2 }, phonePill: { alignSelf: 'flex-start', minHeight: 34, borderRadius: 16, paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 2 }, calloutActions: { flexDirection: 'row', alignItems: 'center', gap: 8 }, calloutIcon: { width: 44, height: 44, borderRadius: 22, borderWidth: 1, borderColor: BorderPalette.border, alignItems: 'center', justifyContent: 'center' }, viewButton: { flex: 1, minHeight: 44, borderRadius: 24, borderWidth: 1, borderColor: BorderPalette.border, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 }, directionsButton: { flex: 1, minHeight: 44, borderRadius: 24, backgroundColor: Colors.brandGreen, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 }, pin: { width: 24, height: 24, borderRadius: 12, borderWidth: 4, alignItems: 'center', justifyContent: 'center', elevation: 4, backgroundColor: 'transparent' }, pinCore: { width: 8, height: 8, borderRadius: 4 }, placeName: { fontFamily: F.headingSemi, fontSize: 20, lineHeight: 26 }, placeInfo: { fontFamily: F.body, fontSize: 13, lineHeight: 18, marginTop: 3 }, action: { fontFamily: F.bodyBold, fontSize: 14 }, close: { width: 28, height: 28, alignItems: 'center', justifyContent: 'center' }
 });

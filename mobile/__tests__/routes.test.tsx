@@ -82,6 +82,9 @@ describe("reachable route coverage", () => {
     const view = await wrap(<MapScreen />);
     expect(view.getByTestId("couponly-map-screen")).toBeTruthy();
     expect(view.getByTestId("map-search")).toBeTruthy();
+    for (const label of ["Cafe", "Gym", "Food", "Salon"]) {
+      expect(view.queryByLabelText(`Filter ${label}`)).toBeNull();
+    }
     await waitFor(() => expect(view.getByLabelText("2 nearby places")).toBeTruthy());
     await fireEvent.press(view.getByLabelText("2 nearby places"));
     expect(StyleSheet.flatten(view.getByTestId('map-cluster-preview').props.style).bottom).toBe(64 + 34 + 12);
@@ -92,9 +95,6 @@ describe("reachable route coverage", () => {
     expect(view.getByText("Directions")).toBeTruthy();
     expect(view.getByLabelText("Save partner")).toBeTruthy();
     expect(StyleSheet.flatten(view.getByTestId('map-vendor-callout').props.style).bottom).toBe(64 + 34 + 12);
-    await fireEvent.press(view.getByLabelText("Filter Cafe"));
-    expect(view.getByLabelText("Filter Cafe").props.accessibilityState.selected).toBe(true);
-    expect(view.queryByText("No partners found")).toBeNull();
   });
 
   it("covers real deal details, save, and redemption entry", async () => {
