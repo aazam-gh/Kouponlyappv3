@@ -2,13 +2,13 @@ do $$
 declare
   old_prefix constant text := 'rea' || 'lx_';
   new_prefix constant text := 'kouponly_';
-  old_bucket constant text := 'rea' || 'lx-public-media';
-  new_bucket constant text := 'kouponly-public-media';
+  old_bucket_prefix constant text := 'rea' || 'lx-';
+  new_bucket_prefix constant text := 'kouponly-';
   item record;
   renamed text;
   function_sql text;
-  columns_sql text;
-  select_sql text;
+  old_bucket text;
+  new_bucket text;
   using_sql text;
   check_sql text;
 begin
@@ -117,14 +117,16 @@ begin
     execute function_sql;
   end loop;
 
-  if to_regclass('storage.buckets') is not null and exists (select 1 from storage.buckets where id = old_bucket) then
-    select string_agg(format('%I', column_name), ', ' order by ordinal_position),
-           string_agg(case when column_name = 'name' then format('%L', new_bucket) else format('%I', column_name) end, ', ' order by ordinal_position)
-      into columns_sql, select_sql
-    from information_schema.columns
-    where table_schema = 'storage' and table_name = 'buckets'
-      and column_name <> 'id' and is_generated = 'NEVER' and is_identity = 'NO';
-    execute format('insert into storage.buckets (id, %s) select %L, %s from storage.buckets where id = %L on conflict (id) do nothing', columns_sql, new_bucket, select_sql, old_bucket);
+  if to_regclass('storage.buckets') is not null and exists (select 1 from storage.buckets where left(id, length(old_bucket_prefix)) = old_bucket_prefix) then
+    alter table storage.objects drop constraint objects_bucketId_fkey;
+    alter table storage.objects add constraint objects_bucketId_fkey
+      foreign key (bucket_id) references storage.buckets(id) on update cascade;
+
+    for item in select id from storage.buckets where left(id, length(old_bucket_prefix)) = old_bucket_prefix loop
+      old_bucket := item.id;
+      new_bucket := new_bucket_prefix || substr(old_bucket, length(old_bucket_prefix) + 1);
+      update storage.buckets set id = new_bucket, name = new_bucket where id = old_bucket;
+    end loop;
 
     for item in
       select p.polname, t.relname as table_name, pg_get_expr(p.polqual, p.polrelid) as using_expr,
@@ -132,11 +134,11 @@ begin
       from pg_policy p join pg_class t on t.oid = p.polrelid
       join pg_namespace n on n.oid = t.relnamespace
       where n.nspname = 'storage'
-        and (position(old_bucket in coalesce(pg_get_expr(p.polqual, p.polrelid), '')) > 0
-          or position(old_bucket in coalesce(pg_get_expr(p.polwithcheck, p.polrelid), '')) > 0)
+        and (position(old_bucket_prefix in coalesce(pg_get_expr(p.polqual, p.polrelid), '')) > 0
+          or position(old_bucket_prefix in coalesce(pg_get_expr(p.polwithcheck, p.polrelid), '')) > 0)
     loop
-      using_sql := replace(item.using_expr, old_bucket, new_bucket);
-      check_sql := replace(item.check_expr, old_bucket, new_bucket);
+      using_sql := replace(item.using_expr, old_bucket_prefix, new_bucket_prefix);
+      check_sql := replace(item.check_expr, old_bucket_prefix, new_bucket_prefix);
       if item.using_expr is not null then
         execute format('alter policy %I on storage.%I using (%s)', item.polname, item.table_name, using_sql);
       end if;
@@ -145,8 +147,6 @@ begin
       end if;
     end loop;
 
-    update storage.objects set bucket_id = new_bucket where bucket_id = old_bucket;
-    delete from storage.buckets where id = old_bucket;
   end if;
 
   for item in
@@ -161,10 +161,10 @@ begin
   loop
     if item.data_type = 'jsonb' then
       execute format('update %I.%I set %I = replace(%I::text, %L, %L)::jsonb where position(%L in %I::text) > 0',
-        item.table_schema, item.table_name, item.column_name, item.column_name, old_bucket, new_bucket, old_bucket, item.column_name);
+        item.table_schema, item.table_name, item.column_name, item.column_name, old_bucket_prefix, new_bucket_prefix, old_bucket_prefix, item.column_name);
     else
       execute format('update %I.%I set %I = replace(%I::text, %L, %L) where position(%L in %I::text) > 0',
-        item.table_schema, item.table_name, item.column_name, item.column_name, old_bucket, new_bucket, old_bucket, item.column_name);
+        item.table_schema, item.table_name, item.column_name, item.column_name, old_bucket_prefix, new_bucket_prefix, old_bucket_prefix, item.column_name);
     end if;
   end loop;
 end $$;
