@@ -119,7 +119,7 @@ begin
 
   if to_regclass('storage.buckets') is not null and exists (select 1 from storage.buckets where id = old_bucket) then
     select string_agg(format('%I', column_name), ', ' order by ordinal_position),
-           string_agg(format('%I', column_name), ', ' order by ordinal_position)
+           string_agg(case when column_name = 'name' then format('%L', new_bucket) else format('%I', column_name) end, ', ' order by ordinal_position)
       into columns_sql, select_sql
     from information_schema.columns
     where table_schema = 'storage' and table_name = 'buckets'
