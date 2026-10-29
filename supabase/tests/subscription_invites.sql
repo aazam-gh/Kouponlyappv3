@@ -5,9 +5,9 @@ insert into auth.users(id,email,email_confirmed_at,raw_user_meta_data,created_at
  ('bbbbbbbb-0000-0000-0000-000000000001','benefits-bob@example.test',null,'{}',now()),
  ('cccccccc-0000-0000-0000-000000000001','benefits-carol@example.test',now(),'{}',now()),
  ('dddddddd-0000-0000-0000-000000000001','benefits-admin@example.test',now(),'{}',now());
-insert into public.realx_user_roles(user_id,role) values('dddddddd-0000-0000-0000-000000000001','admin');
-insert into public.realx_vendors(id,name,status,catalogue_deal_id,category_id) values('benefits-test-a','Test A','Active',900001,(select id from public.realx_categories where active order by id limit 1)),('benefits-test-b','Test B','Active',900002,(select id from public.realx_categories where active order by id limit 1));
-insert into public.realx_offers(id,vendor_id,title,active,redemption_mode,sort_order) values
+insert into public.kouponly_user_roles(user_id,role) values('dddddddd-0000-0000-0000-000000000001','admin');
+insert into public.kouponly_vendors(id,name,status,catalogue_deal_id,category_id) values('benefits-test-a','Test A','Active',900001,(select id from public.kouponly_categories where active order by id limit 1)),('benefits-test-b','Test B','Active',900002,(select id from public.kouponly_categories where active order by id limit 1));
+insert into public.kouponly_offers(id,vendor_id,title,active,redemption_mode,sort_order) values
  ('benefits-offer-a1','benefits-test-a','A1',true,'inStore',0),('benefits-offer-a2','benefits-test-a','A2',true,'inStore',1),('benefits-offer-b','benefits-test-b','B',true,'inStore',0);
 select set_config('request.jwt.claim.sub','dddddddd-0000-0000-0000-000000000001',true);
 select public.kouponly_admin_grant_month('aaaaaaaa-0000-0000-0000-000000000001','benefits-test-paid');

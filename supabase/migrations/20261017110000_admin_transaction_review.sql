@@ -52,8 +52,8 @@ begin
    coalesce(v.payload->>'address', v.locations->0->>'address') as "vendorAddress",
    (select jsonb_agg(jsonb_build_object('updatedAmount', a.updated_amount, 'previousAmount', a.previous_amount, 'reason', a.reason, 'changedBy', a.changed_by, 'changedAt', a.changed_at) order by a.changed_at desc,a.id desc)
     from public.kouponly_redemption_amount_audit a where a.user_id=r.user_id and a.redemption_id=r.redemption_id) as "corrections"
-  from public.redemptions r left join auth.users u on u.id=r.user_id left join public.realx_students s on s.id=r.user_id
-  left join public.realx_universities un on un.id=s.university_id left join public.realx_vendors v on v.id=r.vendor_id
+  from public.redemptions r left join auth.users u on u.id=r.user_id left join public.kouponly_students s on s.id=r.user_id
+  left join public.kouponly_universities un on un.id=s.university_id left join public.kouponly_vendors v on v.id=r.vendor_id
   where r.round_id is not null and r.consumed_at is not null and (p_vendor_id is null or r.vendor_id=p_vendor_id) and (p_user_id is null or r.user_id=p_user_id)
    and (p_from is null or r.consumed_at >= p_from::timestamptz) and (p_to is null or r.consumed_at < (p_to+1)::timestamptz)
  ), filtered as (select * from receipts where coalesce(p_search,'')='' or concat_ws(' ',vendor,offer,email,"studentName",code,id) ilike '%'||p_search||'%')
@@ -72,16 +72,16 @@ create or replace function public.couponly_vendor_dashboard_stats(p_vendor_id te
 returns jsonb language plpgsql stable security invoker set search_path = '' as $$
 declare result jsonb; month_start timestamptz := date_trunc('month', now() at time zone 'Asia/Kolkata') at time zone 'Asia/Kolkata';
 begin
-  if not (public.realx_is_admin() or public.realx_is_vendor_member(p_vendor_id)) then raise exception 'Not authorized to view this vendor dashboard' using errcode = '42501'; end if;
+  if not (public.kouponly_is_admin() or public.kouponly_is_vendor_member(p_vendor_id)) then raise exception 'Not authorized to view this vendor dashboard' using errcode = '42501'; end if;
   select jsonb_build_object(
     'totalRedemptions', count(t.id) filter (where t.status = 'completed'),
     'thisMonthRedemptions', count(t.id) filter (where t.status = 'completed' and t.created_at >= month_start),
     'totalRevenue', coalesce(sum(t.final_amount) filter (where t.status = 'completed'), 0),
     'totalDiscount', coalesce(sum(t.discount_amount) filter (where t.status = 'completed'), 0),
     'uniqueCustomers', count(distinct t.student_id) filter (where t.status = 'completed'),
-    'activeOffers', coalesce((select jsonb_array_length(case when jsonb_typeof(v.payload->'offers') = 'array' then v.payload->'offers' else '[]'::jsonb end) from public.realx_vendors v where v.id = p_vendor_id), 0),
+    'activeOffers', coalesce((select jsonb_array_length(case when jsonb_typeof(v.payload->'offers') = 'array' then v.payload->'offers' else '[]'::jsonb end) from public.kouponly_vendors v where v.id = p_vendor_id), 0),
     'pendingTransactions', count(t.id) filter (where t.status = 'pending')
-  ) into result from public.realx_transactions t where t.vendor_id = p_vendor_id;
+  ) into result from public.kouponly_transactions t where t.vendor_id = p_vendor_id;
   return result;
 end $$;
 revoke all on function public.couponly_vendor_dashboard_stats(text) from public, anon;

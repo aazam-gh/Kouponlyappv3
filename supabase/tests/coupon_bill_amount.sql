@@ -1,10 +1,10 @@
 begin;
 -- Rollback-only fixtures; safe to rehearse against deployed catalogue/role aliases.
 do $$ declare roles regclass; vendors regclass; offers regclass; categories regclass; category text; begin
-  roles:=coalesce(to_regclass('public.couponly_user_roles'),to_regclass('public.realx_user_roles'));
-  vendors:=coalesce(to_regclass('public.couponly_vendors'),to_regclass('public.realx_vendors'));
-  offers:=coalesce(to_regclass('public.couponly_offers'),to_regclass('public.realx_offers'));
-  categories:=coalesce(to_regclass('public.couponly_categories'),to_regclass('public.realx_categories'));
+  roles:=coalesce(to_regclass('public.couponly_user_roles'),to_regclass('public.kouponly_user_roles'));
+  vendors:=coalesce(to_regclass('public.couponly_vendors'),to_regclass('public.kouponly_vendors'));
+  offers:=coalesce(to_regclass('public.couponly_offers'),to_regclass('public.kouponly_offers'));
+  categories:=coalesce(to_regclass('public.couponly_categories'),to_regclass('public.kouponly_categories'));
   execute format('select id from %s where active order by id limit 1',categories) into category;
   insert into auth.users(id,email,email_confirmed_at,created_at,raw_user_meta_data) values
    ('aaaaaaaa-0000-0000-0000-000000000009','mvp-test-alice@outlook.com',now(),now(),'{}'),

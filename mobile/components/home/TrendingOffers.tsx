@@ -111,7 +111,7 @@ export default function TrendingOffers({ onVendorPress }: TrendingOffersProps) {
         if (onVendorPress) {
             onVendorPress(vendor);
         } else if (vendor.vendorId) {
-            router.push({ pathname: '/realx/vendor/[id]', params: { id: vendor.vendorId } } as any);
+            router.push({ pathname: '/kouponly/vendor/[id]', params: { id: vendor.vendorId } } as any);
         }
     };
 

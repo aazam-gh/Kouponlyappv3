@@ -101,7 +101,7 @@ export default function PromoBanner({ banners: bannersOverride, onBannerPress }:
         }
         void recordCmsClick('banner', banner.bannerId).catch(error => logger.warn('Unable to record banner click:', error));
         triggerSubtleHaptic();
-        const open = (vendorId: string) => onBannerPress ? onBannerPress({ ...banner, vendorId }) : router.push({ pathname: '/realx/vendor/[id]', params: { id: vendorId } } as any);
+        const open = (vendorId: string) => onBannerPress ? onBannerPress({ ...banner, vendorId }) : router.push({ pathname: '/kouponly/vendor/[id]', params: { id: vendorId } } as any);
         if (vendorIds.length === 1) open(vendorIds[0]);
         else {
             const options: AlertButton[] = vendorIds.map(vendorId => ({ text: banner.vendorNames?.[vendorId] || 'Vendor', onPress: () => open(vendorId) }));

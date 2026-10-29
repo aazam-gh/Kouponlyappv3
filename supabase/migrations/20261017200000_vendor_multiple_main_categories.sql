@@ -113,9 +113,9 @@ grant select on public.couponly_vendor_categories to anon, authenticated;
 grant insert, update, delete on public.couponly_vendor_categories to authenticated;
 revoke all on function public.kouponly_sync_vendor_categories() from public, anon, authenticated;
 
-create view public.realx_vendor_categories with (security_invoker = true)
+create view public.kouponly_vendor_categories with (security_invoker = true)
 as select * from public.couponly_vendor_categories;
-grant select on public.realx_vendor_categories to anon, authenticated;
+grant select on public.kouponly_vendor_categories to anon, authenticated;
 
 do $body$
 declare
@@ -124,8 +124,8 @@ declare
   new_filter text := $new$and (
         lower(btrim(coalesce(nullif(c.name, ''), nullif(v.payload->>'mainCategory', ''), v.payload->>'category'))) in ('food', 'dining', 'cafe', 'cafes')
         or exists (
-          select 1 from public.realx_vendor_categories vc
-          join public.realx_categories assigned_category on assigned_category.id = vc.category_id
+          select 1 from public.kouponly_vendor_categories vc
+          join public.kouponly_categories assigned_category on assigned_category.id = vc.category_id
           where vc.vendor_id = v.id and lower(btrim(assigned_category.name)) in ('food', 'dining', 'cafe', 'cafes')
         )
       )$new$;

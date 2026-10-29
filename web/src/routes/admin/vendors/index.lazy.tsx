@@ -89,6 +89,7 @@ function RouteComponent() {
             queryClient.invalidateQueries({ queryKey: ['vendors-page'] })
             setForm({ name: '', username: '', password: '', categoryIds: [] })
             setOpen(false)
+            void navigate({ search: { page: 1, pageSize, search: '', sort: 'latest' } })
         },
         onError: (error) => {
             console.error('Error adding vendor: ', error)
@@ -296,12 +297,14 @@ function RouteComponent() {
                         </DialogContent>
                     </Dialog>
                     <Select value={sort} onValueChange={(v) => updateFilters({ sort: v })}>
-                        <SelectTrigger aria-label="Sort vendors" className="w-[130px] h-10 bg-card">
+                        <SelectTrigger aria-label="Sort vendors" className="w-[190px] h-10 bg-card">
                             <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                            <SelectItem value="name-asc">A → Z</SelectItem>
-                            <SelectItem value="name-desc">Z → A</SelectItem>
+                            <SelectItem value="latest">Latest added</SelectItem>
+                            <SelectItem value="oldest">Oldest added</SelectItem>
+                            <SelectItem value="name-asc">Alphabetical A–Z</SelectItem>
+                            <SelectItem value="name-desc">Alphabetical Z–A</SelectItem>
                         </SelectContent>
                     </Select>
                 </div>

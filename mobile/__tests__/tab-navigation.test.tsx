@@ -1,9 +1,9 @@
 import React from 'react';
 import { render } from '@testing-library/react-native';
-import HomeAlias from '../app/realx';
-import ExploreAlias from '../app/realx/map';
-import SavedAlias from '../app/realx/saved';
-import ProfileAlias from '../app/realx/profile';
+import HomeAlias from '../app/kouponly';
+import ExploreAlias from '../app/kouponly/map';
+import SavedAlias from '../app/kouponly/saved';
+import ProfileAlias from '../app/kouponly/profile';
 import NativeTabNavigator from '../components/navigation/TabNavigator.ios';
 
 const mockTabs = jest.fn();

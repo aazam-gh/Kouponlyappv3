@@ -39,7 +39,7 @@ export default function AppLaunchPosterModal({ userId, enabled }: { userId: stri
     void (async () => {
       try {
         const { data, error } = await getSupabase()
-          .from('realx_cms_documents')
+          .from('kouponly_cms_documents')
           .select('payload')
           .eq('id', 'appLaunchPoster')
           .maybeSingle();
@@ -64,7 +64,7 @@ export default function AppLaunchPosterModal({ userId, enabled }: { userId: stri
         {poster && <Pressable accessibilityRole="button" accessibilityLabel={poster.destinationType === 'vendor' ? 'Open featured vendor' : 'Open featured website'} style={styles.posterPressable} onPress={() => {
           dismiss();
           void recordCmsClick('appLaunchPoster', 'appLaunchPoster').catch(error => console.warn('Unable to record poster click:', error)).finally(() => {
-            if (poster.destinationType === 'vendor') router.push(`/realx/vendor/${encodeURIComponent(poster.vendorId)}` as never);
+            if (poster.destinationType === 'vendor') router.push(`/kouponly/vendor/${encodeURIComponent(poster.vendorId)}` as never);
             else if (poster.externalUrl) void Linking.openURL(poster.externalUrl).catch(error => console.warn('Unable to open poster link:', error));
           });
         }}>

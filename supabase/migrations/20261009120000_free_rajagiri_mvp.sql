@@ -51,7 +51,7 @@ end $$;
 
 -- Preserve each deployed signup contract and its existing profile validation.
 do $$ declare f record; begin
-  for f in select proname from pg_proc where pronamespace='public'::regnamespace and proname in ('realx_complete_signup','couponly_complete_signup','kouponly_complete_signup') loop
+  for f in select proname from pg_proc where pronamespace='public'::regnamespace and proname in ('kouponly_complete_signup','couponly_complete_signup','kouponly_complete_signup') loop
     execute format('alter function public.%I(jsonb) rename to %I',f.proname,f.proname||'_pre_mvp');
     execute format('revoke all on function public.%I(jsonb) from public,anon,authenticated,service_role',f.proname||'_pre_mvp');
     execute format('create function public.%I(p_profile jsonb) returns jsonb language plpgsql security definer set search_path='''' as $body$ begin perform public.kouponly_ensure_free_month(auth.uid()); return public.%I(p_profile); end $body$',f.proname,f.proname||'_pre_mvp');

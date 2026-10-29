@@ -26,20 +26,20 @@ export default function OnboardingScreen() {
         flow: 'signup',
         ...(typeof params.prefillEmail === 'string' ? { email: params.prefillEmail } : {}),
     };
-    const handleCreateAccount = () => router.push({ pathname: '/realx/onboarding', params: signupParams } as any);
+    const handleCreateAccount = () => router.push({ pathname: '/kouponly/onboarding', params: signupParams } as any);
 
     const handleLogin = () => {
         router.push({
-            pathname: '/realx/onboarding',
+            pathname: '/kouponly/onboarding',
             params: { flow: 'login' },
         } as any);
     };
 
     const handleGuest = () => {
-        router.replace('/realx' as any);
+        router.replace('/kouponly' as any);
     };
 
-    if (params.intent === 'create') return <Redirect href={{ pathname: '/realx/onboarding', params: signupParams } as any} />;
+    if (params.intent === 'create') return <Redirect href={{ pathname: '/kouponly/onboarding', params: signupParams } as any} />;
 
     return (
         <View style={styles.container}>

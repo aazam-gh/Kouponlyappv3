@@ -10,6 +10,7 @@ const mockPush = jest.fn();
 const mockNotify = jest.fn();
 const mockToggleSavedOffer = jest.fn();
 let mockBenefits: any = null;
+let mockDistances = new Map();
 const mockDeal: any = {
   id: 1, vendorId: 'vendor-1', name: 'Vendor', category: 'Food', image: 'cover.jpg', logo: 'logo.jpg',
   description: 'About the vendor', externalUrl: 'vendor.example', instagramUrl: '@vendor', phoneNumber: '+91 12345',
@@ -19,7 +20,7 @@ jest.mock('expo-router', () => ({
   useLocalSearchParams: () => ({ id: '1' }), useRouter: () => ({ push: mockPush }),
   useFocusEffect: (effect: () => void) => require('react').useEffect(effect, [effect]),
 }));
-jest.mock('../lib/nearby', () => ({ useNearbyDistances: () => ({ distanceByVendor: new Map() }) }));
+jest.mock('../lib/nearby', () => ({ useNearbyDistances: () => ({ distanceByVendor: mockDistances }) }));
 jest.mock('../lib/catalogue', () => ({ useCatalogue: () => ({ status: 'cloud' }) }));
 jest.mock('../lib/auth', () => ({ useAuth: () => ({ user: null }) }));
 jest.mock('../lib/benefits', () => ({ useBenefits: () => ({ benefits: mockBenefits }), isCouponOfferUsed: (benefits: any, offerId: string, vendorId?: string | null) => Array.isArray(benefits?.usedOfferIds) ? benefits.usedOfferIds.includes(offerId) : Boolean(vendorId && benefits?.usedVendorIds?.includes(vendorId)) }));
@@ -36,6 +37,8 @@ const screen = () => render(
 beforeEach(() => {
   jest.clearAllMocks();
   mockBenefits = null;
+  mockDistances = new Map();
+  mockDeal.offers = [0, 1].map(index => ({ id: `offer-${index}`, index, title: `Promo ${index}`, description: 'Offer details', redemption: 'inStore' }));
   mockDeal.externalUrl = 'vendor.example';
   mockDeal.instagramUrl = '@vendor';
   mockDeal.vendorInformation = undefined;
@@ -49,7 +52,7 @@ afterEach(() => { cleanup(); jest.restoreAllMocks(); });
 it('shares a link to this vendor and opens normalized contact links', async () => {
   const view = await screen();
   await fireEvent.press(view.getByLabelText('Share vendor'));
-  expect(Share.share).toHaveBeenCalledWith({ message: 'Vendor on Kouponly\nkouponly://realx/vendor/vendor-1' });
+  expect(Share.share).toHaveBeenCalledWith({ message: 'Vendor on Kouponly\nhttps://kouponly.in/vendor/vendor-1' });
   await fireEvent.press(view.getByLabelText('More information about Vendor'));
   await fireEvent.press(view.getByLabelText('Vendor website'));
   expect(Linking.openURL).toHaveBeenCalledWith('https://vendor.example/');
@@ -122,4 +125,33 @@ it('tracks coupon availability independently for each offer', async () => {
   expect(view.getByTestId('redeem-offer-0')).toBeDisabled();
   expect(view.getByLabelText('Coupons remaining: 1 of 1')).toBeTruthy();
   expect(view.getByTestId('redeem-offer-1')).toBeEnabled();
+});
+
+
+it('opens the nearest branch and switches between its coupons without changing offer indexes', async () => {
+  mockDeal.locations = [
+    { id: 'vendor-1:kochi', branchId: 'kochi', name: 'Kochi', address: 'Kochi address' },
+    { id: 'vendor-1:tvm', branchId: 'tvm', name: 'TVM', address: 'TVM address' },
+  ];
+  mockDeal.offers[0].branchIds = ['kochi'];
+  mockDeal.offers[1].branchIds = ['tvm'];
+  mockDistances.set('vendor-1', { location: { locationId: 'vendor-1:tvm' }, label: '0.10 km' });
+  const view = await screen();
+  expect(view.getByText('Offers at TVM')).toBeTruthy();
+  expect(view.getByText('Promo 1')).toBeTruthy();
+  expect(view.queryByText('Promo 0')).toBeNull();
+  await fireEvent.press(view.getByTestId('redeem-offer-1'));
+  expect(mockPush).toHaveBeenCalledWith({ pathname: '/redeem/[id]', params: { id: '1', vendorId: 'vendor-1', offerIndex: '1', branch: 'vendor-1:tvm' } });
+  await fireEvent.press(view.getByLabelText('Select Kochi'));
+  expect(view.getByText('Promo 0')).toBeTruthy();
+  expect(view.queryByText('Promo 1')).toBeNull();
+});
+
+it('shows an empty state when the selected branch has no coupon', async () => {
+  mockDeal.locations = [{ id: 'kochi', name: 'Kochi' }, { id: 'tvm', name: 'TVM' }];
+  mockDeal.offers.forEach((offer: any) => { offer.branchIds = ['kochi']; });
+  const view = await screen();
+  await fireEvent.press(view.getByLabelText('Select TVM'));
+  expect(view.getByText('No coupons available at this branch. Choose another branch to see its offers.')).toBeTruthy();
+  expect(view.queryByTestId('redeem-offer-0')).toBeNull();
 });

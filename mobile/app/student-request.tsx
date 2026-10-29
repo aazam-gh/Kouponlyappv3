@@ -29,7 +29,7 @@ export default function StudentRequestScreen() {
   }, [user?.id, kind]);
   const submit = async () => {
     if (inFlight.current) return;
-    if (kind === 'restaurant' && !user) { router.push({ pathname: '/realx/onboarding', params: { flow: 'login' } }); return; }
+    if (kind === 'restaurant' && !user) { router.push({ pathname: '/kouponly/onboarding', params: { flow: 'login' } } as any); return; }
     const fingerprint = JSON.stringify(draft);
     if (attempt.current.fingerprint !== fingerprint) attempt.current = { fingerprint, id: makeMutationId() };
     inFlight.current = true; setBusy(true); setError(''); Keyboard.dismiss();

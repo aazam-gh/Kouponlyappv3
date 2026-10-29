@@ -30,13 +30,13 @@ export default function SavedScreen() {
     queryFn: async () => {
       const client = getSupabase();
       const [items, coupons, legacy] = await Promise.all([
-        client.from('realx_student_saved_items').select('id,item_id,item_type,payload').eq('student_id', user!.id).order('created_at', { ascending: false }),
+        client.from('kouponly_student_saved_items').select('id,item_id,item_type,payload').eq('student_id', user!.id).order('created_at', { ascending: false }),
         client.from('redemptions').select('redemption_id,vendor_id,offer_snapshot,consumed_at').eq('user_id', user!.id).eq('status', 'success').not('consumed_at', 'is', null).order('consumed_at', { ascending: false }).limit(100),
-        client.from('realx_transactions').select('vendor_id,vendor_id_snapshot,vendor_name,created_at').eq('student_id', user!.id).eq('transaction_type', 'offer').eq('status', 'completed').order('created_at', { ascending: false }).limit(100),
+        client.from('kouponly_transactions').select('vendor_id,vendor_id_snapshot,vendor_name,created_at').eq('student_id', user!.id).eq('transaction_type', 'offer').eq('status', 'completed').order('created_at', { ascending: false }).limit(100),
       ]);
       if (items.error) throw items.error; if (coupons.error) throw coupons.error; if (legacy.error) throw legacy.error;
       const ids = [...new Set([...(items.data || []).filter(item => item.item_type === 'offer').map(item => item.item_id), ...state.savedOffers])];
-      const offers = ids.length ? await client.from('realx_offers').select('id,vendor_id,title,image_url').in('id', ids) : { data: [], error: null };
+      const offers = ids.length ? await client.from('kouponly_offers').select('id,vendor_id,title,image_url').in('id', ids) : { data: [], error: null };
       if (offers.error) throw offers.error;
       const rawRecent = (coupons.data || []).length ? (coupons.data || []).map(row => ({
         id: String(row.redemption_id), vendorId: String(row.vendor_id), vendorName: row.offer_snapshot?.vendorName,
@@ -73,7 +73,7 @@ export default function SavedScreen() {
       (item.item_type === 'offer' && offerIds.includes(item.item_id))
     );
     if (oldItems.length) {
-      const { error } = await getSupabase().from('realx_student_saved_items').delete().eq('student_id', user!.id).in('id', oldItems.map(item => item.id));
+      const { error } = await getSupabase().from('kouponly_student_saved_items').delete().eq('student_id', user!.id).in('id', oldItems.map(item => item.id));
       if (error) { notify(error.message); return; }
     }
     if (state.saved.includes(vendor.id)) toggleSaved(vendor.id);
@@ -94,13 +94,13 @@ export default function SavedScreen() {
       contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: insets.bottom + 110 }}
       refreshing={refreshing} onRefresh={() => { void catalogue.refresh(); if (user) void saved.refetch(); void retrySync(); }}
       ListHeaderComponent={<>
-        {!user ? <ScalePressable accessibilityRole="button" onPress={() => router.push({ pathname: '/realx/onboarding', params: { flow: 'login' } })} style={[styles.notice, { backgroundColor: theme.cardMuted }]}><Text style={{ color: theme.text }}>Sign in to sync saved vendors across devices.</Text></ScalePressable> : null}
+        {!user ? <ScalePressable accessibilityRole="button" onPress={() => router.push({ pathname: '/kouponly/onboarding', params: { flow: 'login' } } as any)} style={[styles.notice, { backgroundColor: theme.cardMuted }]}><Text style={{ color: theme.text }}>Sign in to sync saved vendors across devices.</Text></ScalePressable> : null}
         {saved.isError || cloudStatus === 'offline' || cloudStatus === 'error' || catalogue.error ? <StateSurface kind="error" message="Some saved items could not be refreshed. Your available items are shown below." onRetry={() => { if (user) void saved.refetch(); void retrySync(); void catalogue.refresh(); }} /> : null}
         {!hydrated || (user && saved.isPending) ? <StateSurface kind="loading" /> : null}
       </>}
       renderSectionHeader={({ section }) => <View style={styles.section}><Text accessibilityRole="header" style={[styles.heading, { color: theme.text }]}>{section.title}</Text>{section.data.length === 0 && hydrated && !(user && saved.isPending) ? <Text style={{ color: theme.mutedText }}>{section.empty}</Text> : null}</View>}
       renderItem={({ item }) => <View style={[styles.card, { backgroundColor: theme.card, borderColor: theme.border }]}>
-        <ScalePressable accessibilityRole="button" accessibilityLabel={`Open ${item.title}`} disabled={!item.vendorId} onPress={() => router.push({ pathname: '/realx/vendor/[id]', params: { id: item.vendorId!, ...(item.offer !== undefined ? { offer: String(item.offer) } : {}) } })} style={styles.main}>
+        <ScalePressable accessibilityRole="button" accessibilityLabel={`Open ${item.title}`} disabled={!item.vendorId} onPress={() => router.push({ pathname: '/kouponly/vendor/[id]', params: { id: item.vendorId!, ...(item.offer !== undefined ? { offer: String(item.offer) } : {}) } } as any)} style={styles.main}>
           <RemoteImage source={item.image ? { uri: item.image } : null} style={styles.image} contentFit="cover" />
           <View style={{ flex: 1 }}><Text style={[styles.title, { color: theme.text }]}>{item.title}</Text><Text style={[styles.subtitle, { color: theme.mutedText }]}>{item.subtitle}</Text></View>
           {!item.remove && item.vendorId ? <Ionicons name="chevron-forward" size={18} color={theme.iconMuted} /> : null}

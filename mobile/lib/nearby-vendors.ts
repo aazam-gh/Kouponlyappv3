@@ -1,3 +1,4 @@
+import { dealAtBranch } from './vendor-branches';
 import type { Deal } from '@/lib/data';
 import { projectVendorCatalogue, type MarketplaceOfferRow, type MarketplaceVendorRow } from '@/lib/vendor-catalogue';
 import { getSupabase } from '@/lib/supabase';
@@ -6,23 +7,23 @@ export type VendorMapLocation = Deal & { vendorId: string; locationId: string; b
 
 export async function fetchVendorMapLocations(search?: string, bounds?: { south: number; north: number; west: number; east: number }): Promise<VendorMapLocation[]> {
   const client = getSupabase();
-  let vendorQuery = client.from('realx_vendors').select('*').eq('status', 'Active');
+  let vendorQuery = client.from('kouponly_vendors').select('*').eq('status', 'Active');
   if (search?.trim()) {
     const term = `%${search.trim().replace(/[%,()]/g, ' ')}%`;
     vendorQuery = vendorQuery.or(`name.ilike.${term},description.ilike.${term}`);
   }
-  let locationQuery = client.from('realx_vendor_locations').select('*').order('sort_order');
+  let locationQuery = client.from('kouponly_vendor_locations').select('*').order('sort_order');
   if (bounds) {
     locationQuery = locationQuery.gte('latitude', bounds.south).lte('latitude', bounds.north)
       .gte('longitude', bounds.west).lte('longitude', bounds.east);
   }
   const [vendors, offers, locations, categories, subcategories, assignments] = await Promise.all([
     vendorQuery,
-    client.from('realx_offers').select('*').order('sort_order'),
+    client.from('kouponly_offers').select('*').order('sort_order'),
     locationQuery,
-    client.from('realx_categories').select('*').eq('active', true),
-    client.from('realx_subcategories').select('*').order('sort_order'),
-    client.from('realx_vendor_subcategories').select('*'),
+    client.from('kouponly_categories').select('*').eq('active', true),
+    client.from('kouponly_subcategories').select('*').order('sort_order'),
+    client.from('kouponly_vendor_subcategories').select('*'),
   ]);
   for (const result of [vendors, offers, locations, categories, subcategories, assignments]) {
     if (result.error) throw new Error(result.error.message || 'Vendor locations could not be loaded.');
@@ -50,10 +51,10 @@ export async function fetchVendorMapLocations(search?: string, bounds?: { south:
       const longitude = Number(location.longitude);
       if (!Number.isFinite(latitude) || !Number.isFinite(longitude) || latitude < -90 || latitude > 90 || longitude < -180 || longitude > 180) return [];
       return [{
-        ...deal,
+        ...dealAtBranch(deal, String(location.id)),
         place: location.address || location.name || deal.place,
         branchName: location.name || undefined,
-        phoneNumber: location.phoneNumber || deal.phoneNumber,
+        phoneNumber: location.phone || location.payload?.phoneNumber || deal.phoneNumber,
         latitude,
         longitude,
         vendorId: vendor.id,

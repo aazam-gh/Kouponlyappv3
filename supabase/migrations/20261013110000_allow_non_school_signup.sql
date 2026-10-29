@@ -8,7 +8,7 @@ begin
     select proname
     from pg_proc
     where pronamespace='public'::regnamespace
-      and proname in ('realx_complete_signup','couponly_complete_signup','kouponly_complete_signup')
+      and proname in ('kouponly_complete_signup','couponly_complete_signup','kouponly_complete_signup')
       and to_regprocedure(format('public.%I(jsonb)',proname||'_pre_mvp')) is not null
   loop
     execute format(

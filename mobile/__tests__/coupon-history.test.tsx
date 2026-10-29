@@ -4,7 +4,7 @@ import { act, cleanup, render, waitFor } from '@testing-library/react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AppThemeProvider } from '../context/AppThemeContext';
 import { LocaleProvider } from '../context/LocaleContext';
-import History from '../app/realx/history';
+import History from '../app/kouponly/history';
 let mockUser:{id:string}|null={id:'alice'}; let mockAuthLoading=false; let mockFocused=true; const mockRows=jest.fn();
 jest.mock('expo-router',()=>({router:{push:jest.fn(),replace:jest.fn(),back:jest.fn()},useIsFocused:()=>mockFocused,useFocusEffect:(callback:any)=>require('react').useEffect(callback,[callback])}));
 jest.mock('../lib/auth',()=>({useAuth:()=>({user:mockUser,loading:mockAuthLoading})}));

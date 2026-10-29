@@ -1,7 +1,7 @@
 create or replace view public.kouponly_entitlement_offers as
   select id,vendor_id,title,active,starts_at,ends_at,redemption_mode,sort_order,
     offer_value,currency
-  from public.realx_offers;
+  from public.kouponly_offers;
 revoke all on public.kouponly_entitlement_offers from public,anon,authenticated;
 
 create or replace function public.kouponly_my_savings()
@@ -9,7 +9,7 @@ returns numeric language sql stable security definer set search_path='' as $$
   select
     coalesce((
       select sum(t.discount_amount)
-      from public.realx_transactions t
+      from public.kouponly_transactions t
       where t.student_id=(select auth.uid())
         and t.status='completed' and t.transaction_type='offer'
     ),0)

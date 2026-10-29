@@ -51,7 +51,7 @@ export default function VendorsScreen() {
   const loading = query ? query.isLoading : status === 'loading';
   const error = query?.error || (section === 'nearby' ? nearby.error : catalogueError || null);
   const retry = () => query ? void query.refetch() : section === 'nearby' ? void nearby.load({ askForPermission: true, force: true }) : void refresh();
-  const title = ({ nearby: 'Offers Near You', new: 'New Deals', trending: 'Trending Offers', brands: 'Brands', top: 'Top Brands' } as Record<string, string>)[section] || 'Vendors';
+  const title = ({ nearby: 'Offers Near You', new: 'New Deals', trending: 'Trending Offers', brands: 'Top Brands', top: 'Top Brands' } as Record<string, string>)[section] || 'Vendors';
   return <SafeAreaView style={{ flex: 1, backgroundColor: theme.background }} edges={['top']}>
     <AppHeader title={title} onBackPress={() => router.back()} />
     {loading && !items.length ? <StateSurface kind="loading" /> : error && !items.length ? <StateSurface kind="error" message={String(error)} onRetry={retry} /> : <FlatList
@@ -62,7 +62,7 @@ export default function VendorsScreen() {
       ListHeaderComponent={<FilterTabs selectedFilter={filter} onFilterChange={setFilter} sortMode={sortMode} onSortModeChange={setSortMode} horizontalPadding={0} />}
       ListEmptyComponent={<StateSurface kind="empty" title={section === 'nearby' && !nearby.position ? 'Enable location on Home to see nearby offers' : 'No vendors yet'} />}
       renderItem={({ item }) => {
-        const openVendor = () => router.push({ pathname: '/realx/vendor/[id]', params: { id: String(item.vendorId || item.id) } });
+        const openVendor = () => router.push({ pathname: '/kouponly/vendor/[id]', params: { id: String(item.vendorId || item.id) } } as any);
         return <View>
           {section === 'trending' ? <TrendingOfferListCard name={item.name} imageUri={item.image} logoUri={item.logo} onPress={openVendor} />
             : section === 'new' ? <NewDealListCard name={item.name} imageUri={item.image} logoUri={item.logo} onPress={openVendor} />

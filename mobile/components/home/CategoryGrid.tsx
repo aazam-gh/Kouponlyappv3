@@ -46,7 +46,7 @@ export default function CategoryGrid({ categories: propCategories, onCategoryPre
     const openCategory = (item: CategoryItem) => {
         triggerSubtleHaptic();
         if (onCategoryPress) onCategoryPress(item);
-        else router.push({ pathname: '/realx/category/[id]', params: { id: item.id, name: item.name, englishName: item.englishName || item.name } } as any);
+        else router.push({ pathname: '/kouponly/category/[id]', params: { id: item.id, name: item.name, englishName: item.englishName || item.name } } as any);
     };
 
     const renderCategory = (item: CategoryItem, itemWidth = columnWidth, labelColor = theme.text) => (

@@ -86,15 +86,15 @@ export async function applyMutation(mutation: PendingMutation): Promise<void> {
 export async function fetchCloudCatalogue(): Promise<CloudCatalogue> {
   const client = getSupabase();
   const [vendors, offers, locations, categories, subcategories, assignments, categoryAssignments, bannerDocument, layoutDocument] = await Promise.all([
-    rows(client.from('realx_vendors').select('*').eq('status', 'Active').order('sort_order'), 'Vendor catalogue load'),
-    rows(client.from('realx_offers').select('*').order('sort_order'), 'Vendor offer load'),
-    rows(client.from('realx_vendor_locations').select('*').order('sort_order'), 'Vendor locations load'),
-    rows(client.from('realx_categories').select('*').eq('active', true).order('sort_order'), 'Categories load'),
-    rows(client.from('realx_subcategories').select('*').order('sort_order'), 'Subcategories load'),
-    rows(client.from('realx_vendor_subcategories').select('*'), 'Vendor subcategories load'),
-    rows(client.from('realx_vendor_categories').select('*'), 'Vendor categories load'),
-    single<Row>(client.from('realx_cms_documents').select('payload').eq('id', 'banner').maybeSingle(), 'Hero banners load'),
-    single<Row>(client.from('realx_cms_documents').select('payload').eq('id', 'homeLayout').maybeSingle(), 'Home layout load'),
+    rows(client.from('kouponly_vendors').select('*').eq('status', 'Active').order('sort_order'), 'Vendor catalogue load'),
+    rows(client.from('kouponly_offers').select('*').order('sort_order'), 'Vendor offer load'),
+    rows(client.from('kouponly_vendor_locations').select('*').order('sort_order'), 'Vendor locations load'),
+    rows(client.from('kouponly_categories').select('*').eq('active', true).order('sort_order'), 'Categories load'),
+    rows(client.from('kouponly_subcategories').select('*').order('sort_order'), 'Subcategories load'),
+    rows(client.from('kouponly_vendor_subcategories').select('*'), 'Vendor subcategories load'),
+    rows(client.from('kouponly_vendor_categories').select('*'), 'Vendor categories load'),
+    single<Row>(client.from('kouponly_cms_documents').select('payload').eq('id', 'banner').maybeSingle(), 'Hero banners load'),
+    single<Row>(client.from('kouponly_cms_documents').select('payload').eq('id', 'homeLayout').maybeSingle(), 'Home layout load'),
   ]);
   const now = Date.now();
   const nextValidityChangeAt = offers.flatMap(offer => [offer.starts_at, offer.ends_at])

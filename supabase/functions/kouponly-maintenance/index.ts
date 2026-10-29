@@ -13,9 +13,9 @@ const json = (body: unknown, status = 200) => new Response(JSON.stringify(body),
 const errorText = (error: any) => String(error?.message || error || "Maintenance failed");
 
 async function removeDocuments(service: any, paths: string[]) {
-  const objects = paths.map((path) => path.replace(/^(?:couponly|realx)-student-documents\//, "")).filter(Boolean);
+  const objects = paths.map((path) => path.replace(/^(?:couponly|kouponly)-student-documents\//, "")).filter(Boolean);
   if (!objects.length) return true;
-  const { error } = await service.storage.from("realx-student-documents").remove(objects);
+  const { error } = await service.storage.from("kouponly-student-documents").remove(objects);
   if (error) console.warn("Could not remove one or more student ID files", errorText(error));
   return !error;
 }

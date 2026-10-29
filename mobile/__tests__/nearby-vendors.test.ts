@@ -2,12 +2,12 @@ import { locations, offers, taxonomy, vendor } from '../test/catalogue-fixture';
 
 const mockBounds = jest.fn();
 const rows: Record<string, unknown[]> = {
-  realx_vendors: [vendor],
-  realx_offers: offers,
-  realx_vendor_locations: [{ ...locations[0], latitude: 9.9819, longitude: 76.2822 }],
-  realx_categories: taxonomy.categories,
-  realx_subcategories: taxonomy.subcategories,
-  realx_vendor_subcategories: taxonomy.assignments,
+  kouponly_vendors: [vendor],
+  kouponly_offers: offers,
+  kouponly_vendor_locations: [{ ...locations[0], latitude: 9.9819, longitude: 76.2822 }],
+  kouponly_categories: taxonomy.categories,
+  kouponly_subcategories: taxonomy.subcategories,
+  kouponly_vendor_subcategories: taxonomy.assignments,
 };
 
 jest.doMock('../lib/supabase', () => ({

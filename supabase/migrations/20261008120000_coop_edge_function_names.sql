@@ -10,8 +10,8 @@ begin
     select jobid
     from cron.job
     where jobname in (
-      'realx-daily-maintenance',
-      'realx-notification-receipts',
+      'kouponly-daily-maintenance',
+      'kouponly-notification-receipts',
       'coop-daily-maintenance',
       'coop-notification-receipts'
     )

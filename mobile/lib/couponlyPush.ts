@@ -17,9 +17,9 @@ Notifications.setNotificationHandler({
 });
 
 const TOKEN_KEY = 'couponly.expoPushToken';
-const LEGACY_TOKEN_KEY = 'realx.expoPushToken';
+const LEGACY_TOKEN_KEY = 'kouponly.expoPushToken';
 const SYNC_KEY = 'couponly.expoPushTokenSync';
-const LEGACY_SYNC_KEY = 'realx.expoPushTokenSync';
+const LEGACY_SYNC_KEY = 'kouponly.expoPushTokenSync';
 const PERMISSION_PROMPTED_KEY = 'couponly.notificationPermissionPrompted';
 const syncsInFlight = new Map<string, Promise<string | null>>();
 
@@ -28,7 +28,7 @@ function projectId() {
 }
 
 async function isCouponlyStudent(userId: string) {
-  const { data, error } = await getSupabase().from('realx_students').select('id').eq('id', userId).maybeSingle();
+  const { data, error } = await getSupabase().from('kouponly_students').select('id').eq('id', userId).maybeSingle();
   if (error) throw error;
   return Boolean(data);
 }
@@ -81,8 +81,8 @@ async function performCouponlyPushTokenSync(userId: string, requestPermission: b
 export async function setupCouponlyNotificationChannels() {
   if (Platform.OS !== 'android') return;
   await Promise.all([
-    Notifications.setNotificationChannelAsync('reelx_general_v2', { name: 'General', importance: Notifications.AndroidImportance.HIGH, sound: null }),
-    Notifications.setNotificationChannelAsync('reelx_redemptions_v2', { name: 'Redemptions', importance: Notifications.AndroidImportance.HIGH, sound: null }),
+    Notifications.setNotificationChannelAsync('kouponly_general_v2', { name: 'General', importance: Notifications.AndroidImportance.HIGH, sound: null }),
+    Notifications.setNotificationChannelAsync('kouponly_redemptions_v2', { name: 'Redemptions', importance: Notifications.AndroidImportance.HIGH, sound: null }),
   ]);
 }
 

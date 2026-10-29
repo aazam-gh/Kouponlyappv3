@@ -12,9 +12,10 @@ import { useAppTheme } from '@/context/AppThemeContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNearbyDistances } from '@/lib/nearby';
 import { isCouponOfferUsed, useBenefits } from '@/lib/benefits';
+import { dealAtBranch } from '@/lib/vendor-branches';
 import { sortVendors, type VendorSortMode } from '@/lib/vendor-sorting';
 
-export default function RealXCategoryScreen() {
+export default function KouponlyCategoryScreen() {
   const { id, name, englishName } = useLocalSearchParams<{ id: string; name?: string; englishName?: string }>();
   const { t } = useTranslation();
   const { isDark, theme } = useAppTheme();
@@ -36,7 +37,7 @@ export default function RealXCategoryScreen() {
     ...(category?.subcategories.filter(item => item.id).map(item => ({ id: item.id!, name: item.label, icon: item.image || '' })) || []),
   ], [category, t]);
   const rows = React.useMemo(() => {
-    const matching = deals.filter(deal => {
+    const matching = deals.map(deal => dealAtBranch(deal, distanceByVendor.get(String(deal.vendorId || deal.id))?.location.locationId)).filter(deal => {
       if (deal.categoryId !== category?.id && !deal.categoryIds?.includes(String(category?.id || ''))) return false;
       if (filter === 'top' && !(deal.trend > 0)) return false;
       if (subcategory !== 'all' && !deal.subcategoryIds?.includes(subcategory)) return false;
@@ -75,7 +76,8 @@ export default function RealXCategoryScreen() {
         imageUri={item.image}
         logoUri={item.logo}
         imageHeight={Math.round(cardWidth * 0.38)}
-        logoBottom={-35.6}
+        logoBottom={-40}
+        logoSize={80}
         distance={distanceByVendor.get(String(item.vendorId || item.id))?.label}
         xcardEnabled={item.xcard}
         badgeLabel={item.cardLabel}
@@ -83,9 +85,9 @@ export default function RealXCategoryScreen() {
         distanceOnImage
         overlapLogo
         titleCaseName
-        contentStyle={{ minHeight: 48, justifyContent: 'center', paddingTop: 10, paddingBottom: 10 }}
+        contentStyle={{ minHeight: 56, justifyContent: 'center', paddingVertical: 6, paddingRight: 100 }}
         style={{ width: cardWidth, marginHorizontal: 20, marginBottom: 14, borderWidth: 1, borderColor: theme.border, borderRadius: 20, overflow: 'hidden' }}
-        onPress={() => router.push({ pathname: '/realx/vendor/[id]', params: { id: String(item.vendorId || item.id) } } as any)}
+        onPress={() => router.push({ pathname: '/kouponly/vendor/[id]', params: { id: String(item.vendorId || item.id) } } as any)}
       />}
       ListEmptyComponent={status === 'loading' ? <ActivityIndicator color={theme.brand} style={{ marginTop: 30 }} /> : <View style={styles.empty}><Text style={[styles.emptyTitle, { color: theme.text }]}>{t('state_filtered_empty_title')}</Text><Text style={{ color: theme.mutedText }}>{t('state_filtered_empty_message')}</Text></View>}
       onRefresh={() => void refresh()}

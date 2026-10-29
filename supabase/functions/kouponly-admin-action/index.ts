@@ -198,9 +198,9 @@ Deno.serve(async (request) => {
           const {error:authError}=await service.auth.admin.deleteUser(uid);
           if(authError&&authError.status!==404)throw authError;
           try{
-            const {data:objects}=await service.storage.from("realx-public-media").list(`vendors/${uid}/gallery`,{limit:1000});
+            const {data:objects}=await service.storage.from("kouponly-public-media").list(`vendors/${uid}/gallery`,{limit:1000});
             const files=(objects||[]).filter((item:any)=>item.id).map((item:any)=>`vendors/${uid}/gallery/${item.name}`);
-            if(files.length)await service.storage.from("realx-public-media").remove(files);
+            if(files.length)await service.storage.from("kouponly-public-media").remove(files);
           }catch(storageError){console.warn("Vendor gallery cleanup failed",String((storageError as any)?.message||storageError));}
         }
         await insertAudit(service,user.id,action,action==="deleteStudentUser"?"student":"vendor",uid);
@@ -266,7 +266,7 @@ Deno.serve(async (request) => {
           await service.from("couponly_verification_requests").update({student_id:uid}).eq("id",id);
         } else {
           const {data:req}=await service.from("couponly_verification_requests").select("id_image_path").eq("id",id).maybeSingle();
-          if(req?.id_image_path)await service.storage.from("realx-student-documents").remove([String(req.id_image_path).replace(/^(?:couponly|realx)-student-documents\//,"")]);
+          if(req?.id_image_path)await service.storage.from("kouponly-student-documents").remove([String(req.id_image_path).replace(/^(?:couponly|kouponly)-student-documents\//,"")]);
           await service.from("couponly_verification_requests").update({id_image_path:null}).eq("id",id);
         }
         await insertAudit(service,user.id,action,"verification_request",id,{uid,decision});
@@ -286,9 +286,9 @@ Deno.serve(async (request) => {
         const cursorMillis=Number(data.cursorMillis||0);
         if(Number.isFinite(cursorMillis)&&cursorMillis>0)q=q.gt("submitted_at",new Date(cursorMillis).toISOString());
         const {data:rows,error}=await q;if(error)throw error;
-        const bucket=service.storage.from("realx-student-documents");
+        const bucket=service.storage.from("kouponly-student-documents");
         const requests=await Promise.all((rows||[]).map(async(row:any)=>{
-          const path=String(row.id_image_path||"").replace(/^(?:couponly|realx)-student-documents\//,"");
+          const path=String(row.id_image_path||"").replace(/^(?:couponly|kouponly)-student-documents\//,"");
           const signed=path?await bucket.createSignedUrl(path,3600):{data:null};
           return {requestId:row.id,email:row.email,submittedAt:row.submitted_at,idImageUrl:signed.data?.signedUrl||null};
         }));
@@ -300,7 +300,7 @@ Deno.serve(async (request) => {
         const id=String(data.verificationRequestId||"");
         const {data:req,error}=await service.from("couponly_verification_requests").select("id_image_path").eq("id",id).maybeSingle();
         if(error)throw error;if(!req)fail("Verification request not found",404);
-        if(req.id_image_path)await service.storage.from("realx-student-documents").remove([String(req.id_image_path).replace(/^(?:couponly|realx)-student-documents\//,"")]);
+        if(req.id_image_path)await service.storage.from("kouponly-student-documents").remove([String(req.id_image_path).replace(/^(?:couponly|kouponly)-student-documents\//,"")]);
         const {error:deleteError}=await service.from("couponly_verification_requests").delete().eq("id",id);
         if(deleteError)throw deleteError;
         await insertAudit(service,user.id,action,"verification_request",id);
@@ -322,7 +322,7 @@ Deno.serve(async (request) => {
         const {data:quota,error:quotaError}=await service.rpc("couponly_consume_notification_quota",{p_date_key:dateKey,p_daily_limit:2});
         if(quotaError)throw quotaError;
         if(!quota)fail("Daily notification limit reached (2 per Qatar day).",429);
-        const destination=vendorId?{vendorId,path:`/realx/vendor/${encodeURIComponent(vendorId)}`}:{path:"/notifications"};
+        const destination=vendorId?{vendorId,path:`/kouponly/vendor/${encodeURIComponent(vendorId)}`}:{path:"/notifications"};
         const {data:record,error}=await service.from("couponly_notifications").insert({title,body:message,data:{imageUrl:imageUrl||null,topic,...destination},status:"queued",sent_by:user.id,date_key:dateKey}).select("id").single();
         if(error)throw error;
         let sentCount=0,failedCount=0,invalidTokenCount=0;
@@ -335,7 +335,7 @@ Deno.serve(async (request) => {
             const push=await fetch("https://exp.host/--/api/v2/push/send",{
               method:"POST",headers:{"Content-Type":"application/json",Accept:"application/json"},
               signal:AbortSignal.timeout(15000),
-              body:JSON.stringify(chunk.map((item:any)=>({to:item.token,title,body:message,priority:"high",channelId:"reelx_general_v2",...(imageUrl?{richContent:{image:imageUrl}}:{}),data:{type:"admin_broadcast",campaignId:record.id,imageUrl:imageUrl||null,...destination}})))
+              body:JSON.stringify(chunk.map((item:any)=>({to:item.token,title,body:message,priority:"high",channelId:"kouponly_general_v2",...(imageUrl?{richContent:{image:imageUrl}}:{}),data:{type:"admin_broadcast",campaignId:record.id,imageUrl:imageUrl||null,...destination}})))
             });
             payload=await push.json();
             if(!push.ok)payload={errors:payload.errors||[{message:`Expo rejected the request (${push.status})`}]};

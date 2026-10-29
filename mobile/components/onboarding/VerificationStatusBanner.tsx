@@ -29,7 +29,7 @@ export default function VerificationStatusBanner() {
   }, []));
 
   if (!pending) return null;
-  return <ScalePressable accessibilityRole="button" accessibilityHint="Open verification status" style={[styles.banner, { backgroundColor: theme.brandSoft, borderColor: BorderPalette.border }]} onPress={() => router.push({ pathname: '/realx/onboarding', params: { flow: 'verification', step: 'status', requestId: pending.requestId, statusToken: pending.statusToken } } as any)}>
+  return <ScalePressable accessibilityRole="button" accessibilityHint="Open verification status" style={[styles.banner, { backgroundColor: theme.brandSoft, borderColor: BorderPalette.border }]} onPress={() => router.push({ pathname: '/kouponly/onboarding', params: { flow: 'verification', step: 'status', requestId: pending.requestId, statusToken: pending.statusToken } } as any)}>
     <Clock3 size={22} color={theme.brand} /><View style={styles.copy}><Text style={[styles.title, { color: theme.brandText }]}>{t('onboarding_pending_banner_title')}</Text><Text style={[styles.message, { color: theme.mutedText }]}>{t('onboarding_pending_banner_message')}</Text></View><ChevronRight size={20} color={theme.brand} />
   </ScalePressable>;
 }

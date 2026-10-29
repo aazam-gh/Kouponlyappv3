@@ -61,8 +61,8 @@ function AddBrandPage() {
     }
 
     const handleSave = async () => {
-        if (!brand.logoUrl && !brand.vendorId) {
-            toast.error('Please upload a logo')
+        if (!brand.vendorId) {
+            toast.error('Choose a vendor for this Top Brand.')
             return
         }
 

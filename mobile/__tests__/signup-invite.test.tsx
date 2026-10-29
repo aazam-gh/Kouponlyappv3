@@ -1,7 +1,7 @@
 import React from 'react';
 import { Alert, Linking } from 'react-native';
 import { cleanup, fireEvent, render, waitFor } from '@testing-library/react-native';
-import Signup from '../app/realx/onboarding';
+import Signup from '../app/kouponly/onboarding';
 const mockSend=jest.fn(async(...args:any[])=>{void args;});
 const mockComplete=jest.fn(async(...args:unknown[])=>{void args;return {success:true};}); const mockClaim=jest.fn(); const mockRefresh=jest.fn(async()=>{});
 jest.mock('react-i18next',()=>({useTranslation:()=>({t:(key:string)=>key})}));

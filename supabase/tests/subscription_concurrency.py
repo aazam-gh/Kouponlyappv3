@@ -22,8 +22,8 @@ def rpc(uid, statement):
 alice, bob = str(uuid.uuid4()), str(uuid.uuid4())
 setup = f"""
 insert into auth.users(id,email,created_at,email_confirmed_at) values ('{alice}','concurrent-{alice}@example.test',now(),now()),('{bob}','concurrent-{bob}@example.test',now(),now());
-insert into realx_vendors(id,name,status,catalogue_deal_id,category_id) values ('concurrent-{alice}','Concurrency vendor','Active',900010,(select id from realx_categories where active limit 1));
-insert into realx_offers(id,vendor_id,title,active,redemption_mode,sort_order) values ('concurrent-{alice}','concurrent-{alice}','Test coupon',true,'inStore',0);
+insert into kouponly_vendors(id,name,status,catalogue_deal_id,category_id) values ('concurrent-{alice}','Concurrency vendor','Active',900010,(select id from kouponly_categories where active limit 1));
+insert into kouponly_offers(id,vendor_id,title,active,redemption_mode,sort_order) values ('concurrent-{alice}','concurrent-{alice}','Test coupon',true,'inStore',0);
 """
 sql(setup)
 try:
@@ -74,4 +74,4 @@ try:
 
 finally:
     # Only the exact fixture accounts/vendors created by this script are removed.
-    sql(f"delete from auth.users where id in ('{alice}','{bob}'); delete from realx_offers where id='concurrent-{alice}'; delete from realx_vendors where id='concurrent-{alice}'; delete from kouponly_vouchers where label='Concurrency' and code_digest=encode(extensions.digest('{code if 'code' in locals() else ''}','sha256'),'hex');")
+    sql(f"delete from auth.users where id in ('{alice}','{bob}'); delete from kouponly_offers where id='concurrent-{alice}'; delete from kouponly_vendors where id='concurrent-{alice}'; delete from kouponly_vouchers where label='Concurrency' and code_digest=encode(extensions.digest('{code if 'code' in locals() else ''}','sha256'),'hex');")

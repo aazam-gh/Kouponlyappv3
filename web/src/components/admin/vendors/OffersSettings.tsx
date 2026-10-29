@@ -10,6 +10,7 @@ import { restrictToParentElement } from '@dnd-kit/modifiers'
 import { CSS } from '@dnd-kit/utilities'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Checkbox } from '@/components/ui/checkbox'
 import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { vendorQueryOptions, type EmbeddedOffer } from '@/queries'
@@ -175,6 +176,7 @@ export function OffersSettings({ vendorId }: OffersSettingsProps) {
                 ...(editingIndex !== null ? offers[editingIndex] : {}),
                 id: data.id,
                 titleEn: data.titleEn.trim(),
+                branchIds: data.branchIds || [],
                 descriptionEn: data.descriptionEn,
                 badgeLabel: data.badgeLabel?.trim() || undefined,
                 discountType: data.discountType || 'percentage',
@@ -310,6 +312,15 @@ export function OffersSettings({ vendorId }: OffersSettingsProps) {
                             </div>
                         </div>
 
+                        <div className="space-y-3 rounded-xl border p-4">
+                            <Label>Valid branches</Label>
+                            <p className="text-sm text-muted-foreground">Leave all unchecked for all branches, or choose where this coupon is valid.</p>
+                            {(vendor?.locations || []).map(branch => <Label key={branch.id} className="flex min-h-12 cursor-pointer items-center gap-3 rounded-lg border p-3">
+                                <Checkbox className="size-6" checked={formData.branchIds?.includes(branch.id) || false} onCheckedChange={checked => setFormData(prev => ({ ...prev, branchIds: checked === true ? [...(prev.branchIds || []), branch.id] : (prev.branchIds || []).filter(id => id !== branch.id) }))} />
+                                <span>{branch.name || branch.address || branch.id}</span>
+                            </Label>)}
+                            {!vendor?.locations?.length && <p className="text-sm text-muted-foreground">Add branch locations before assigning branch-specific coupons.</p>}
+                        </div>
                         {/* Descriptions */}
                         <div className="space-y-4">
                             <div className="space-y-2">

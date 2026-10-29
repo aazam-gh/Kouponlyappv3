@@ -320,7 +320,7 @@
   "state_offline_message": "Reconnect to the internet and try again.",
   "state_not_found_title": "We couldn’t find that",
   "state_not_found_message": "It may no longer be available.",
-  "realx": "Kouponly",
+  "kouponly": "Kouponly",
   "explore": "Explore",
   "rewards": "Rewards",
   "student_life_unlocked": "Your student life, unlocked",

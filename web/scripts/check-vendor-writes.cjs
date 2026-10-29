@@ -44,5 +44,13 @@ compiled._compile(ts.transpileModule(fs.readFileSync(source,'utf8'),{compilerOpt
   await assert.rejects(updateVendor('vendor-check',{newest:-1}),/non-negative whole numbers/);
   await assert.rejects(updateVendor('vendor-check',{sortOrder:0.5}),/non-negative whole numbers/);
   await assert.rejects(updateVendor('vendor-check',{cardLabel:'x'.repeat(33)}),/32 characters/);
+  const branches = [{id:'kochi',latitude:9.93,longitude:76.27},{id:'tvm',latitude:8.52,longitude:76.94}];
+  await updateVendor('vendor-check',{locations:branches,offers:[{id:'branch-offer',branchIds:['kochi']}]});
+  assert.deepEqual(written.payload.offers[0].branchIds,['kochi']);
+  await assert.rejects(updateVendor('vendor-check',{locations:branches,offers:[{branchIds:['foreign'] }]}),/must belong/);
+  await assert.rejects(updateVendor('vendor-check',{locations:branches,offers:[{branchIds:'kochi'}]}),/must belong/);
+  await assert.rejects(updateVendor('vendor-check',{locations:[{id:'kochi',latitude:91,longitude:76}]}),/valid latitude/);
+  await assert.rejects(updateVendor('vendor-check',{locations:[{id:'kochi',latitude:9}]}),/together/);
+  await assert.rejects(updateVendor('vendor-check',{locations:[{id:'same'},{id:'same'}]}),/unique ID/);
   console.log('Admin Supabase vendor writes, empty-field clearing, and field validation: passed');
 })().catch(error=>{console.error(error.message);process.exitCode=1;});

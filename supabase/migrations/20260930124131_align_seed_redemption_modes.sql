@@ -1,6 +1,6 @@
 -- Preserve the live mobile app's existing online destinations for non-local
 -- catalog categories while keeping vendor accounts themselves in-store-only.
-update public.realx_vendors
+update public.kouponly_vendors
 set payload=jsonb_set(
   payload,
   '{offers,0,redemptionMode}',

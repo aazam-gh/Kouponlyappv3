@@ -65,7 +65,7 @@ function AppNavigation({ firstRunStatus }: { firstRunStatus: Exclude<FirstRunSta
     if(firstRunStatus!=='new'||firstRunRedirected.current)return;
     firstRunRedirected.current=true;
     if(routeSegments.includes('welcome'))return;
-    router.replace('/realx/welcome' as any);
+    router.replace('/kouponly/welcome' as any);
   },[firstRunStatus,segments]);
   React.useEffect(()=>{void setupCouponlyNotificationChannels().catch(()=>{});},[]);
   React.useEffect(()=>{
@@ -82,12 +82,12 @@ function AppNavigation({ firstRunStatus }: { firstRunStatus: Exclude<FirstRunSta
       const data=response.notification.request.content.data;
       const vendorId=data?.vendorId;
       if(typeof vendorId==='string'&&/^[A-Za-z0-9_-]{1,160}$/.test(vendorId)){
-        router.push({pathname:'/realx/vendor/[id]',params:{id:vendorId}} as any);
+        router.push({pathname:'/kouponly/vendor/[id]',params:{id:vendorId}} as any);
         void Notifications.clearLastNotificationResponseAsync().catch(()=>{});
         return;
       }
       const path=data?.path;
-      const supported=new Set(['/realx','/realx/history','/realx/map','/realx/opportunities','/realx/saved','/realx/search','/notifications']);
+      const supported=new Set(['/kouponly','/kouponly/history','/kouponly/map','/kouponly/opportunities','/kouponly/saved','/kouponly/search','/notifications']);
       if(typeof path==='string'&&supported.has(path)){
         router.push(path as any);
         void Notifications.clearLastNotificationResponseAsync().catch(()=>{});
@@ -97,7 +97,7 @@ function AppNavigation({ firstRunStatus }: { firstRunStatus: Exclude<FirstRunSta
     const subscription=Notifications.addNotificationResponseReceivedListener(openNotification);
     return ()=>subscription.remove();
   },[]);
-  return <><ReducedMotionConfig mode={theme.motion.reduceMotion ? ReduceMotion.Always : ReduceMotion.System}/><StatusBar style={theme.dark?"light":"dark"}/><Stack initialRouteName={firstRunStatus==='new'?'realx/welcome':'(tabs)'} screenOptions={{headerShown:false,contentStyle:{backgroundColor:theme.colors.paper},animation:theme.motion.reduceMotion?"fade":"default"}}/><AppLaunchPosterModal userId={session?.user.id??null} enabled={isHomeRoute}/><Toast/></>;
+  return <><ReducedMotionConfig mode={theme.motion.reduceMotion ? ReduceMotion.Always : ReduceMotion.System}/><StatusBar style={theme.dark?"light":"dark"}/><Stack initialRouteName={firstRunStatus==='new'?'kouponly/welcome':'(tabs)'} screenOptions={{headerShown:false,contentStyle:{backgroundColor:theme.colors.paper},animation:theme.motion.reduceMotion?"fade":"default"}}/><AppLaunchPosterModal userId={session?.user.id??null} enabled={isHomeRoute}/><Toast/></>;
 }
 
 export default function RootLayout(){

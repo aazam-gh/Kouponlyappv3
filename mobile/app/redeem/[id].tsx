@@ -12,6 +12,7 @@ import { useAppTheme } from '../../context/AppThemeContext';
 import { Typography } from '../../constants/Typography';
 import { useAuth } from '../../lib/auth';
 import { useCatalogue } from '../../lib/catalogue';
+import { dealAtBranch, offerBranchLabel } from '../../lib/vendor-branches';
 import { dealById } from '../../lib/data';
 import { benefitsError, isCouponOfferUsed, makeMutationId, redeemSubscriptionCoupon, useBenefits } from '../../lib/benefits';
 import { usePostHog } from 'posthog-react-native';
@@ -24,10 +25,12 @@ import { syncCouponlyPushToken } from '@/lib/couponlyPush';
 
 export default function RedeemScreen() {
   const posthog = usePostHog();
-  const { id, offerIndex } = useLocalSearchParams<{ id: string; offerIndex?: string }>();
+  const { id, offerIndex, branch } = useLocalSearchParams<{ id: string; offerIndex?: string; branch?: string }>();
   const router = useRouter(); const { theme } = useAppTheme(); const styles = makeStyles(theme); const insets = useSafeAreaInsets(); const { user } = useAuth();
   const { status: catalogueStatus } = useCatalogue(); const { benefits, refresh, loading, error: benefitsFailure } = useBenefits(); const { retrySync } = useStore();
-  const deal = dealById(id); const offer = deal?.offers?.find(item => item.index === Number(offerIndex ?? 0)) ?? deal?.offers?.[0];
+  const vendorDeal = dealById(id);
+  const deal = vendorDeal ? dealAtBranch(vendorDeal, branch) : undefined;
+  const offer = deal?.offers?.find(item => item.index === Number(offerIndex ?? 0));
   const [busy, setBusy] = useState(false); const [error, setError] = useState(''); const [receipt, setReceipt] = useState<Awaited<ReturnType<typeof redeemSubscriptionCoupon>> | null>(null);
   const [freeItemAmount, setFreeItemAmount] = useState('');
   const [billAmount, setBillAmount] = useState(''); const [billError, setBillError] = useState('');
@@ -55,7 +58,7 @@ export default function RedeemScreen() {
     } catch (e) { if (currentContext.current === context) { const message = e instanceof Error ? e.message : 'Unable to confirm this coupon. Try again.'; setError(message); if (message === benefitsError('ROUND_CHANGED')) request.current = { round: '', mutation: '', billAmount: null }; await refresh().catch(() => {}); } }
     finally { if (currentContext.current === context) { setBusy(false); inFlight.current = false; } }
   };
-  const goBack = () => router.canGoBack() ? router.back() : router.replace('/realx' as any);
+  const goBack = () => router.canGoBack() ? router.back() : router.replace('/kouponly' as any);
   return <View style={[styles.screen, {paddingTop:insets.top}]}>
     <ProfileSprites />
     <AppHeader title={receipt ? '' : 'Redeem coupon'} onBackPress={goBack} />
@@ -73,13 +76,14 @@ export default function RedeemScreen() {
           <View style={styles.timestamp}><Ionicons name="time-outline" size={18} color={theme.mutedText} /><Text selectable accessibilityLabel="Redeemed at" style={styles.body}>{new Date(receipt.consumedAt).toLocaleString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Kolkata' })} IST</Text></View>
         </View>
         <Action label="Done" onPress={goBack} />
-      </> : !user ? <><Text style={styles.body}>Sign in to redeem a free coupon.</Text><Action label="Sign in" onPress={() => router.push({ pathname: '/realx/onboarding', params: { flow: 'login' } } as any)} /></>
+      </> : !user ? <><Text style={styles.body}>Sign in to redeem a free coupon.</Text><Action label="Sign in" onPress={() => router.push({ pathname: '/kouponly/onboarding', params: { flow: 'login' } } as any)} /></>
       : !deal || !offer ? <Text style={styles.body}>{catalogueStatus === 'loading' ? 'Loading offer…' : 'This offer is unavailable.'}</Text>
       : <>
         <Vendor name={deal.name} logo={deal.logo} />
         <View style={styles.offerPanel}>
           <View style={styles.mode}><Ionicons name="storefront-outline" size={16} color={theme.brand} /><Text style={styles.eyebrow}>IN-STORE COUPON</Text></View>
           <Text style={styles.offerTitle}>{offer.title.toUpperCase()}</Text>
+          <Text style={styles.body}>Valid at: {offerBranchLabel(offer, deal.locations)}</Text>
           {['fixed_price', 'combo'].includes(offer.discountType || '') ? <Text style={styles.body}>Kouponly Exclusive Price: {offer.currency || 'INR'} {offer.discountValue}</Text> : null}
           {offer.description ? <Text style={styles.body}>{offer.description}</Text> : null}
           {offer.redemptionInstructions ? <Text style={styles.body}>{offer.redemptionInstructions}</Text> : null}

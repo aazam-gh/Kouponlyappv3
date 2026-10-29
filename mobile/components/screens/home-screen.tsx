@@ -65,11 +65,11 @@ export default function HomeScreen() {
     const query = searchQuery.trim();
     if (!query) return;
     triggerSubtleHaptic();
-    router.push({ pathname: '/realx/search', params: { q: query } });
+    router.push({ pathname: '/kouponly/search', params: { q: query } } as any);
   };
   const openVendor = (vendorId?: string) => {
     Keyboard.dismiss();
-    if (vendorId) router.push({ pathname: '/realx/vendor/[id]', params: { id: vendorId } });
+    if (vendorId) router.push({ pathname: '/kouponly/vendor/[id]', params: { id: vendorId } } as any);
   };
 
   const sections: Record<HomeSectionId, React.ReactNode> = {

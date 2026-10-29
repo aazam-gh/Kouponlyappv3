@@ -1,371 +1,81 @@
-import { getCmsDocument, saveCmsDocument } from '@/lib/admin-cms'
-import { useState, useEffect, useRef } from 'react'
-import { createLazyFileRoute, useNavigate } from '@tanstack/react-router'
-import {
-    ArrowLeft,
-    ArrowUp,
-    ArrowDown,
-    Image as ImageIcon,
-    Plus,
-    Trash2,
-    Loader2,
-    Type
-} from 'lucide-react'
-import { Button } from '@/components/ui/button'
+import { createLazyFileRoute } from '@tanstack/react-router'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useState } from 'react'
+import { ArrowUp, ArrowDown, Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
-import { cn } from '@/lib/utils'
-import { Link } from '@tanstack/react-router'
+import { getCmsDocument, saveCmsDocument } from '@/lib/admin-cms'
+import { uploadImage } from '@/lib/upload'
+import { getVendorList } from '@/lib/vendorList'
+import { Button } from '@/components/ui/button'
+import { Checkbox } from '@/components/ui/checkbox'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import type { BrandItem } from '@/types/brands'
-import { getVendorList, type VendorOption } from '@/lib/vendorList'
-import { uploadImage, deletePublicMedia } from '@/lib/upload'
 
-export const Route = createLazyFileRoute('/admin/cms/brands/')({
-    component: BrandsManagement,
-})
+export const Route = createLazyFileRoute('/admin/cms/brands/')({ component: TopBrands })
 
-function BrandsManagement() {
-    const navigate = useNavigate()
-    const [brands, setBrands] = useState<BrandItem[]>([])
-    const [lastUpdated, setLastUpdated] = useState<string>('')
-    const [loading, setLoading] = useState(true)
-    const [uploading, setUploading] = useState<string | null>(null)
-    const [activeBrandId, setActiveBrandId] = useState<string | null>(null)
-    const [pendingDeletions, setPendingDeletions] = useState<string[]>([])
-    const [vendors, setVendors] = useState<VendorOption[]>([])
-
-    const fileInputRef = useRef<HTMLInputElement>(null)
-
-    useEffect(() => {
-        fetchData()
-        getVendorList().then(setVendors).catch(err => console.error('Error fetching vendor list:', err))
-    }, [])
-
-    const fetchData = async () => {
-        setLoading(true)
+function TopBrands() {
+    const queryClient = useQueryClient()
+    const [draft, setDraft] = useState<BrandItem[]>()
+    const [search, setSearch] = useState('')
+    const [uploading, setUploading] = useState(false)
+    const { data, isPending, error } = useQuery({
+        queryKey: ['admin-top-brands'],
+        queryFn: async () => {
+            const [document, vendors] = await Promise.all([getCmsDocument('brand'), getVendorList()])
+            return { brands: (document?.brands || []) as BrandItem[], vendors }
+        },
+    })
+    const brands = draft ?? data?.brands ?? []
+    const selected = brands.filter(brand => brand.isActive && brand.vendorId)
+    const save = useMutation({
+        mutationFn: () => saveCmsDocument('brand', { brands, lastUpdated: new Date().toISOString() }, { merge: true }),
+        onSuccess: async () => {
+            await queryClient.invalidateQueries({ queryKey: ['admin-top-brands'] })
+            setDraft(undefined)
+            toast.success('Top Brands saved')
+        },
+        onError: error => toast.error(error instanceof Error ? error.message : 'Could not save Top Brands'),
+    })
+    const changeLogo = async (brandId: string, file: File) => {
+        setUploading(true)
         try {
-            const cmsSnap = await getCmsDocument('brand')
-
-            if (cmsSnap) {
-                const data = cmsSnap
-                setBrands(data.brands || [])
-                setLastUpdated(data.lastUpdated || '')
-            } else {
-                setBrands([])
-                setLastUpdated('')
-            }
+            const logoUrl = await uploadImage(`brands/${brandId}/${Date.now()}_${file.name}`, file, { maxWidth: 512, quality: 0.8 })
+            setDraft(current => (current ?? brands).map(brand => brand.id === brandId ? { ...brand, logoUrl } : brand))
         } catch (error) {
-            console.error('Error fetching data:', error)
-            toast.error('Failed to load data')
-        } finally {
-            setLoading(false)
-        }
+            toast.error(error instanceof Error ? error.message : 'Could not upload logo')
+        } finally { setUploading(false) }
     }
-
-    const saveBrands = async (updatedBrands: BrandItem[]) => {
-        try {
-            const lastUpdated = new Date().toISOString()
-
-            await saveCmsDocument('brand', {
-                brands: updatedBrands,
-                lastUpdated: lastUpdated
-            })
-
-            if (pendingDeletions.length > 0) {
-                await Promise.all(pendingDeletions.map(async (url) => {
-                    try {
-                        await deletePublicMedia(url)
-                    } catch (err) {
-                        console.error('Failed to delete storage object:', url, err)
-                    }
-                }))
-                setPendingDeletions([])
-            }
-
-            setLastUpdated(lastUpdated)
-            setBrands(updatedBrands)
-            toast.success('Brands updated successfully')
-        } catch (error) {
-            console.error('Error saving brands:', error)
-            toast.error('Failed to save changes')
-        }
+    const move = (brandId: string, offset: number) => {
+        const next = [...brands]
+        const from = next.findIndex(brand => brand.id === brandId)
+        const target = selected[selected.findIndex(brand => brand.id === brandId) + offset]
+        const to = next.findIndex(brand => brand.id === target?.id)
+        if (from < 0 || to < 0) return
+        ;[next[from], next[to]] = [next[to], next[from]]
+        setDraft(next)
     }
-
-    const onFileChange = async (e: React.ChangeEvent<HTMLInputElement>, brandId: string) => {
-        const file = e.target.files?.[0]
-        if (!file) return
-
-        setUploading(brandId)
-        try {
-            const downloadURL = await uploadImage(
-                `brands/${brandId}/${Date.now()}_${file.name}`,
-                file,
-                { maxWidth: 512, quality: 0.8 }
-            )
-
-            const updatedBrands = brands.map(b => {
-                if (b.id === brandId) {
-                    if (b.logoUrl) {
-                        setPendingDeletions(prev => [...prev, b.logoUrl])
-                    }
-                    return {
-                        ...b,
-                        logoUrl: downloadURL
-                    }
-                }
-                return b
-            })
-
-            setBrands(updatedBrands)
-            toast.success('Logo uploaded')
-        } catch (error) {
-            console.error('Error uploading image:', error)
-            toast.error('Failed to upload image')
-        } finally {
-            setUploading(null)
-        }
-    }
-
-    const handleDeleteBrand = async (brandId: string) => {
-        if (!confirm('Are you sure you want to delete this brand?')) return
-        try {
-            const brandToDelete = brands.find(b => b.id === brandId)
-            const remainingBrands = brands.filter(b => b.id !== brandId)
-
-            if (brandToDelete) {
-                await saveCmsDocument('brand', {
-                    brands: remainingBrands,
-                    lastUpdated: new Date().toISOString()
-                })
-
-                if (brandToDelete.logoUrl) {
-                    try {
-                        await deletePublicMedia(brandToDelete.logoUrl)
-                    } catch (err) {
-                        console.error('Failed to delete storage object:', brandToDelete.logoUrl, err)
-                    }
-                }
-            }
-            setBrands(remainingBrands)
-            toast.success('Brand deleted')
-        } catch (error) {
-            console.error('Error deleting brand:', error)
-            toast.error('Failed to delete brand')
-        }
-    }
-
-    const handleUpdateBrand = (brandId: string, updates: Partial<BrandItem>) => {
-        setBrands(brands.map(b => b.id === brandId ? { ...b, ...updates } : b))
-    }
-
-    const triggerUpload = (brandId: string) => {
-        setActiveBrandId(brandId)
-        fileInputRef.current?.click()
-    }
-
-    if (loading) {
-        return (
-            <div className="flex items-center justify-center min-h-screen">
-                <Loader2 className="w-8 h-8 animate-spin text-primary" />
-            </div>
-        )
-    }
-
-    return (
-        <div className="p-4 sm:p-8 space-y-8 w-full max-w-6xl mx-auto font-sans bg-white min-h-screen">
-            {/* Header */}
-            <div className="sticky top-(--header-height) z-10 flex flex-wrap items-center justify-between gap-4 border-b bg-white py-3">
-                <div className="flex items-center gap-4">
-                    <Button
-                        variant="ghost"
-                        size="icon"
-                        className="rounded-xl bg-gray-100 hover:bg-gray-200"
-                        onClick={() => navigate({ to: '/admin/cms' })}
-                        aria-label="Back to Home content"
-                    >
-                        <ArrowLeft className="h-5 w-5" />
-                    </Button>
-                    <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-600 flex items-center justify-center">
-                            <Type className="w-5 h-5" />
-                        </div>
-                        <div>
-                            <h1 className="text-2xl font-bold tracking-tight">Brand logos</h1>
-                            <p className="text-xs text-gray-500 font-medium">{brands.length} brand{brands.length !== 1 ? 's' : ''} configured</p>
-                        </div>
-                    </div>
-                </div>
-
-                <div className="flex items-center gap-4">
-                    <div className="text-right hidden sm:block">
-                        <p className="text-xs text-gray-400 font-medium">Last Updated</p>
-                        <p className="text-sm font-bold text-gray-900">
-                            {lastUpdated ? new Date(lastUpdated).toLocaleString() : 'Never'}
-                        </p>
-                    </div>
-                    <Button
-                        onClick={() => saveBrands(brands)}
-                        className="bg-primary hover:bg-primary/90 text-white rounded-xl px-6 h-10 font-bold shadow-sm transition-all"
-                    >
-                        Save All Changes
-                    </Button>
-                </div>
-            </div>
-
-            {/* Section Header */}
-            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-gray-100 pb-4">
-                <h2 className="text-lg font-bold text-gray-900">Configure Brands</h2>
-                <Link
-                    to="/admin/cms/brands/add"
-                    className="inline-flex items-center justify-center bg-[#F8F9F9] hover:bg-gray-100 text-gray-900 border border-gray-100 rounded-xl px-5 h-10 gap-2 font-bold text-sm shadow-sm transition-all"
-                >
-                    <Plus className="w-4 h-4 text-primary" />
-                    Add New Brand
-                </Link>
-
-                <input
-                    type="file"
-                    ref={fileInputRef}
-                    className="hidden"
-                    accept="image/*"
-                    onChange={(e) => activeBrandId && onFileChange(e, activeBrandId)}
-                />
-            </div>
-
-            {/* Brand Cards */}
-            <div className="grid grid-cols-1 gap-4">
-                {brands.map((brand, index) => {
-                    const logo = brand.vendorId ? vendors.find(v => v.id === brand.vendorId)?.logoUrl || '' : brand.logoUrl
-                    return <div key={brand.id} className="bg-[#F8F9F9] rounded-2xl p-6 border border-gray-100 shadow-sm relative group">
-                        <div className="flex flex-col md:flex-row items-center gap-6">
-                            {/* Logo */}
-                            <div className="w-24 h-24 flex-shrink-0">
-                                <button
-                                    type="button"
-                                    aria-label={`Change logo for brand ${index + 1}`}
-                                    onClick={() => triggerUpload(brand.id)}
-                                    className="relative w-full h-full rounded-xl overflow-hidden bg-white border-2 border-dashed border-gray-200 cursor-pointer hover:border-primary transition-all flex items-center justify-center group/img"
-                                >
-                                    {logo ? (
-                                        <img alt={`Brand ${index + 1} logo`} src={logo} className="w-full h-full object-contain p-2" loading="lazy" />
-                                    ) : (
-                                        <div className="flex flex-col items-center gap-1 opacity-30">
-                                            <ImageIcon className="w-6 h-6" />
-                                            <span className="text-[10px] font-bold text-center">Logo</span>
-                                        </div>
-                                    )}
-                                    {uploading === brand.id && (
-                                        <div className="absolute inset-0 bg-white/80 flex items-center justify-center">
-                                            <Loader2 className="w-5 h-5 animate-spin text-primary" />
-                                        </div>
-                                    )}
-                                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/img:opacity-100 transition-opacity flex items-center justify-center">
-                                        <span className="text-white text-[10px] font-bold px-2 py-1 bg-black/50 rounded-xl">Change</span>
-                                    </div>
-                                </button>
-                            </div>
-
-                            {/* Fields */}
-                            <div className="flex-1 w-full space-y-4">
-                                <div className="space-y-1.5">
-                                    <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider ml-1">Vendor</label>
-                                    <select
-                                        aria-label={`Vendor for brand ${index + 1}`}
-                                        value={brand.vendorId || ''}
-                                        onChange={(e) => { const vendor = vendors.find(v => v.id === e.target.value); handleUpdateBrand(brand.id, { vendorId: e.target.value, logoUrl: vendor?.logoUrl || '' }) }}
-                                        className="w-full h-11 px-4 rounded-xl bg-white border border-gray-100 font-bold text-sm text-gray-900 outline-none focus:border-primary transition-all shadow-sm appearance-none cursor-pointer"
-                                    >
-                                        <option value="">— No linked vendor —</option>
-                                        {vendors.map(v => (
-                                            <option key={v.id} value={v.id}>{v.name}</option>
-                                        ))}
-                                    </select>
-                                </div>
-
-                                <div className="flex items-center gap-3 pt-1">
-                                    <button
-                                        role="switch"
-                                        aria-label={`Show brand ${index + 1}`}
-                                        aria-checked={brand.isActive}
-                                        onClick={() => handleUpdateBrand(brand.id, { isActive: !brand.isActive })}
-                                        className={cn(
-                                            "w-11 h-6 rounded-full transition-colors relative shadow-inner",
-                                            brand.isActive ? "bg-primary" : "bg-gray-200"
-                                        )}
-                                    >
-                                        <div className={cn(
-                                            "absolute top-0.5 w-5 h-5 rounded-full bg-white transition-all transform shadow-sm",
-                                            brand.isActive ? "left-5.5" : "left-0.5"
-                                        )} />
-                                    </button>
-                                    <span className="text-xs font-bold text-gray-600">
-                                        {brand.isActive ? 'Active' : 'Inactive'}
-                                    </span>
-                                </div>
-
-                                <div className="flex items-center justify-end gap-1.5 pt-3 border-t border-gray-200/60">
-                                    <Button
-                                        variant="outline"
-                                        size="icon"
-                                        onClick={() => {
-                                            const updated = [...brands]
-                                            if (index > 0) {
-                                                const temp = updated[index]
-                                                updated[index] = updated[index - 1]
-                                                updated[index - 1] = temp
-                                                setBrands(updated)
-                                            }
-                                        }}
-                                        aria-label={`Move brand ${index + 1} up`}
-                                        disabled={index === 0}
-                                        className="rounded-xl h-9 w-9 border-gray-100 bg-white text-gray-500 hover:text-primary hover:bg-accent"
-                                    >
-                                        <ArrowUp className="h-4 w-4" />
-                                    </Button>
-                                    <Button
-                                        variant="outline"
-                                        size="icon"
-                                        onClick={() => {
-                                            const updated = [...brands]
-                                            if (index < brands.length - 1) {
-                                                const temp = updated[index]
-                                                updated[index] = updated[index + 1]
-                                                updated[index + 1] = temp
-                                                setBrands(updated)
-                                            }
-                                        }}
-                                        aria-label={`Move brand ${index + 1} down`}
-                                        disabled={index === brands.length - 1}
-                                        className="rounded-xl h-9 w-9 border-gray-100 bg-white text-gray-500 hover:text-primary hover:bg-accent"
-                                    >
-                                        <ArrowDown className="h-4 w-4" />
-                                    </Button>
-                                    <Button
-                                        variant="outline"
-                                        size="icon"
-                                        aria-label={`Delete brand ${index + 1}`}
-                                        onClick={() => handleDeleteBrand(brand.id)}
-                                        className="rounded-xl h-9 w-9 border-gray-100 text-red-400 hover:text-red-600 hover:bg-red-50"
-                                    >
-                                        <Trash2 className="h-4 w-4" />
-                                    </Button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                })}
-
-                {brands.length === 0 && (
-                    <div className="py-20 bg-gray-50 rounded-2xl border-2 border-dashed border-gray-200 flex flex-col items-center justify-center text-gray-400 gap-3">
-                        <div className="bg-white p-4 rounded-xl shadow-sm">
-                            <ImageIcon className="w-8 h-8 opacity-30 text-primary" />
-                        </div>
-                        <p className="font-bold text-lg text-gray-500">No brands configured</p>
-                        <p className="text-sm">Click 'Add New Brand' to start the list.</p>
-                    </div>
-                )}
-            </div>
-
-            <div className="h-20" />
-        </div>
-    )
+    return <div className="mx-auto max-w-5xl space-y-6 p-4 sm:p-8">
+        <div><h1 className="text-2xl font-semibold">Top Brands</h1><p className="mt-1 text-sm text-muted-foreground">Select vendors for Top Brands on Home. Each logo opens its vendor page. Vendors need an active offer to appear in the app.</p></div>
+        {isPending ? <p>Loading vendors…</p> : error ? <p role="alert">Could not load Top Brands: {error.message}</p> : <>
+            <div className="flex flex-wrap gap-3"><Input className="max-w-md" aria-label="Search Top Brands vendors" placeholder="Search vendors…" value={search} onChange={event => setSearch(event.target.value)} /><Button disabled={!draft || save.isPending || uploading} onClick={() => save.mutate()}>{save.isPending && <Loader2 className="animate-spin" />}Save Top Brands</Button></div>
+            {selected.length > 0 && <section className="space-y-2"><h2 className="font-semibold">Display order</h2>{selected.map((brand, index) => <div key={brand.id} className="flex flex-wrap items-center gap-3 rounded-lg border p-3">
+                {brand.logoUrl && <img src={brand.logoUrl} alt="" className="size-12 rounded-lg object-contain" />}
+                <span className="flex-1">{index + 1}. {data?.vendors.find(vendor => vendor.id === brand.vendorId)?.name || brand.vendorId}</span>
+                <Label className="relative min-h-11 cursor-pointer rounded-md border px-3 py-2">Change logo<input type="file" accept="image/*" aria-label={`Change logo for ${data?.vendors.find(vendor => vendor.id === brand.vendorId)?.name || brand.vendorId}`} className="absolute inset-0 cursor-pointer opacity-0" disabled={save.isPending || uploading} onChange={event => { const file = event.target.files?.[0]; if (file) void changeLogo(brand.id, file) }} /></Label>
+                <Button variant="outline" size="icon" aria-label={`Move brand ${index + 1} up`} disabled={save.isPending || uploading || index === 0} onClick={() => move(brand.id, -1)}><ArrowUp /></Button>
+                <Button variant="outline" size="icon" aria-label={`Move brand ${index + 1} down`} disabled={save.isPending || uploading || index === selected.length - 1} onClick={() => move(brand.id, 1)}><ArrowDown /></Button>
+            </div>)}</section>}
+            <div className="divide-y rounded-xl border">{data?.vendors.filter(vendor => vendor.name.toLowerCase().includes(search.toLowerCase())).map(vendor => {
+                const included = brands.some(brand => brand.vendorId === vendor.id && brand.isActive)
+                return <Label key={vendor.id} className="flex min-h-16 cursor-pointer items-center gap-4 p-4 hover:bg-muted/50">
+                    <Checkbox className="size-6" checked={included} disabled={save.isPending || uploading} onCheckedChange={checked => {
+                        const existing = brands.find(brand => brand.vendorId === vendor.id)
+                        setDraft(existing ? brands.map(brand => brand.vendorId === vendor.id ? { ...brand, isActive: checked === true } : brand) : [...brands, { id: `vendor-${vendor.id}`, vendorId: vendor.id, logoUrl: vendor.logoUrl || '', isActive: true }])
+                    }} />
+                    {vendor.logoUrl && <img src={vendor.logoUrl} alt="" className="size-12 rounded-lg object-contain" />}<span>{vendor.name}</span>
+                </Label>
+            })}</div>
+        </>}
+    </div>
 }

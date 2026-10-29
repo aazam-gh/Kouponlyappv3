@@ -6,7 +6,7 @@ export const taxonomy = {
   subcategories: [{id:'rice',category_id:'food',name:'Rice'}, {id:'sweets',category_id:'food',name:'Sweets'}, {id:'homestays',category_id:'stays',name:'Homestays'}],
   assignments: [{vendor_id:'vendor-1',subcategory_id:'rice',category_id:'food'}, {vendor_id:'vendor-1',subcategory_id:'sweets',category_id:'food'}],
 };
-export const vendor = {id:'vendor-1',name:'Test Kitchen',status:'Active',catalogue_deal_id:101,category_id:'food',image_url:'https://example.test/kitchen.jpg',featured:true,payload:{mainCategory:'Wrong legacy label'}};
+export const vendor = {id:'vendor-1',name:'Test Kitchen',status:'Active',catalogue_deal_id:101,category_id:'food',image_url:'https://example.test/kitchen.jpg',featured:true,is_suggested:true,payload:{mainCategory:'Wrong legacy label'}};
 export const offers = [
   {id:'expired',vendor_id:'vendor-1',title:'Expired offer',active:true,sort_order:0,ends_at:'2020-01-01T00:00:00Z'},
   {id:'rice-offer',vendor_id:'vendor-1',title:'Rice lunch discount',image_url:'https://example.test/rice.jpg',description:'Lunch offer details',saving_label:'Lunch saving',active:true,sort_order:1,redemption_mode:'inStore'},

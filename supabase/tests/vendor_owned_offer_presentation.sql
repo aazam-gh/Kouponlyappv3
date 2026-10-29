@@ -23,7 +23,7 @@ begin
 
   update public.couponly_vendors set card_label=null,logo_path=null where id=vendor;
   assert not exists(select 1 from public.couponly_offers where vendor_id=vendor and (image_url is not null or payload->>'cardLabel' is not null or payload->'cardLabels' is distinct from '[]'::jsonb)), 'Clearing vendor branding must clear compatibility fields';
-  assert (select card_label is null from public.realx_vendors where id=vendor), 'Legacy mobile view must expose the canonical label';
+  assert (select card_label is null from public.kouponly_vendors where id=vendor), 'Legacy mobile view must expose the canonical label';
   begin
     update public.couponly_vendors set card_label=repeat('x',33) where id=vendor;
     raise exception 'Oversized label was accepted';

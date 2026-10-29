@@ -28,7 +28,7 @@ begin
     assert not dirty, format('Stored translations remain in %s.%I',target.relation,target.attname);
   end loop;
   assert to_regprocedure('public.couponly_redeem_gift_card(text,numeric,uuid)') is null
-    and to_regprocedure('public.realx_redeem_gift_card(text,numeric,uuid)') is null,
+    and to_regprocedure('public.kouponly_redeem_gift_card(text,numeric,uuid)') is null,
     'Gift-card checkout must be removed under both backend names';
   caught:=false;
   begin
@@ -38,33 +38,33 @@ begin
 
   insert into public.couponly_categories(id,name,slug,payload) values(fixture,'English check',fixture,
     '{"nameEnglish":"English check","nameArabic":"Remove","subcategories":[{"nameEnglish":"Check","nameArabic":"Remove"}]}');
-  assert exists(select 1 from public.realx_subcategories where category_id=fixture and name='Check'),
+  assert exists(select 1 from public.kouponly_subcategories where category_id=fixture and name='Check'),
     'Category synchronization and legacy reads must work without Arabic columns';
   insert into public.couponly_vendors(id,name,status,category_id,locations,payload) values(fixture,'English vendor','Active',fixture,
     '[{"id":"one","name":"English branch","nameAr":"Remove","address":"English address","addressAr":"Remove","latitude":10,"longitude":76}]',
     '{"nameAr":"Remove","subcategory":["Check"],"offers":[{"titleEn":"English offer","titleAr":"Remove","descriptionEn":"English description","descriptionAr":"Remove","active":true}]}');
-  assert exists(select 1 from public.realx_offers where vendor_id=fixture and title='English offer' and description='English description'),
+  assert exists(select 1 from public.kouponly_offers where vendor_id=fixture and title='English offer' and description='English description'),
     'Vendor offer synchronization must preserve English fields';
-  assert exists(select 1 from public.realx_vendor_locations where vendor_id=fixture and name='English branch' and address='English address'),
+  assert exists(select 1 from public.kouponly_vendor_locations where vendor_id=fixture and name='English branch' and address='English address'),
     'Branch synchronization must preserve English fields';
-  assert exists(select 1 from public.realx_map_locations where vendor_id=fixture and payload->>'name'='English vendor'),
+  assert exists(select 1 from public.kouponly_map_locations where vendor_id=fixture and payload->>'name'='English vendor'),
     'Map synchronization must still work';
   assert (select not (payload ? 'nameAr') and not (locations->0 ? 'nameAr') and not (payload->'offers'->0 ? 'titleAr')
-    from public.realx_vendors where id=fixture), 'Future writes must strip translations';
-  update public.realx_vendors set payload=payload||'{"descriptionAr":"Remove","descriptionEn":"Updated English"}' where id=fixture;
-  assert (select not (payload ? 'descriptionAr') and payload->>'descriptionEn'='Updated English' from public.realx_vendors where id=fixture),
+    from public.kouponly_vendors where id=fixture), 'Future writes must strip translations';
+  update public.kouponly_vendors set payload=payload||'{"descriptionAr":"Remove","descriptionEn":"Updated English"}' where id=fixture;
+  assert (select not (payload ? 'descriptionAr') and payload->>'descriptionEn'='Updated English' from public.kouponly_vendors where id=fixture),
     'Updates through legacy views must strip translations and preserve English';
   assert not exists(
-    select 1 from pg_catalog.pg_class where oid in ('public.realx_offers'::regclass,'public.realx_vendor_locations'::regclass,'public.realx_subcategories'::regclass)
+    select 1 from pg_catalog.pg_class where oid in ('public.kouponly_offers'::regclass,'public.kouponly_vendor_locations'::regclass,'public.kouponly_subcategories'::regclass)
       and (relkind<>'v' or not coalesce(reloptions @> array['security_invoker=true'],false))
   ), 'Compatibility views must retain invoker security';
 end $$;
 set local role anon;
 do $$
 begin
-  perform id from public.realx_offers limit 1;
-  perform id from public.realx_vendor_locations limit 1;
-  perform id from public.realx_subcategories limit 1;
+  perform id from public.kouponly_offers limit 1;
+  perform id from public.kouponly_vendor_locations limit 1;
+  perform id from public.kouponly_subcategories limit 1;
 end $$;
 reset role;
 rollback;

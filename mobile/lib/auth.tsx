@@ -77,7 +77,7 @@ async function handleAuthUrl(url: string, setRecoveryMode: (value: boolean) => v
 }
 
 async function accountAccess(uid: string): Promise<'student' | 'admin' | 'incomplete'> {
-  const { data, error } = await getSupabase().from('realx_students').select('id').eq('id', uid).maybeSingle();
+  const { data, error } = await getSupabase().from('kouponly_students').select('id').eq('id', uid).maybeSingle();
   if (error) throw error;
   if (data) return 'student';
   const { data: admin, error: roleError } = await getSupabase().rpc('kouponly_is_benefits_admin');

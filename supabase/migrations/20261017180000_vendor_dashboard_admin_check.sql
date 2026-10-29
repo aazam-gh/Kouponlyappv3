@@ -9,9 +9,9 @@ begin
     'totalRevenue', coalesce(sum(t.final_amount) filter (where t.status = 'completed'), 0),
     'totalDiscount', coalesce(sum(t.discount_amount) filter (where t.status = 'completed'), 0),
     'uniqueCustomers', count(distinct t.student_id) filter (where t.status = 'completed'),
-    'activeOffers', coalesce((select jsonb_array_length(case when jsonb_typeof(v.payload->'offers') = 'array' then v.payload->'offers' else '[]'::jsonb end) from public.realx_vendors v where v.id = p_vendor_id), 0),
+    'activeOffers', coalesce((select jsonb_array_length(case when jsonb_typeof(v.payload->'offers') = 'array' then v.payload->'offers' else '[]'::jsonb end) from public.kouponly_vendors v where v.id = p_vendor_id), 0),
     'pendingTransactions', count(t.id) filter (where t.status = 'pending')
-  ) into result from public.realx_transactions t where t.vendor_id = p_vendor_id;
+  ) into result from public.kouponly_transactions t where t.vendor_id = p_vendor_id;
   return result;
 end $$;
 revoke all on function public.couponly_vendor_dashboard_stats(text) from public, anon;

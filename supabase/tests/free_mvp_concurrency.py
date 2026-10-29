@@ -25,8 +25,8 @@ vendor = 'mvp-concurrent-' + alice
 try:
     for uid in users:
         sql(f"insert into auth.users(id,email,email_confirmed_at) values('{uid}','mvp-concurrent-{uid}@example.com',now())")
-    sql(f"insert into realx_vendors(id,name,status,catalogue_deal_id) values('{vendor}','Concurrency','Active',900098)")
-    sql(f"insert into realx_offers(id,vendor_id,title,active,redemption_mode,sort_order) values('{vendor}','{vendor}','Coupon',true,'inStore',0)")
+    sql(f"insert into kouponly_vendors(id,name,status,catalogue_deal_id) values('{vendor}','Concurrency','Active',900098)")
+    sql(f"insert into kouponly_offers(id,vendor_id,title,active,redemption_mode,sort_order) values('{vendor}','{vendor}','Coupon',true,'inStore',0)")
     benefits = json.loads(rpc(alice, "select kouponly_account_benefits()").stdout.splitlines()[-1])
     round_id = benefits['subscription']['roundId']
     code = benefits['inviteCode']
@@ -56,4 +56,4 @@ try:
 finally:
     for uid in users:
         sql(f"delete from auth.users where id='{uid}'", False)
-    sql(f"delete from realx_offers where id='{vendor}'; delete from realx_vendors where id='{vendor}'", False)
+    sql(f"delete from kouponly_offers where id='{vendor}'; delete from kouponly_vendors where id='{vendor}'", False)

@@ -47,7 +47,7 @@ it('attributes invite success to the owner rather than the entrant', async () =>
 it('routes guests to authentication instead of claiming', async () => {
   mockUser=null; const view = await wrap(<EnterCodeScreen />);
   await fireEvent.changeText(view.getByLabelText('Friend’s invite code'), 'AB234'); await fireEvent.press(view.getByText('Sign in to apply code'));
-  expect(mockClaim).not.toHaveBeenCalled(); expect(router.push).toHaveBeenCalledWith({pathname:'/realx/onboarding',params:{flow:'login'}});
+  expect(mockClaim).not.toHaveBeenCalled(); expect(router.push).toHaveBeenCalledWith({pathname:'/kouponly/onboarding',params:{flow:'login'}});
 });
 
 it('shares an invite that welcomes every verified email domain', async () => {

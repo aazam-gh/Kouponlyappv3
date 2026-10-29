@@ -10,7 +10,7 @@ import { F, type ThemeColors, useAppTheme } from '@/lib/theme';
 const DOHA = { latitude: 25.2854, longitude: 51.531 };
 const FILTERS = ['All', 'Food', 'Cafe', 'Fitness', 'Beauty'];
 
-export default function RealXMapScreen() {
+export default function KouponlyMapScreen() {
   const { colors: C } = useAppTheme();
   const insets = useSafeAreaInsets();
   const [locations, setLocations] = React.useState<VendorMapLocation[]>([]);
@@ -39,7 +39,7 @@ export default function RealXMapScreen() {
       initialRegion={{ ...DOHA, latitudeDelta: 0.12, longitudeDelta: 0.12 }}
       showsUserLocation
       showsCompass={false}
-      accessibilityLabel="Map of RealX partners"
+      accessibilityLabel="Map of Kouponly partners"
     >
       {visible.map(item => <Marker key={`${item.vendorId}:${item.locationId}`} coordinate={{ latitude: item.latitude, longitude: item.longitude }} onPress={() => setSelected(item)} accessibilityLabel={`View ${item.name}`}>
         <View style={[s.pin, { backgroundColor: C.lime, borderColor: C.paper }]}><MapPin size={16} color="#FFFFFF" /></View>
@@ -60,7 +60,7 @@ export default function RealXMapScreen() {
     {!loading && !visible.length ? <View style={[s.empty, { backgroundColor: C.card }]}><Text style={[s.emptyTitle, { color: C.ink }]}>{message ? 'Map unavailable' : 'No partners found'}</Text><Text style={[s.statusText, { color: C.muted }]}>{message || 'Try a different search or category.'}</Text></View> : null}
     {selected ? <View style={[s.placeCard, { backgroundColor: C.card, borderColor: C.line, bottom: Math.max(insets.bottom, 10) + 12 }]}>
       {selected.image ? <Image source={{ uri: selected.image }} style={s.photo} /> : <View style={[s.photo, s.placeholder, { backgroundColor: C.soft }]}><Store size={20} color={C.ink} /></View>}
-      <View style={s.placeCopy}><Text numberOfLines={1} style={[s.placeName, { color: C.ink }]}>{selected.name}</Text><Text numberOfLines={1} style={[s.placeInfo, { color: C.muted }]}>{selected.place} · {selected.category}</Text><View style={s.actions}><Pressable onPress={() => router.push({ pathname: '/realx/vendor/[id]', params: { id: selected.vendorId } } as any)}><Text style={[s.action, { color: C.lime }]}>Partner details</Text></Pressable><Pressable onPress={() => openDirections(selected)}><Text style={[s.action, { color: C.ink }]}>Directions</Text></Pressable></View></View>
+      <View style={s.placeCopy}><Text numberOfLines={1} style={[s.placeName, { color: C.ink }]}>{selected.name}</Text><Text numberOfLines={1} style={[s.placeInfo, { color: C.muted }]}>{selected.place} · {selected.category}</Text><View style={s.actions}><Pressable onPress={() => router.push({ pathname: '/kouponly/vendor/[id]', params: { id: selected.vendorId } } as any)}><Text style={[s.action, { color: C.lime }]}>Partner details</Text></Pressable><Pressable onPress={() => openDirections(selected)}><Text style={[s.action, { color: C.ink }]}>Directions</Text></Pressable></View></View>
       <Pressable accessibilityLabel="Close partner details" onPress={() => setSelected(null)} style={s.close}><X size={17} color={C.muted} /></Pressable>
     </View> : null}
   </View>;

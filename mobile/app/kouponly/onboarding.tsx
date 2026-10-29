@@ -23,7 +23,7 @@ type Step = 'email' | 'code' | 'document' | 'status' | 'done';
 type PickedImage = { base64: string; uri: string; extension: string; contentType: string };
 const MAX_ID_BYTES = 3 * 1024 * 1024;
 
-export default function RealXOnboardingScreen() {
+export default function KouponlyOnboardingScreen() {
   const params = useLocalSearchParams<{ flow?: Flow; step?: Step; email?: string; requestId?: string; statusToken?: string }>();
   const theme = useAppTheme(); const { colors: C } = theme;
   const { t } = useTranslation();
@@ -101,8 +101,8 @@ export default function RealXOnboardingScreen() {
         const current = getSupabase().auth.getUser ? await getSupabase().auth.getUser() : null;
         const uid = current?.data.user?.id;
         if (uid) {
-          const { data: profile } = await getSupabase().from('realx_students').select('id').eq('id', uid).maybeSingle();
-          if (profile) { setStep('done'); router.replace('/realx' as any); return; }
+          const { data: profile } = await getSupabase().from('kouponly_students').select('id').eq('id', uid).maybeSingle();
+          if (profile) { setStep('done'); router.replace('/kouponly' as any); return; }
         }
         setFlow('signup');
         setStep('email');
@@ -191,14 +191,14 @@ export default function RealXOnboardingScreen() {
     ? { current: step === 'email' ? 2 : step === 'code' ? 3 : step === 'document' ? 4 : 5, total: 5 }
     : { current: step === 'email' ? 1 : 2, total: 2 };
   const disabled = step === 'email' ? !email.trim() || (flow === 'signup' && (!firstName.trim() || !lastName.trim())) : step === 'code' ? code.trim().length < 6 : step === 'document' ? !image : false;
-  const onSubmit = step === 'email' ? sendCode : step === 'code' ? verifyCode : step === 'document' ? submitId : step === 'status' && (status === 'rejected' || status === 'cancelled') ? () => { setFlow('verification'); setStep('email'); setMessage(''); } : () => router.replace('/realx' as any);
+  const onSubmit = step === 'email' ? sendCode : step === 'code' ? verifyCode : step === 'document' ? submitId : step === 'status' && (status === 'rejected' || status === 'cancelled') ? () => { setFlow('verification'); setStep('email'); setMessage(''); } : () => router.replace('/kouponly' as any);
 
   return <OnboardingScaffold
     transitionKey={`${flow}:${step}`}
     title={heading}
     subtitle={subtitle}
     onBack={onBack}
-    onClose={() => router.replace('/realx' as any)}
+    onClose={() => router.replace('/kouponly' as any)}
     progress={progress}
     footer={<OnboardingPrimaryButton label={primaryLabel} loadingLabel={step === 'code' && flow === 'signup' ? t('onboarding_v2_creating_account') : undefined} loading={busy} disabled={disabled} onPress={() => void onSubmit()} />}
   >

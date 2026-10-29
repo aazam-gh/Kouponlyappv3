@@ -150,13 +150,13 @@ Deno.serve(async(request)=>{
           const bytes=base64ToBytes(String(data.idImageBase64));if(bytes.byteLength>3*1024*1024)throw Object.assign(new Error("ID image is too large"),{status:413});
           const ext=String(data.imageExtension||"jpg").replace(/[^a-z0-9]/gi,"").toLowerCase()||"jpg";
           const objectPath=await sha256(email)+"/"+crypto.randomUUID()+"."+ext;
-          path="realx-student-documents/"+objectPath;
-          const {error:uploadError}=await service.storage.from("realx-student-documents").upload(objectPath,bytes,{contentType:String(data.contentType||"image/jpeg"),upsert:false});
+          path="kouponly-student-documents/"+objectPath;
+          const {error:uploadError}=await service.storage.from("kouponly-student-documents").upload(objectPath,bytes,{contentType:String(data.contentType||"image/jpeg"),upsert:false});
           if(uploadError)throw uploadError;
         }
         const statusToken=randomToken();
         const {data:requestId,error}=await service.rpc("couponly_submit_verification_request",{p_email:email,p_role:role,p_status_token:statusToken,p_image_path:path,p_details:data.details||{}});
-        if(error){if(path)await service.storage.from("realx-student-documents").remove([path.replace(/^realx-student-documents\//,"")]);throw error;}
+        if(error){if(path)await service.storage.from("kouponly-student-documents").remove([path.replace(/^kouponly-student-documents\//,"")]);throw error;}
         return reply({success:true,requestId,statusToken});
       }
       case "checkVerificationStatus": {
@@ -193,7 +193,7 @@ Deno.serve(async(request)=>{
         });
         if(error)throw error;
         if(result?.creatorUid&&Number(result.creatorCashback)>0){
-          try{await sendExpoPushToUser(service,String(result.creatorUid),{title:"Your code was used!",body:`Someone used your code at ${result.vendorName||"a vendor"}. You earned ${Number(result.creatorCashback).toFixed(2)} XPoints.`,data:{type:"creator_code_used",transactionId:result.transactionId,vendorName:result.vendorName,cashbackAmount:result.creatorCashback},channelId:"reelx_general_v2"});}catch(pushError){console.warn("creator reward push failed",String((pushError as any)?.message||pushError));}
+          try{await sendExpoPushToUser(service,String(result.creatorUid),{title:"Your code was used!",body:`Someone used your code at ${result.vendorName||"a vendor"}. You earned ${Number(result.creatorCashback).toFixed(2)} XPoints.`,data:{type:"creator_code_used",transactionId:result.transactionId,vendorName:result.vendorName,cashbackAmount:result.creatorCashback},channelId:"kouponly_general_v2"});}catch(pushError){console.warn("creator reward push failed",String((pushError as any)?.message||pushError));}
         }
         return reply(result);
       }

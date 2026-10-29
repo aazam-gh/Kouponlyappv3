@@ -26,7 +26,7 @@ it('shows an active poster once for a signed-in user and opens its configured ve
   const reopened = await render(<AppLaunchPosterModal userId="student-1" enabled />);
   const reopenedPoster = await reopened.findByLabelText('Open featured vendor');
   fireEvent.press(reopenedPoster);
-  await waitFor(() => expect(router.push).toHaveBeenCalledWith('/realx/vendor/vendor-123'));
+  await waitFor(() => expect(router.push).toHaveBeenCalledWith('/kouponly/vendor/vendor-123'));
   expect(mockRpc).toHaveBeenCalledWith('couponly_record_cms_click', { p_document_id: 'appLaunchPoster', p_item_id: 'appLaunchPoster' });
   await waitFor(() => expect(reopened.queryByLabelText('Open featured vendor')).toBeNull());
   expect(mockMaybeSingle).toHaveBeenCalledTimes(2);

@@ -48,7 +48,7 @@ export default function ProfileDetailsScreen() {
       setDeleting(true);
       void deleteAccount().then((result) => {
         if (result.error) Alert.alert(t('error'), result.error);
-        else router.replace({ pathname: '/realx/onboarding', params: { flow: 'login' } } as any);
+        else router.replace({ pathname: '/kouponly/onboarding', params: { flow: 'login' } } as any);
       }).finally(() => setDeleting(false));
     } },
   ]);

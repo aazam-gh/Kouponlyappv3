@@ -88,7 +88,7 @@ export function projectVendorCatalogue(
       id, vendorId: vendor.id, categoryId: mainCategory.id, categoryIds, subcategoryIds,
       offers: vendorOffers.map(row => {
         const badgeLabel = stringValue(row.payload?.badgeLabel);
-        return { currency: stringValue(row.currency) || undefined, id: row.id, index: offerIndexes.get(row.id)!, title: row.title, ...(badgeLabel ? { badgeLabel } : {}),
+        return { branchIds: Array.isArray(row.payload?.branchIds) ? row.payload.branchIds.filter((id: unknown): id is string => typeof id === 'string') : [], currency: stringValue(row.currency) || undefined, id: row.id, index: offerIndexes.get(row.id)!, title: row.title, ...(badgeLabel ? { badgeLabel } : {}),
           logo: vendorLogo, description: row.description || '', saving: row.saving_label || '', terms: row.terms || undefined, redemptionInstructions: row.redemption_instructions || undefined,
           redemption: row.redemption_mode === 'online' ? 'online' : 'inStore', discountType: row.discount_type || row.payload?.discountType, discountValue: numberValue(row.discount_value ?? row.payload?.discountValue, NaN) };
       }),
@@ -96,7 +96,7 @@ export function projectVendorCatalogue(
       phoneNumber: stringValue(vendor.phone, stringValue(payload.phoneNumber, stringValue(payload.phone, ''))) || undefined,
       openingHours: payload.openingHours ?? payload.opening_hours,
       vendorInformation: payload.vendorInformation ?? (payload.vendorInformationTitle || payload.vendorInformationMessage ? { title: payload.vendorInformationTitle, message: payload.vendorInformationMessage } : undefined),
-      locations: (byVendorLocations.get(vendor.id) ?? []).map(row => ({id: row.id, name: row.name || '', address: row.address || '', phoneNumber: row.phone || row.payload?.phoneNumber,
+      locations: (byVendorLocations.get(vendor.id) ?? []).map(row => ({id: row.id, branchId: row.payload?.id || row.id, name: row.name || '', address: row.address || '', phoneNumber: row.phone || row.payload?.phoneNumber,
         openingHours: row.payload?.openingHours ?? row.payload?.opening_hours,
         latitude: row.latitude == null ? undefined : numberValue(row.latitude), longitude: row.longitude == null ? undefined : numberValue(row.longitude) })),
       latitude: primaryLocation?.latitude == null ? undefined : numberValue(primaryLocation.latitude),

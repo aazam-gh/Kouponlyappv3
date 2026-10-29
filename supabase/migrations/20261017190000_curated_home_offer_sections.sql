@@ -34,5 +34,5 @@ set trending_priority = ranked.priority
 from ranked
 where ranked.id = v.id;
 
-create or replace view public.realx_vendors with (security_invoker = true) as
+create or replace view public.kouponly_vendors with (security_invoker = true) as
 select * from public.couponly_vendors;

@@ -5,7 +5,7 @@ export type Deal = {
 };
 
 export const onlineUrlFor = (name:string, explicitUrl?:string) => explicitUrl || `https://www.google.com/search?q=${encodeURIComponent(name)}`;
-export type VendorOffer = {currency?:string; id:string; index:number; title:string; badgeLabel?:string; logo?:string; description:string; saving:string; terms?:string; redemptionInstructions?:string; redemption:"online"|"inStore"; discountType?:string; discountValue?:number};
+export type VendorOffer = {branchIds?:string[]; currency?:string; id:string; index:number; title:string; badgeLabel?:string; logo?:string; description:string; saving:string; terms?:string; redemptionInstructions?:string; redemption:"online"|"inStore"; discountType?:string; discountValue?:number};
 export function dealDiscountLabel(deal: Deal): string | undefined {
   const offer = deal.offers?.filter(row => ['percentage', 'amount'].includes(row.discountType || '') && Number.isFinite(row.discountValue) && row.discountValue! > 0)
     .reduce<VendorOffer | undefined>((highest, row) => !highest || row.discountValue! > highest.discountValue! ? row : highest, undefined) ?? deal.offers?.[0];
@@ -20,7 +20,7 @@ export function dealDiscountLabel(deal: Deal): string | undefined {
   const title = offer?.title?.trim() || deal.offer?.trim();
   return title && !/^member offer$/i.test(title) ? title : undefined;
 }
-export type VendorLocation = {id:string; name:string; address:string; phoneNumber?:string; openingHours?:unknown; latitude?:number; longitude?:number};
+export type VendorLocation = {id:string; branchId?:string; name:string; address:string; phoneNumber?:string; openingHours?:unknown; latitude?:number; longitude?:number};
 export type Subcategory = { id?:string; label:string; terms:string[]; image?:string };
 export type Category = { id?:string; slug?:string; name:string; search:string; icon:string; image:string; description:string; match:string[]; subcategories:Subcategory[] };
 export type DirectoryType = "Vendor"|"Offer"|"Experience"|"Course"|"Internship"|"Freelance"|"Job"|"Prize";

@@ -16,7 +16,7 @@ Reference: `Kouponly_V2_CTO_Feedback.docx`, 12 October 2026. Existing working-tr
 | 10 | Exact categories and queries without a matching name prefix search categories, subcategory names, admin search tokens, locations, descriptions and offers. |
 | 11 | Submit blurs/dismisses the keyboard; search results support tap and drag dismissal; submitted searches do not automatically reopen it. |
 | 12 | Pressing the Home tab scrolls its list to the top. Native iOS tabs retain their default scroll-to-top behavior. |
-| 13 | Share vendor action shares the registered `kouponly://realx/vendor/<id>` app link. Requires Kouponly to be installed. |
+| 13 | Share vendor action shares the registered `kouponly://kouponly/vendor/<id>` app link. Requires Kouponly to be installed. |
 | 14 | Instagram link from vendor payload; editable in admin Branding; accepts handles or Instagram URLs. |
 | 15 | Website action from the vendor website; editable in admin Branding; links restricted to HTTP(S). |
 | 16 | About vendor description shown after promos, information and opening hours. |

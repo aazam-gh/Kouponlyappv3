@@ -10,7 +10,7 @@ import { getCouponlyOpportunityAction, trackCouponlyOpportunityEvent } from '@/m
 import { getSupabase } from '@/lib/supabase';
 import { F, type ThemeColors, useAppTheme } from '@/lib/theme';
 
-export default function RealXOpportunityDetailScreen() {
+export default function KouponlyOpportunityDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>(); const theme = useAppTheme(); const { colors: C } = theme;
   const styles = React.useMemo(() => makeStyles(C), [theme.mode, theme.highContrast]); const { user } = useAuth();
   const [row, setRow] = React.useState<any>(null); const [saved, setSaved] = React.useState(false); const [loading, setLoading] = React.useState(true); const [busy, setBusy] = React.useState(false); const [message, setMessage] = React.useState('');
@@ -56,7 +56,7 @@ export default function RealXOpportunityDetailScreen() {
     catch (error) { setMessage(error instanceof Error ? error.message : 'This opportunity is not available right now.'); }
     finally { setBusy(false); }
   };
-  return <Screen testID="couponly-opportunity-detail-screen"><AppHeader eyebrow="REALX · OPPORTUNITY" title={payload.titleEn || row?.title || 'Details'} back />
+  return <Screen testID="couponly-opportunity-detail-screen"><AppHeader eyebrow="KOUPONLY · OPPORTUNITY" title={payload.titleEn || row?.title || 'Details'} back />
     {loading ? <ActivityIndicator color={C.ink} style={{ marginTop: 40 }} /> : row ? <>
       <View style={styles.card}><Text style={styles.kind}>{String(payload.kind || payload.type || 'OPPORTUNITY').toUpperCase()}</Text><Text style={styles.title}>{payload.titleEn || row.title || 'Opportunity'}</Text><Text style={styles.body}>{payload.descriptionEn || payload.summaryEn || payload.description || 'Review the opportunity details and application instructions.'}</Text>
         {row.starts_at ? <Text style={styles.meta}>Opens {new Date(row.starts_at).toLocaleDateString()}</Text> : null}{row.ends_at ? <Text style={styles.meta}>Closes {new Date(row.ends_at).toLocaleDateString()}</Text> : null}

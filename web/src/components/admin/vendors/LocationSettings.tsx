@@ -17,7 +17,7 @@ const readLocations = (vendor: Vendor): VendorLocation[] => {
         return vendor.locations.map((location, index) => ({
             ...location,
             id: location.id || (index === 0 ? 'primary' : `branch-${index + 1}`),
-            isPrimary: location.isPrimary === true || index === 0,
+            isPrimary: location.isPrimary === true || (!vendor.locations?.some(branch => branch.isPrimary) && index === 0),
         }))
     }
 
@@ -32,9 +32,10 @@ const readLocations = (vendor: Vendor): VendorLocation[] => {
 }
 
 const syncPrimaryLocation = (vendor: Vendor, locations: VendorLocation[]): Vendor => {
+    const primaryIndex = Math.max(0, locations.findIndex(location => location.isPrimary))
     const normalized = locations.map((location, index) => ({
         ...location,
-        isPrimary: location.isPrimary === true || index === 0,
+        isPrimary: index === primaryIndex,
     }))
     const primary = normalized.find((location) => location.isPrimary) || normalized[0]
 

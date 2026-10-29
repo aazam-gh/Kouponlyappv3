@@ -33,7 +33,7 @@ for each row execute function public.kouponly_offer_vendor_presentation();
 
 update public.couponly_offers set image_url = image_url;
 
-create or replace view public.realx_vendors with (security_invoker = true) as
+create or replace view public.kouponly_vendors with (security_invoker = true) as
 select * from public.couponly_vendors;
 
 commit;

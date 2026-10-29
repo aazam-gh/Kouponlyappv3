@@ -2,11 +2,11 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 
-async function render() {
+async function render(path = '/') {
   const workerUrl = new URL('../dist/server/index.js', import.meta.url);
   workerUrl.searchParams.set('test', `${process.pid}-${Date.now()}`);
   const { default: worker } = await import(workerUrl.href);
-  return worker.fetch(new Request('http://localhost/', { headers: { accept: 'text/html' } }), { ASSETS: { fetch: async () => new Response('Not found', { status: 404 }) } }, { waitUntil() {}, passThroughOnException() {} });
+  return worker.fetch(new Request(`http://localhost${path}`, { headers: { accept: 'text/html' } }), { ASSETS: { fetch: async () => new Response('Not found', { status: 404 }) } }, { waitUntil() {}, passThroughOnException() {} });
 }
 
 test('renders the Save-first Kouponly showcase', async () => {
@@ -32,4 +32,13 @@ test('keeps web navigation, search, and saving wired without creator UI', async 
   assert.match(css, /\.sidebar-open/);
   assert.match(css, /prefers-reduced-motion/);
   assert.doesNotMatch(page, /campaign|earnings|creator/i);
+});
+
+
+test('shared vendor links render an app link for the same vendor', async () => {
+  const response = await render('/vendor/vendor-1');
+  assert.equal(response.status, 200);
+  const html = await response.text();
+  assert.match(html, /kouponly:\/\/\/kouponly\/vendor\/vendor-1/);
+  assert.match(html, /Open vendor in Kouponly/);
 });

@@ -3,9 +3,9 @@ export const homeContentLinks = [
   { title: 'Partner banners', url: '/admin/cms/banners' },
   { title: 'Featured showcase', url: '/admin/cms/featured-brand-showcase' },
   { title: 'New Deals', url: '/admin/cms/new-deals' },
-  { title: 'Trending Vendors', url: '/admin/cms/trending-offers' },
+  { title: 'Trending Offers', url: '/admin/cms/trending-offers' },
   { title: 'App launch poster', url: '/admin/cms/app-launch-poster' },
-  { title: 'Brand logos', url: '/admin/cms/brands' },
+  { title: 'Top Brands', url: '/admin/cms/brands' },
   { title: 'Categories', url: '/admin/cms/categories' },
 ]
 

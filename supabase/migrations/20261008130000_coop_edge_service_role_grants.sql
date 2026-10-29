@@ -1,53 +1,53 @@
 grant select on table
-  public.realx_students,
-  public.realx_verification_requests,
-  public.realx_notification_deliveries,
-  public.realx_notifications,
-  public.realx_push_tokens,
-  public.realx_transactions,
-  public.realx_vendors
+  public.kouponly_students,
+  public.kouponly_verification_requests,
+  public.kouponly_notification_deliveries,
+  public.kouponly_notifications,
+  public.kouponly_push_tokens,
+  public.kouponly_transactions,
+  public.kouponly_vendors
 to service_role;
 
 grant insert on table
   public.notifications,
-  public.realx_admin_audit_log,
-  public.realx_creator_codes,
-  public.realx_map_cache,
-  public.realx_map_locations,
-  public.realx_notification_deliveries,
-  public.realx_notifications,
-  public.realx_otp_challenges,
-  public.realx_students,
-  public.realx_user_roles,
-  public.realx_vendor_memberships,
-  public.realx_vendors
+  public.kouponly_admin_audit_log,
+  public.kouponly_creator_codes,
+  public.kouponly_map_cache,
+  public.kouponly_map_locations,
+  public.kouponly_notification_deliveries,
+  public.kouponly_notifications,
+  public.kouponly_otp_challenges,
+  public.kouponly_students,
+  public.kouponly_user_roles,
+  public.kouponly_vendor_memberships,
+  public.kouponly_vendors
 to service_role;
 
 grant update on table
-  public.realx_creator_codes,
-  public.realx_map_cache,
-  public.realx_map_locations,
-  public.realx_notification_deliveries,
-  public.realx_notifications,
-  public.realx_otp_challenges,
-  public.realx_push_tokens,
-  public.realx_students,
-  public.realx_vendors,
-  public.realx_verification_requests
+  public.kouponly_creator_codes,
+  public.kouponly_map_cache,
+  public.kouponly_map_locations,
+  public.kouponly_notification_deliveries,
+  public.kouponly_notifications,
+  public.kouponly_otp_challenges,
+  public.kouponly_push_tokens,
+  public.kouponly_students,
+  public.kouponly_vendors,
+  public.kouponly_verification_requests
 to service_role;
 
 grant delete on table
-  public.realx_map_locations,
-  public.realx_opportunity_action_requests,
-  public.realx_otp_challenges,
-  public.realx_push_tokens,
-  public.realx_rate_limits,
-  public.realx_students,
-  public.realx_transactions,
-  public.realx_user_roles,
-  public.realx_vendor_memberships,
-  public.realx_vendors,
-  public.realx_verification_requests
+  public.kouponly_map_locations,
+  public.kouponly_opportunity_action_requests,
+  public.kouponly_otp_challenges,
+  public.kouponly_push_tokens,
+  public.kouponly_rate_limits,
+  public.kouponly_students,
+  public.kouponly_transactions,
+  public.kouponly_user_roles,
+  public.kouponly_vendor_memberships,
+  public.kouponly_vendors,
+  public.kouponly_verification_requests
 to service_role;
 
 do $$
@@ -65,10 +65,10 @@ begin
       and sn.nspname = 'public'
       and tn.nspname = 'public'
       and t.relname in (
-        'notifications', 'realx_admin_audit_log', 'realx_creator_codes',
-        'realx_map_cache', 'realx_map_locations', 'realx_notification_deliveries',
-        'realx_notifications', 'realx_otp_challenges', 'realx_students',
-        'realx_user_roles', 'realx_vendor_memberships', 'realx_vendors'
+        'notifications', 'kouponly_admin_audit_log', 'kouponly_creator_codes',
+        'kouponly_map_cache', 'kouponly_map_locations', 'kouponly_notification_deliveries',
+        'kouponly_notifications', 'kouponly_otp_challenges', 'kouponly_students',
+        'kouponly_user_roles', 'kouponly_vendor_memberships', 'kouponly_vendors'
       )
   loop
     execute format('grant usage, select on sequence %I.%I to service_role', seq.schema_name, seq.sequence_name);

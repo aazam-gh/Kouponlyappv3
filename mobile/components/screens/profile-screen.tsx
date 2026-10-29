@@ -108,14 +108,14 @@ export default function ProfileScreen() {
               <View style={[styles.guestProfileActions, isRTL && styles.guestProfileActionsRTL]}>
                 <ScalePressable
                   style={[styles.guestPrimaryAction, { backgroundColor: theme.actionSolid }]}
-                  onPress={() => { void endGuestSession().finally(() => router.push({ pathname: '/realx/onboarding', params: { flow: 'login' } } as any)); }}
+                  onPress={() => { void endGuestSession().finally(() => router.push({ pathname: '/kouponly/onboarding', params: { flow: 'login' } } as any)); }}
                   activeOpacity={0.85}
                 >
                   <Text style={[styles.guestPrimaryActionText, { color: theme.onActionSolid }]}>{t('onboarding_login_action')}</Text>
                 </ScalePressable>
                 <ScalePressable
                   style={[styles.guestSecondaryAction, { borderColor: BorderPalette.border }]}
-                  onPress={() => { void endGuestSession().finally(() => router.push('/realx/welcome' as any)); }}
+                  onPress={() => { void endGuestSession().finally(() => router.push('/kouponly/welcome' as any)); }}
                   activeOpacity={0.85}
                 >
                   <Text style={[styles.guestSecondaryActionText, { color: theme.text }]}>{t('onboarding_sign_up')}</Text>
@@ -204,7 +204,7 @@ export default function ProfileScreen() {
           <MenuItem
             icon="time-outline"
             label={t('redemption_history')}
-            onPress={() => router.push('/realx/history' as any)}
+            onPress={() => router.push('/kouponly/history' as any)}
             isRTL={isRTL}
           />
           <MenuItem

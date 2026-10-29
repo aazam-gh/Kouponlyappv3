@@ -14,7 +14,7 @@ type Draft = { included: boolean; priority: string }
 
 const definitions = {
   'new-deals': { title: 'New Deals', column: 'new_deals_priority', description: 'Choose which active vendor cards appear in New Deals. The current primary offer is shown beneath each vendor; priority 1 appears first.' },
-  'trending-vendors': { title: 'Trending Vendors', column: 'trending_priority', description: 'Choose active vendors for the mobile app’s Trending Offers section and set their order. Priority 1 appears first; vendors need a current offer to appear as a card in the app.' },
+  'trending-vendors': { title: 'Trending Offers', column: 'trending_priority', description: 'Choose active vendors for the mobile app’s Trending Offers section and set their order. Priority 1 appears first; vendors need a current offer to appear as a card in the app.' },
 } as const
 
 async function loadRows(section: Section): Promise<Row[]> {
@@ -94,7 +94,7 @@ export function HomeOfferPriority({ section }: { section: Section }) {
     const original: Draft = { included: row.priority != null, priority: String(row.priority ?? nextPriority) }
     const draft = drafts[row.id] ?? original
     const changed = draft.included !== original.included || (draft.included && Number(draft.priority) !== row.priority)
-    return changed && !(section === 'new-deals' && !row.offer) ? [{ id: row.id, draft }] : []
+    return changed ? [{ id: row.id, draft }] : []
   })
   const Icon = section === 'new-deals' ? Sparkles : TrendingUp
 
@@ -139,13 +139,13 @@ export function HomeOfferPriority({ section }: { section: Section }) {
                   {row.logo ? <img src={row.logo} alt="" className="size-11 rounded-lg border object-cover" /> : <div className="grid size-11 shrink-0 place-items-center rounded-lg bg-muted font-semibold">{row.name.slice(0, 1).toUpperCase()}</div>}
                   <div className="min-w-0"><p className="truncate font-medium">{row.name}</p><p className="truncate text-sm text-muted-foreground">{row.offer || 'No active offer currently'}</p></div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <Checkbox id={`${id}-included`} checked={draft.included} disabled={saveAll.isPending || (section === 'new-deals' && !row.offer)} onCheckedChange={checked => setDrafts(current => ({ ...current, [row.id]: { ...draft, included: checked === true, priority: checked === true && !draft.included ? String(nextPriority) : draft.priority } }))} />
-                  <Label htmlFor={`${id}-included`} className={section === 'new-deals' && !row.offer ? 'text-muted-foreground' : ''}>Include</Label>
-                </div>
+                <Label className="flex min-h-12 cursor-pointer items-center gap-3 rounded-lg border px-4 py-3 hover:bg-muted/50">
+                  <Checkbox className="size-6" id={`${id}-included`} checked={draft.included} disabled={saveAll.isPending} onCheckedChange={checked => setDrafts(current => ({ ...current, [row.id]: { ...draft, included: checked === true, priority: checked === true && !draft.included ? String(nextPriority) : draft.priority } }))} />
+                  <span>Show in {definition.title}</span>
+                </Label>
                 <div className="flex items-center gap-2">
                   <Label htmlFor={`${id}-priority`} className="whitespace-nowrap">Priority</Label>
-                  <Input id={`${id}-priority`} type="number" min="1" max="99999" step="1" disabled={saveAll.isPending || !draft.included || (section === 'new-deals' && !row.offer)} value={draft.priority} onChange={event => setDrafts(current => ({ ...current, [row.id]: { ...draft, priority: event.target.value } }))} className="w-24" />
+                  <Input id={`${id}-priority`} type="number" min="1" max="99999" step="1" disabled={saveAll.isPending || !draft.included} value={draft.priority} onChange={event => setDrafts(current => ({ ...current, [row.id]: { ...draft, priority: event.target.value } }))} className="w-24" />
                 </div>
               </div>
             })}

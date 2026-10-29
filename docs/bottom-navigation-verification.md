@@ -2,7 +2,7 @@
 
 ## Cause and fix
 
-Legacy `/realx`, `/realx/map`, and `/realx/profile` routes rendered screens outside the tab navigator. Login completion, closing onboarding, notification links, and several back fallbacks could enter those routes and lose the bottom navigation.
+Legacy `/kouponly`, `/kouponly/map`, and `/kouponly/profile` routes rendered screens outside the tab navigator. Login completion, closing onboarding, notification links, and several back fallbacks could enter those routes and lose the bottom navigation.
 
 The three routes now redirect to Home, Explore, and Profile inside `(tabs)`. The existing screens were moved unchanged into `mobile/components/screens` and their tab routes updated. iOS tab minimization is set to `never`; the shared JavaScript navigator always displays its bar.
 

@@ -83,7 +83,7 @@ export default function NewDeals({ onVendorPress }: NewDealsProps) {
                     titleCaseName
                     contentStyle={{ minHeight: 48, justifyContent: 'center', paddingTop: 10, paddingBottom: 10 }}
                     style={{ width: cardWidth, borderWidth: 1, borderColor: 'rgba(100, 116, 106, 0.28)', borderRadius: 20, overflow: 'hidden' }}
-                    onPress={() => onVendorPress ? onVendorPress(vendor) : router.push({ pathname: '/realx/vendor/[id]', params: { id: vendor.vendorId } } as any)}
+                    onPress={() => onVendorPress ? onVendorPress(vendor) : router.push({ pathname: '/kouponly/vendor/[id]', params: { id: vendor.vendorId } } as any)}
                 />
             ))}
         </ScrollView>

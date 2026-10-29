@@ -28,7 +28,7 @@ begin
        left join public.kouponly_coupon_rounds r on r.period_id=sp.id and r.closed_at is null
        where sp.user_id=u.id and sub.provider='free_mvp' and sp.revoked_at is null and sp.starts_at<=now() and sp.ends_at>now() order by sp.starts_at desc limit 1) as "couponMonth"
     from auth.users u left join public.profiles p on p.user_id=u.id left join public.couponly_students s on s.id=u.id
-    left join public.realx_universities un on un.id=s.university_id
+    left join public.kouponly_universities un on un.id=s.university_id
     where not coalesce(u.is_anonymous,false) and (p.user_id is not null or s.id is not null or public.kouponly_school_email(u.email))
       and not exists(select 1 from public.couponly_user_roles where user_id=u.id and role in ('admin','vendor')) and (p_user_id is null or u.id=p_user_id)
   ), filtered as (

@@ -24,12 +24,12 @@ setNotificationHandler({
 export const setupNotificationChannels = async () => {
   if (Platform.OS !== 'android') return;
 
-  await setNotificationChannelAsync('reelx_general_v2', {
+  await setNotificationChannelAsync('kouponly_general_v2', {
     name: 'General',
     importance: AndroidImportance.HIGH,
     sound: null,
   });
-  await setNotificationChannelAsync('reelx_redemptions_v2', {
+  await setNotificationChannelAsync('kouponly_redemptions_v2', {
     name: 'Redemptions',
     importance: AndroidImportance.HIGH,
     sound: null,

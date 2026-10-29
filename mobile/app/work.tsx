@@ -1,1 +1,1 @@
-export { default } from './realx/opportunities';
+export { default } from './kouponly/opportunities';

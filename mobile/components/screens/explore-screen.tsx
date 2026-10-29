@@ -40,7 +40,7 @@ function markerColor(item: LocatedVendor) {
   return MARKER_COLORS.other;
 }
 
-export default function RealXMapScreen() {
+export default function KouponlyMapScreen() {
   const { colors: C } = useAppTheme();
   const { reduceMotion } = useMotionPreferences();
   const { isRTL } = useAppLocale();
@@ -112,7 +112,7 @@ export default function RealXMapScreen() {
   React.useEffect(() => {
     let active = true;
     if (!user) { setSavedVendorIds([]); return () => { active = false; }; }
-    void getSupabase().from('realx_student_saved_items').select('item_id').eq('student_id', user.id).eq('item_type', 'vendor').then(({ data }) => {
+    void getSupabase().from('kouponly_student_saved_items').select('item_id').eq('student_id', user.id).eq('item_type', 'vendor').then(({ data }) => {
       if (active) setSavedVendorIds((data || []).map(row => row.item_id));
     });
     return () => { active = false; };
@@ -152,11 +152,11 @@ export default function RealXMapScreen() {
     if (coords.length) mapRef.current?.fitToCoordinates?.(coords, { edgePadding: { top: 100, right: 40, bottom: 220, left: 40 }, animated: !reduceMotion });
   };
   const toggleSaved = async (item: LocatedVendor) => {
-    if (!user) { router.push({ pathname: '/realx/onboarding', params: { flow: 'login' } } as any); return; }
+    if (!user) { router.push({ pathname: '/kouponly/onboarding', params: { flow: 'login' } } as any); return; }
     const removing = savedVendorIds.includes(item.vendorId);
     const result = removing
-      ? await getSupabase().from('realx_student_saved_items').delete().eq('student_id', user.id).eq('item_type', 'vendor').eq('item_id', item.vendorId)
-      : await getSupabase().from('realx_student_saved_items').upsert({ student_id: user.id, item_type: 'vendor', item_id: item.vendorId, payload: { name: item.name, source: 'map', locationId: item.locationId } }, { onConflict: 'student_id,item_type,item_id' });
+      ? await getSupabase().from('kouponly_student_saved_items').delete().eq('student_id', user.id).eq('item_type', 'vendor').eq('item_id', item.vendorId)
+      : await getSupabase().from('kouponly_student_saved_items').upsert({ student_id: user.id, item_type: 'vendor', item_id: item.vendorId, payload: { name: item.name, source: 'map', locationId: item.locationId } }, { onConflict: 'student_id,item_type,item_id' });
     if (!result.error) setSavedVendorIds(ids => removing ? ids.filter(id => id !== item.vendorId) : [...ids, item.vendorId]);
   };
   const recenter = async () => {
@@ -227,7 +227,7 @@ export default function RealXMapScreen() {
       <View style={s.offerPill}><Ionicons name="pricetag" size={14} color={C.lime}/><Text numberOfLines={1} style={[s.offerText,{color:C.ink}]}>{selected.offer}</Text></View>
       {userLocation ? <View style={s.distanceRow}><Ionicons name="navigate-outline" size={14} color={C.muted}/><Text style={[s.placeInfo,{color:C.muted,marginTop:0}]}>{distanceBetweenKm(userLocation, selected).toFixed(2)} km</Text></View> : null}
       {selected.phoneNumber ? <ScalePressable onPress={() => void Linking.openURL(`tel:${selected.phoneNumber!.replace(/[^\d+]/g,'')}`)} style={s.phonePill}><Ionicons name="call-outline" size={14} color={C.lime}/><Text style={[s.placeInfo,{color:C.ink}]}>{selected.phoneNumber}</Text></ScalePressable>:null}
-      <View style={s.calloutActions}><ScalePressable accessibilityLabel={savedVendorIds.includes(selected.vendorId) ? 'Remove saved partner' : 'Save partner'} onPress={() => void toggleSaved(selected)} style={[s.calloutIcon, savedVendorIds.includes(selected.vendorId) && { backgroundColor: C.lime }]}><Ionicons name={savedVendorIds.includes(selected.vendorId) ? 'bookmark' : 'bookmark-outline'} size={18} color={savedVendorIds.includes(selected.vendorId) ? C.inkOnAccent : C.lime}/></ScalePressable><ScalePressable onPress={() => router.push({ pathname: '/realx/vendor/[id]', params: { id: selected.vendorId } } as any)} style={s.viewButton}><Ionicons name="storefront-outline" size={16} color={C.ink}/><Text style={[s.action,{color:C.ink}]}>{t('map_callout_view')}</Text></ScalePressable><ScalePressable onPress={() => void Linking.openURL(`https://www.google.com/maps/dir/?api=1&destination=${selected.latitude},${selected.longitude}`)} style={s.directionsButton}><Ionicons name="navigate" size={16} color={C.inkOnAccent}/><Text style={[s.action,{color:C.inkOnAccent}]}>{t('map_callout_directions')}</Text></ScalePressable></View>
+      <View style={s.calloutActions}><ScalePressable accessibilityLabel={savedVendorIds.includes(selected.vendorId) ? 'Remove saved partner' : 'Save partner'} onPress={() => void toggleSaved(selected)} style={[s.calloutIcon, savedVendorIds.includes(selected.vendorId) && { backgroundColor: C.lime }]}><Ionicons name={savedVendorIds.includes(selected.vendorId) ? 'bookmark' : 'bookmark-outline'} size={18} color={savedVendorIds.includes(selected.vendorId) ? C.inkOnAccent : C.lime}/></ScalePressable><ScalePressable onPress={() => router.push({ pathname: '/kouponly/vendor/[id]', params: { id: selected.vendorId, branch: selected.locationId } } as any)} style={s.viewButton}><Ionicons name="storefront-outline" size={16} color={C.ink}/><Text style={[s.action,{color:C.ink}]}>{t('map_callout_view')}</Text></ScalePressable><ScalePressable onPress={() => void Linking.openURL(`https://www.google.com/maps/dir/?api=1&destination=${selected.latitude},${selected.longitude}`)} style={s.directionsButton}><Ionicons name="navigate" size={16} color={C.inkOnAccent}/><Text style={[s.action,{color:C.inkOnAccent}]}>{t('map_callout_directions')}</Text></ScalePressable></View>
     </Animated.View> : null}
   </View>;
 }

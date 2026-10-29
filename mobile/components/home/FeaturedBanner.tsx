@@ -63,7 +63,7 @@ export default function FeaturedBanner({ item, style }: FeaturedBannerProps) {
         void recordCmsClick('featuredBrandShowcase', currentItem.id).catch(error => logger.warn('Unable to record showcase click:', error)).finally(() => {
             const url = safeWebUrl(currentItem.orderUrl);
             if (url) void Linking.openURL(url).catch(error => logger.warn('Unable to open showcase link:', error));
-            else if (currentItem.vendorId?.trim()) router.push({ pathname: '/realx/vendor/[id]', params: { id: currentItem.vendorId.trim() } } as any);
+            else if (currentItem.vendorId?.trim()) router.push({ pathname: '/kouponly/vendor/[id]', params: { id: currentItem.vendorId.trim() } } as any);
         });
     };
 

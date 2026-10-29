@@ -9,7 +9,7 @@ import { act } from '@testing-library/react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { StoreProvider } from '../lib/store';
-import VendorSearchScreen from '../app/realx/search';
+import VendorSearchScreen from '../app/kouponly/search';
 import HomeScreen from '../app/(tabs)/index';
 import SavedScreen from '../components/screens/saved-screen';
 import WorkScreen from '../app/work';
@@ -46,7 +46,7 @@ describe('mobile showcase states', () => {
     expect(view.getByTestId('home-search')).toBeTruthy();
     await fireEvent.changeText(view.getByTestId('home-search'), '  lunch  ');
     await fireEvent(view.getByTestId('home-search'),'submitEditing');
-    expect(router.push).toHaveBeenCalledWith({pathname:'/realx/search',params:{q:'lunch'}});
+    expect(router.push).toHaveBeenCalledWith({pathname:'/kouponly/search',params:{q:'lunch'}});
   });
   it('shows suggested vendors for an unmatched home search', async () => {
     const view = await wrapper(<HomeScreen />);
@@ -54,7 +54,7 @@ describe('mobile showcase states', () => {
     expect(view.queryByText('Can’t find it? Suggest a restaurant')).toBeNull();
     const suggestion = await view.findByText('Test Kitchen');
     await fireEvent.press(suggestion);
-    expect(router.push).toHaveBeenCalledWith({ pathname: '/realx/vendor/[id]', params: { id: 'vendor-1' } });
+    expect(router.push).toHaveBeenCalledWith({ pathname: '/kouponly/vendor/[id]', params: { id: 'vendor-1' } });
   });
   it('returns Home to the top when its tab is pressed', async () => {
     const listeners = new Map<string, () => void>();
@@ -76,7 +76,7 @@ describe('mobile showcase states', () => {
     expect(view.getByLabelText('Test Kitchen')).toBeTruthy();
     await fireEvent.changeText(input, 'no matching partner');
     await fireEvent(input, 'submitEditing');
-    await waitFor(() => expect(view.getByText('Popular offers for you')).toBeTruthy());
+    await waitFor(() => expect(view.getByText('Suggested offers')).toBeTruthy());
     expect(view.getByLabelText('Test Kitchen')).toBeTruthy();
     expect(view.queryByLabelText('Suggest a restaurant')).toBeNull();
   });
@@ -92,7 +92,7 @@ describe('mobile showcase states', () => {
     const view = await wrapper(<HomeScreen />);
     await waitFor(() => expect(view.getByText('Verification in Progress')).toBeTruthy());
     await fireEvent.press(view.getByText('Verification in Progress'));
-    expect(router.push).toHaveBeenCalledWith({ pathname: '/realx/onboarding', params: { flow: 'verification', step: 'status', requestId: 'request-1', statusToken: 'status-token' } });
+    expect(router.push).toHaveBeenCalledWith({ pathname: '/kouponly/onboarding', params: { flow: 'verification', step: 'status', requestId: 'request-1', statusToken: 'status-token' } });
   });
   it('labels the saved vendor section Saved Discounts for guest users', async () => {
     const view = await wrapper(<SavedScreen />);
@@ -103,7 +103,7 @@ describe('mobile showcase states', () => {
   });
   it('routes the legacy work link to the source Explore map', async () => {
     await wrapper(<WorkScreen />);
-    await waitFor(() => expect(router.replace).toHaveBeenCalledWith('/realx/map'));
+    await waitFor(() => expect(router.replace).toHaveBeenCalledWith('/kouponly/map'));
   });
   it.each(['online','inStore'] as const)('requires sign-in for %s redemption', async (mode) => {
     const view = await wrapper(<RedemptionSheet visible id="deal-101-1" title="Test Kitchen" mode={mode} onClose={jest.fn()}/>);

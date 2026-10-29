@@ -53,7 +53,7 @@ export default function NewDealsSection({ scrollY, viewportHeight, bottomInset, 
                 titleCaseName
                 contentStyle={{ minHeight: 48, justifyContent: 'center', paddingTop: 10, paddingBottom: 10 }}
                 style={{ width: width * 0.6, borderWidth: 1, borderColor: BorderPalette.cardOutline, borderRadius: 20, overflow: 'hidden' }}
-                onPress={() => router.push({ pathname: '/realx/vendor/[id]', params: { id: String(deal.vendorId || deal.id) } } as any)}
+                onPress={() => router.push({ pathname: '/kouponly/vendor/[id]', params: { id: String(deal.vendorId || deal.id) } } as any)}
               />
             ))}
           </ScrollView>

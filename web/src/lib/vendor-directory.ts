@@ -7,7 +7,7 @@ export const vendorsSearchSchema = z.object({
     page: z.coerce.number().int().min(1).catch(1),
     pageSize: z.coerce.number().int().min(5).max(50).catch(10),
     search: z.string().catch(''),
-    sort: z.enum(['name-asc', 'name-desc']).catch('name-asc'),
+    sort: z.enum(['latest', 'oldest', 'name-asc', 'name-desc']).catch('latest'),
 })
 
 export type VendorsSearch = z.infer<typeof vendorsSearchSchema>
@@ -58,7 +58,7 @@ export async function fetchVendorsPage(search: VendorsSearch, vendorScope: Vendo
     const term = search.search.trim().toLowerCase()
     let request = supabase.from('couponly_vendors').select(VENDOR_SELECT, { count: 'exact' })
     if (vendorScope !== 'all') request = request.eq('vendor_type', vendorScope)
-    request = request.order('name', { ascending: search.sort === 'name-asc', nullsFirst: false }).order('id')
+    request = request.order(search.sort === 'latest' || search.sort === 'oldest' ? 'created_at' : 'name', { ascending: search.sort === 'oldest' || search.sort === 'name-asc', nullsFirst: false }).order('id')
     if (term) {
         const { data, error } = await request
         if (error) throw error
@@ -81,9 +81,23 @@ export async function fetchAllVendors(): Promise<Vendor[]> {
 }
 
 export async function updateVendor(vendorId: string, updates: Record<string, unknown>): Promise<void> {
-    const { data: current, error: readError } = await supabase.from('couponly_vendors').select('payload').eq('id', vendorId).single()
+    const { data: current, error: readError } = await supabase.from('couponly_vendors').select('payload,locations').eq('id', vendorId).single()
     if (readError) throw readError
     const payload = { ...(current.payload || {}), ...updates }
+    const locations = (updates.locations ?? current.locations ?? []) as NonNullable<Vendor['locations']>
+    if ('locations' in updates || 'offers' in updates) {
+        if (!Array.isArray(locations)) throw new Error('Branches must be a list.')
+        const ids = locations.map(branch => branch.id)
+        if (ids.some(id => typeof id !== 'string' || !id.trim()) || new Set(ids).size !== ids.length) throw new Error('Each branch needs a unique ID.')
+        for (const branch of locations) {
+            const lat = branch.latitude, lng = branch.longitude
+            if ((lat == null) !== (lng == null) || lat != null && (!Number.isFinite(lat) || lat < -90 || lat > 90) || lng != null && (!Number.isFinite(lng) || lng < -180 || lng > 180)) throw new Error('Enter valid latitude and longitude together for each branch.')
+        }
+        if (!Array.isArray(payload.offers ?? [])) throw new Error('Offers must be a list.')
+        for (const offer of payload.offers ?? []) {
+            if (offer.branchIds !== undefined && (!Array.isArray(offer.branchIds) || offer.branchIds.some((id: unknown) => typeof id !== 'string' || !ids.includes(id)))) throw new Error('Offer branches must belong to this vendor. Reassign coupons before deleting a branch.')
+        }
+    }
     for (const field of ['newest', 'sortOrder']) {
         const value = updates[field]
         if (value != null && (!Number.isSafeInteger(value) || Number(value) < 0)) throw new Error('Vendor ordering must use non-negative whole numbers.')

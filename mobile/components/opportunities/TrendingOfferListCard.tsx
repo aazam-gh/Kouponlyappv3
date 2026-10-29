@@ -26,7 +26,7 @@ export default function TrendingOfferListCard({ name, imageUri, logoUri, onPress
       <View style={styles.imageContainer}>
         <RemoteImage source={imageUri ? { uri: imageUri } : undefined} style={StyleSheet.absoluteFill} contentFit="cover" />
         <View style={[styles.logoFrame, { backgroundColor: theme.background, borderColor: theme.border }]}>
-          <RemoteImage source={logoUri ? { uri: logoUri } : undefined} style={StyleSheet.absoluteFill} contentFit="cover" />
+          <RemoteImage source={logoUri ? { uri: logoUri } : undefined} style={StyleSheet.absoluteFill} contentFit="contain" />
         </View>
       </View>
       <View style={styles.content}>
@@ -62,7 +62,6 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 20,
-    borderWidth: 2,
     overflow: 'hidden',
   },
   content: {

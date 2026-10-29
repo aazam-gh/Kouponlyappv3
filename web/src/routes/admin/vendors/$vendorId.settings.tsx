@@ -24,7 +24,7 @@ function VendorSettingsLayout() {
             <div className="flex items-center gap-4">
                 <Link
                     to="/admin/vendors"
-                    search={{ page: 1, pageSize: 10, search: '', sort: 'name-asc' }}
+                    search={{ page: 1, pageSize: 10, search: '', sort: 'latest' }}
                     aria-label="Back to vendors"
                     className="p-2 -ml-2 rounded-full hover:bg-muted transition-colors"
                 >

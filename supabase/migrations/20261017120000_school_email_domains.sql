@@ -6,7 +6,7 @@ create table public.kouponly_school_email_domains (
   updated_by uuid references auth.users(id) on delete set null
 );
 insert into public.kouponly_school_email_domains(domain)
-select distinct lower(trim(domain)) from public.realx_universities u cross join lateral unnest(u.email_domains) as domains(domain)
+select distinct lower(trim(domain)) from public.kouponly_universities u cross join lateral unnest(u.email_domains) as domains(domain)
 where lower(trim(domain)) ~ '^[a-z0-9]([a-z0-9-]*[a-z0-9])?([.][a-z0-9]([a-z0-9-]*[a-z0-9])?)+$'
 on conflict(domain) do nothing;
 insert into public.kouponly_school_email_domains(domain) values ('rajagiri.edu.in') on conflict(domain) do nothing;

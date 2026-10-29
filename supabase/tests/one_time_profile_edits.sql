@@ -11,7 +11,7 @@ begin
   assert result->>'first_name_edit_used'='true','name slot consumed';
   assert result->>'date_of_birth_edit_used'='true','DOB slot consumed';
   assert result->>'mobile_edit_used'='true','phone slot consumed';
-  assert (select first_name='Updated' from public.realx_students where id=auth.uid()),'student view synchronized';
+  assert (select first_name='Updated' from public.kouponly_students where id=auth.uid()),'student view synchronized';
   perform public.update_own_profile_details('{"first_name":"Updated"}');
   begin perform public.update_own_profile_details('{"first_name":"Again"}');exception when raise_exception then rejected:=sqlerrm like '%only%once%';end;
   assert rejected,'second name change rejected';rejected:=false;

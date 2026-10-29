@@ -14,7 +14,7 @@ begin
   end if;
 
   select vendor_id into target_vendor_id
-  from public.realx_offers
+  from public.kouponly_offers
   where id = p_offer_id;
 
   if target_vendor_id is null then
@@ -24,7 +24,7 @@ begin
     raise exception 'Not authorized to update this offer badge' using errcode = '42501';
   end if;
 
-  update public.realx_vendors as vendor
+  update public.kouponly_vendors as vendor
   set payload = jsonb_set(vendor.payload, '{offers}', (
     select jsonb_agg(
       case when coalesce(nullif(item.value->>'id', ''), target_vendor_id || ':embedded:' || item.ordinal::text) = p_offer_id then

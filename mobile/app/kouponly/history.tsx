@@ -17,7 +17,7 @@ import { useAppTheme as useDesignTheme } from '@/context/AppThemeContext';
 import { useAppLocale } from '@/context/LocaleContext';
 import ProfileSprites from '@/components/profile/ProfileSprites';
 
-export default function RealXHistoryScreen() {
+export default function KouponlyHistoryScreen() {
   const styles = React.useMemo(() => makeStyles(), []); const { user, loading: authLoading } = useAuth(); const { t } = useTranslation(); const { isRTL } = useAppLocale(); const { theme: design } = useDesignTheme();
   const isFocused = useIsFocused();
   const [snapshot, setSnapshot] = React.useState<{userId:string; rows:any[]} | null>(null);
@@ -28,16 +28,16 @@ export default function RealXHistoryScreen() {
     if (user || authLoading || !isFocused) return;
     Alert.alert(t('guest_auth_required_title'), t('guest_history_message'), [
       { text: t('cancel'), style: 'cancel' },
-      { text: t('onboarding_login_action'), onPress: () => router.push({ pathname: '/realx/onboarding', params: { flow: 'login' } } as any) },
-      { text: t('onboarding_sign_up'), onPress: () => router.push('/realx/welcome' as any) },
+      { text: t('onboarding_login_action'), onPress: () => router.push({ pathname: '/kouponly/onboarding', params: { flow: 'login' } } as any) },
+      { text: t('onboarding_sign_up'), onPress: () => router.push('/kouponly/welcome' as any) },
     ]);
-    router.replace('/realx/profile' as any);
+    router.replace('/kouponly/profile' as any);
   }, [user?.id, authLoading, isFocused, t]);
   const load = React.useCallback(async () => {
     if (!user) { setSnapshot(null); setLoading(false); return; }
     try {
       const [legacy, coupons] = await Promise.all([
-        getSupabase().from('realx_transactions').select('*').eq('student_id', user.id).eq('transaction_type', 'offer').eq('status', 'completed').order('created_at', { ascending: false }).limit(100),
+        getSupabase().from('kouponly_transactions').select('*').eq('student_id', user.id).eq('transaction_type', 'offer').eq('status', 'completed').order('created_at', { ascending: false }).limit(100),
         getSupabase().from('redemptions').select('redemption_id,code,vendor_id,bill_amount,offer_snapshot,consumed_at').eq('user_id', user.id).eq('status', 'success').not('round_id', 'is', null).order('consumed_at', {ascending: false}).limit(100),
       ]);
       if (legacy.error) throw legacy.error; if (coupons.error) throw coupons.error;
@@ -57,7 +57,7 @@ export default function RealXHistoryScreen() {
         const vendorName = row.vendor_name || vendor?.name || 'VENDOR';
         return <View style={styles.item}><View style={[styles.card, { backgroundColor: design.cardMuted }]}><View style={[styles.header, isRTL && styles.rowReverse]}><View style={[styles.vendorInfo, isRTL && styles.rowReverse]}><View style={[styles.logo, { backgroundColor: design.logoTile, borderColor: design.logoTileBorder }]}>{vendor?.logo || vendor?.image ? <Image source={{ uri: vendor.logo || vendor.image }} style={styles.logoImage} contentFit="contain" /> : <Ionicons name="storefront" size={24} color={design.iconMuted} />}</View><View style={styles.vendorCopy}><Text style={[styles.vendorName, { color: design.text, textAlign: isRTL ? 'right' : 'left', writingDirection: isRTL ? 'rtl' : 'ltr' }]} numberOfLines={1}>{vendorName}</Text><Text style={[styles.savings, { color: design.mutedText, writingDirection: isRTL ? 'rtl' : 'ltr' }]} numberOfLines={2}>{row.is_coupon ? 'Free monthly coupon' : t('estimated_savings', { amount: amount(savings) })}</Text></View></View><View style={[styles.paid, isRTL && { alignItems: 'flex-start' }]}><Text style={[styles.paidLabel, { color: design.mutedText }]} numberOfLines={1}>{row.is_coupon ? 'Status' : t('total_paid')}</Text><Text style={[styles.paidValue, { color: design.text, writingDirection: isRTL ? 'rtl' : 'ltr' }]} numberOfLines={1}>{row.is_coupon ? 'Redeemed' : amount(paid)}</Text></View></View>
           {row.is_coupon && row.bill_amount != null ? <Text testID="history-bill-amount" style={{ color: design.text, marginTop: 12 }}>Bill amount before discount: {row.bill_currency} {Number(row.bill_amount).toFixed(2)}</Text> : null}
-          {row.is_coupon && row.code ? <Text selectable accessibilityLabel="Unique redemption code" style={{ color: design.text, marginTop: 12 }}>Code: {row.code}</Text> : null}<View style={[styles.divider, { backgroundColor: design.border }]} /><View style={[styles.footer, isRTL && styles.rowReverse]}><View style={styles.offerInfo}><Text style={[styles.offerLabel, { color: design.mutedText }]} numberOfLines={1}>{t('offer_redeemed_label')}</Text><Text style={[styles.offerValue, { color: design.text, writingDirection: isRTL ? 'rtl' : 'ltr' }]} numberOfLines={1}>{discount}</Text></View>{vendor ? <ScalePressable style={[styles.redeem, { backgroundColor: design.actionSolid }]} onPress={() => router.push({ pathname: '/realx/vendor/[id]', params: { id: String(vendor.id) } } as any)}><Text style={[styles.redeemText, { color: design.onActionSolid }]}>{row.is_coupon ? 'View offer' : t('redeem_again')}</Text></ScalePressable> : null}</View></View><Text style={[styles.date, { color: design.mutedText, writingDirection: isRTL ? 'rtl' : 'ltr', textAlign: isRTL ? 'right' : 'left' }]}>{t('redeemed_on', { date })}</Text></View>;
+          {row.is_coupon && row.code ? <Text selectable accessibilityLabel="Unique redemption code" style={{ color: design.text, marginTop: 12 }}>Code: {row.code}</Text> : null}<View style={[styles.divider, { backgroundColor: design.border }]} /><View style={[styles.footer, isRTL && styles.rowReverse]}><View style={styles.offerInfo}><Text style={[styles.offerLabel, { color: design.mutedText }]} numberOfLines={1}>{t('offer_redeemed_label')}</Text><Text style={[styles.offerValue, { color: design.text, writingDirection: isRTL ? 'rtl' : 'ltr' }]} numberOfLines={1}>{discount}</Text></View>{vendor ? <ScalePressable style={[styles.redeem, { backgroundColor: design.actionSolid }]} onPress={() => router.push({ pathname: '/kouponly/vendor/[id]', params: { id: String(vendor.id) } } as any)}><Text style={[styles.redeemText, { color: design.onActionSolid }]}>{row.is_coupon ? 'View offer' : t('redeem_again')}</Text></ScalePressable> : null}</View></View><Text style={[styles.date, { color: design.mutedText, writingDirection: isRTL ? 'rtl' : 'ltr', textAlign: isRTL ? 'right' : 'left' }]}>{t('redeemed_on', { date })}</Text></View>;
   };
   return <SafeAreaView testID="couponly-history-screen" style={[styles.root, { backgroundColor: design.background }]} edges={['top']}>
     <ProfileSprites />

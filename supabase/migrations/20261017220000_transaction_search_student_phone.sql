@@ -14,7 +14,7 @@ begin
    nullif(r.offer_snapshot->>'estimatedSavings','')::numeric as "discountAmount",v.payload->>'email' as "vendorEmail",coalesce(v.payload->>'phoneNumber',v.payload->>'phone') as "vendorPhone",
    coalesce(v.payload->>'address',v.locations->0->>'address') as "vendorAddress",
    (select jsonb_agg(jsonb_build_object('updatedAmount',a.updated_amount,'previousAmount',a.previous_amount,'reason',a.reason,'changedBy',a.changed_by,'changedAt',a.changed_at) order by a.changed_at desc,a.id desc) from public.kouponly_redemption_amount_audit a where a.user_id=r.user_id and a.redemption_id=r.redemption_id) as corrections
-  from public.redemptions r left join auth.users u on u.id=r.user_id left join public.realx_students s on s.id=r.user_id left join public.realx_universities un on un.id=s.university_id left join public.realx_vendors v on v.id=r.vendor_id
+  from public.redemptions r left join auth.users u on u.id=r.user_id left join public.kouponly_students s on s.id=r.user_id left join public.kouponly_universities un on un.id=s.university_id left join public.kouponly_vendors v on v.id=r.vendor_id
   where r.round_id is not null and r.consumed_at is not null and (p_vendor_id is null or r.vendor_id=p_vendor_id) and (p_user_id is null or r.user_id=p_user_id)
    and (p_from is null or r.consumed_at>=p_from::timestamptz) and (p_to is null or r.consumed_at<(p_to+1)::timestamptz)
   union all
@@ -26,7 +26,7 @@ begin
    t.discount_amount,v.payload->>'email',coalesce(v.payload->>'phoneNumber',v.payload->>'phone'),coalesce(v.payload->>'address',v.locations->0->>'address'),
    (select jsonb_agg(jsonb_build_object('updatedAmount',a.updated_amount,'previousAmount',a.previous_amount,'reason',a.reason,'changedBy',a.changed_by,'changedAt',a.changed_at) order by a.changed_at desc,a.id desc) from public.kouponly_transaction_amount_audit a where a.transaction_id=t.id)
   from public.couponly_transactions t left join auth.users u on u.id=t.student_id left join public.couponly_students s on s.id=t.student_id left join public.profiles p on p.user_id=t.student_id
-   left join public.realx_universities un on un.id=s.university_id left join public.couponly_vendors v on v.id=t.vendor_id left join public.couponly_offers o on o.id=t.offer_id
+   left join public.kouponly_universities un on un.id=s.university_id left join public.couponly_vendors v on v.id=t.vendor_id left join public.couponly_offers o on o.id=t.offer_id
   where t.status='completed' and (p_vendor_id is null or t.vendor_id=p_vendor_id) and (p_user_id is null or t.student_id=p_user_id)
    and (p_from is null or t.created_at>=p_from::timestamptz) and (p_to is null or t.created_at<(p_to+1)::timestamptz)
  ), filtered as (select * from records where coalesce(p_search,'')='' or concat_ws(' ',vendor,offer,email,"studentName","studentPhone",code,id) ilike '%'||p_search||'%')

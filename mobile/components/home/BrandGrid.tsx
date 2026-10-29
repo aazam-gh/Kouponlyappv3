@@ -98,7 +98,7 @@ export default function BrandGrid() {
         if (!vendorId) return;
 
         triggerSubtleHaptic();
-        router.push({ pathname: '/realx/vendor/[id]', params: { id: vendorId } } as any);
+        router.push({ pathname: '/kouponly/vendor/[id]', params: { id: vendorId } } as any);
     };
 
     // Split brands into rows: ≤4 = 1 row, 5-8 = 2 rows, >8 = 2 scrollable rows

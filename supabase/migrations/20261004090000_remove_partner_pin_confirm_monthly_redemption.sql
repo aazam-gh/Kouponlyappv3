@@ -32,10 +32,10 @@ begin
   listing_key:=substring(p_redemption_id from '^listing-(.+)$');
   offer_key:=substring(p_redemption_id from '^deal-[0-9]+-([0-9]+)');
   if deal_key is not null then
-    select id into vendor_key from public.realx_vendors
+    select id into vendor_key from public.kouponly_vendors
       where catalogue_deal_id=deal_key::integer and status='Active';
     if not exists(select 1 from public.catalogue_deals where id=deal_key and published)
-      and (vendor_key is null or not exists(select 1 from public.realx_offers where vendor_id=vendor_key and active
+      and (vendor_key is null or not exists(select 1 from public.kouponly_offers where vendor_id=vendor_key and active
         and (starts_at is null or starts_at<=now()) and (ends_at is null or ends_at>now()))) then
       raise exception 'Offer is unavailable' using errcode='P0001';
     end if;
@@ -110,34 +110,34 @@ revoke all on function public.complete_redemption_atomic(text,uuid) from public,
 grant execute on function public.complete_redemption_atomic(text,uuid) to authenticated;
 
 -- Remove PIN based transactions while retaining the checkout transaction logic.
-drop function if exists public.realx_redeem_offer(text,text,numeric,text,text,numeric,integer,text,uuid);
-create function public.realx_redeem_offer(
+drop function if exists public.kouponly_redeem_offer(text,text,numeric,text,text,numeric,integer,text,uuid);
+create function public.kouponly_redeem_offer(
   p_vendor_id text,p_offer_id text,p_total_amount numeric,p_type text,
   p_giftcard_amount numeric,p_offer_index integer,p_creator_code text,p_idempotency_key uuid
 )
 returns jsonb language plpgsql security definer set search_path='' as $$
 declare
-  uid uuid:=auth.uid(); student public.realx_students%rowtype; vendor public.realx_vendors%rowtype;
-  creator public.realx_students%rowtype; txn public.realx_transactions%rowtype; offer_data jsonb;
-  creator_code_row public.realx_creator_codes%rowtype; total_cents bigint; discount_cents bigint:=0;
+  uid uuid:=auth.uid(); student public.kouponly_students%rowtype; vendor public.kouponly_vendors%rowtype;
+  creator public.kouponly_students%rowtype; txn public.kouponly_transactions%rowtype; offer_data jsonb;
+  creator_code_row public.kouponly_creator_codes%rowtype; total_cents bigint; discount_cents bigint:=0;
   gift_cents bigint:=0; final_cents bigint; user_cashback bigint:=0; creator_cashback bigint:=0;
-  rate_key text; rate_row public.realx_rate_limits%rowtype; creator_name text;
+  rate_key text; rate_row public.kouponly_rate_limits%rowtype; creator_name text;
   discount_type text; discount_value numeric; allowed_values jsonb; response jsonb;
 begin
   if uid is null then raise exception 'Login required' using errcode='28000'; end if;
   if p_type is null or p_type not in ('offer','giftcard') then raise exception 'Invalid redemption type' using errcode='22023'; end if;
   if p_total_amount is null or p_total_amount<0.01 or p_total_amount>1000000 or round(p_total_amount*100)<>p_total_amount*100 then raise exception 'Total amount is invalid' using errcode='22023'; end if;
-  select * into txn from public.realx_transactions where student_id=uid and idempotency_key=p_idempotency_key;
+  select * into txn from public.kouponly_transactions where student_id=uid and idempotency_key=p_idempotency_key;
   if found and txn.payload ? 'finalAmount' then return txn.payload; end if;
-  select * into student from public.realx_students where id=uid for update;
+  select * into student from public.kouponly_students where id=uid for update;
   if not found then raise exception 'User not found' using errcode='P0002'; end if;
   if coalesce((student.profile->>'redemptionDisabled')::boolean,false) or student.profile->>'accountType'='browse_only' then raise exception 'This account cannot make redemptions' using errcode='42501'; end if;
-  select * into vendor from public.realx_vendors where id=p_vendor_id for share;
+  select * into vendor from public.kouponly_vendors where id=p_vendor_id for share;
   if not found then raise exception 'Vendor not found' using errcode='P0002'; end if;
   rate_key:=encode(extensions.digest(uid::text||':'||p_vendor_id,'sha256'),'hex');
-  insert into public.realx_rate_limits(key,window_started_at,hit_count) values(rate_key,now(),1)
-    on conflict(key) do update set hit_count=case when now()-realx_rate_limits.window_started_at<interval '5 minutes' then realx_rate_limits.hit_count+1 else 1 end,
-      window_started_at=case when now()-realx_rate_limits.window_started_at<interval '5 minutes' then realx_rate_limits.window_started_at else now() end returning * into rate_row;
+  insert into public.kouponly_rate_limits(key,window_started_at,hit_count) values(rate_key,now(),1)
+    on conflict(key) do update set hit_count=case when now()-kouponly_rate_limits.window_started_at<interval '5 minutes' then kouponly_rate_limits.hit_count+1 else 1 end,
+      window_started_at=case when now()-kouponly_rate_limits.window_started_at<interval '5 minutes' then kouponly_rate_limits.window_started_at else now() end returning * into rate_row;
   if rate_row.hit_count>10 then raise exception 'Too many redemption attempts. Please try again later.' using errcode='42900'; end if;
   total_cents:=round(p_total_amount*100);final_cents:=total_cents;
   if p_type='offer' then
@@ -154,9 +154,9 @@ begin
       discount_cents:=least(discount_cents,total_cents);final_cents:=total_cents-discount_cents;
     end if;
     if nullif(trim(coalesce(p_creator_code,'')),'') is not null then
-      select * into creator_code_row from public.realx_creator_codes where code=upper(trim(p_creator_code));
+      select * into creator_code_row from public.kouponly_creator_codes where code=upper(trim(p_creator_code));
       if not found then raise exception 'Invalid creator code' using errcode='P0002'; end if;
-      select * into creator from public.realx_students where id=creator_code_row.student_id;
+      select * into creator from public.kouponly_students where id=creator_code_row.student_id;
       if not found then raise exception 'Creator not found' using errcode='P0002'; end if;
       creator_name:=coalesce(creator.profile->>'name',nullif(creator.first_name||' '||creator.last_name,' '));
     end if;
@@ -169,29 +169,29 @@ begin
     gift_cents:=round(p_giftcard_amount*100);
     if round(student.cashback*100)<gift_cents then raise exception 'Insufficient balance' using errcode='55000'; end if;
     final_cents:=greatest(0,total_cents-gift_cents);
-    update public.realx_students set cashback=cashback-(gift_cents::numeric/100),savings=savings+(gift_cents::numeric/100) where id=uid;
+    update public.kouponly_students set cashback=cashback-(gift_cents::numeric/100),savings=savings+(gift_cents::numeric/100) where id=uid;
   end if;
-  insert into public.realx_transactions(student_id,vendor_id,vendor_id_snapshot,offer_id,transaction_type,status,idempotency_key,amount,total_amount,final_amount,discount_amount,vendor_name,type,cashback_amount,creator_cashback_amount,creator_code,creator_uid,discount_type,discount_value,redemption_card_amount,remaining_amount,metadata,completed_at)
+  insert into public.kouponly_transactions(student_id,vendor_id,vendor_id_snapshot,offer_id,transaction_type,status,idempotency_key,amount,total_amount,final_amount,discount_amount,vendor_name,type,cashback_amount,creator_cashback_amount,creator_code,creator_uid,discount_type,discount_value,redemption_card_amount,remaining_amount,metadata,completed_at)
   values(uid,p_vendor_id,p_vendor_id,p_offer_id,p_type,'completed',p_idempotency_key,p_total_amount,p_total_amount,final_cents::numeric/100,discount_cents::numeric/100,vendor.name,p_type,user_cashback::numeric/100,creator_cashback::numeric/100,nullif(p_creator_code,''),creator_code_row.student_id,discount_type,discount_value,gift_cents::numeric/100,final_cents::numeric/100,
     jsonb_build_object('totalAmount',p_total_amount,'finalAmount',final_cents::numeric/100,'offer',offer_data,'creatorCode',nullif(p_creator_code,''),'cashbackAmount',user_cashback::numeric/100,'creatorCashbackAmount',creator_cashback::numeric/100),now()) returning * into txn;
-  if p_type='offer' and (discount_cents+gift_cents)>0 then update public.realx_students set savings=savings+(discount_cents::numeric/100) where id=uid; end if;
-  if user_cashback>0 then update public.realx_students set cashback=cashback+(user_cashback::numeric/100) where id=uid; end if;
-  if creator_cashback>0 then update public.realx_students set cashback=cashback+(creator_cashback::numeric/100) where id=creator_code_row.student_id; end if;
-  insert into public.realx_reward_accounts(student_id,status_points,redemption_count,last_earned_at,updated_at)
-    values(uid,100,1,now(),now()) on conflict(student_id) do update set status_points=realx_reward_accounts.status_points+100,redemption_count=realx_reward_accounts.redemption_count+1,last_earned_at=now(),updated_at=now();
+  if p_type='offer' and (discount_cents+gift_cents)>0 then update public.kouponly_students set savings=savings+(discount_cents::numeric/100) where id=uid; end if;
+  if user_cashback>0 then update public.kouponly_students set cashback=cashback+(user_cashback::numeric/100) where id=uid; end if;
+  if creator_cashback>0 then update public.kouponly_students set cashback=cashback+(creator_cashback::numeric/100) where id=creator_code_row.student_id; end if;
+  insert into public.kouponly_reward_accounts(student_id,status_points,redemption_count,last_earned_at,updated_at)
+    values(uid,100,1,now(),now()) on conflict(student_id) do update set status_points=kouponly_reward_accounts.status_points+100,redemption_count=kouponly_reward_accounts.redemption_count+1,last_earned_at=now(),updated_at=now();
   response:=jsonb_build_object('transactionId',txn.id,'finalAmount',final_cents::numeric/100,'discountAmount',discount_cents::numeric/100,
     'savedAmount',(discount_cents+gift_cents)::numeric/100,'cashbackAmount',case when creator_code_row.student_id=uid then (user_cashback+creator_cashback)::numeric/100 else user_cashback::numeric/100 end,
     'creatorUid',creator_code_row.student_id,'creatorName',creator_name,'creatorCashback',creator_cashback::numeric/100,'vendorName',vendor.name);
-  update public.realx_transactions set payload=response where id=txn.id;
+  update public.kouponly_transactions set payload=response where id=txn.id;
   return response;
 end $$;
-revoke all on function public.realx_redeem_offer(text,text,numeric,text,numeric,integer,text,uuid) from public,anon;
-grant execute on function public.realx_redeem_offer(text,text,numeric,text,numeric,integer,text,uuid) to authenticated;
+revoke all on function public.kouponly_redeem_offer(text,text,numeric,text,numeric,integer,text,uuid) from public,anon;
+grant execute on function public.kouponly_redeem_offer(text,text,numeric,text,numeric,integer,text,uuid) to authenticated;
 
-create or replace function public.realx_redeem_gift_card(p_vendor_id text,p_amount numeric,p_idempotency_key uuid default gen_random_uuid())
+create or replace function public.kouponly_redeem_gift_card(p_vendor_id text,p_amount numeric,p_idempotency_key uuid default gen_random_uuid())
 returns jsonb language plpgsql security definer set search_path='' as $$
-begin raise exception 'Use realx_redeem_offer for vendor checkout' using errcode='42501'; end $$;
+begin raise exception 'Use kouponly_redeem_offer for vendor checkout' using errcode='42501'; end $$;
 
-drop function if exists public.realx_set_vendor_redemption_pin(text,text);
+drop function if exists public.kouponly_set_vendor_redemption_pin(text,text);
 drop table if exists public.partner_redemption_pins;
-drop table if exists public.realx_vendor_redemption_secrets;
+drop table if exists public.kouponly_vendor_redemption_secrets;

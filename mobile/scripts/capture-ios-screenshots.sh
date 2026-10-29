@@ -13,16 +13,16 @@ mkdir -p "${OUTPUT_DIR}"
 xcrun simctl bootstatus "${DEVICE_UDID}" -b
 
 routes=(
-  "home:/realx"
-  "search:/realx/search"
-  "map:/realx/map"
-  "saved:/realx/saved"
-  "profile:/realx/profile"
-  "history:/realx/history"
-  "category:/realx/category/market-food"
-  "vendor:/realx/vendor/catalogue-vendor-1"
-  "welcome:/realx/welcome"
-  "login:/realx/onboarding?flow=login"
+  "home:/kouponly"
+  "search:/kouponly/search"
+  "map:/kouponly/map"
+  "saved:/kouponly/saved"
+  "profile:/kouponly/profile"
+  "history:/kouponly/history"
+  "category:/kouponly/category/market-food"
+  "vendor:/kouponly/vendor/catalogue-vendor-1"
+  "welcome:/kouponly/welcome"
+  "login:/kouponly/onboarding?flow=login"
 )
 
 for item in "${routes[@]}"; do

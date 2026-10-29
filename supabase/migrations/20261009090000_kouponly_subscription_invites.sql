@@ -9,9 +9,9 @@ select referral_code,user_id from public.profiles where referral_code ~ '^[ABCDE
 
 -- Views retain table dependencies through the pending backend renames.
 do $$ declare vendors regclass; offers regclass; roles regclass; begin
-  vendors := coalesce(to_regclass('public.kouponly_vendors'),to_regclass('public.couponly_vendors'),to_regclass('public.realx_vendors'));
-  offers := coalesce(to_regclass('public.kouponly_offers'),to_regclass('public.couponly_offers'),to_regclass('public.realx_offers'));
-  roles := coalesce(to_regclass('public.kouponly_user_roles'),to_regclass('public.couponly_user_roles'),to_regclass('public.realx_user_roles'));
+  vendors := coalesce(to_regclass('public.kouponly_vendors'),to_regclass('public.couponly_vendors'),to_regclass('public.kouponly_vendors'));
+  offers := coalesce(to_regclass('public.kouponly_offers'),to_regclass('public.couponly_offers'),to_regclass('public.kouponly_offers'));
+  roles := coalesce(to_regclass('public.kouponly_user_roles'),to_regclass('public.couponly_user_roles'),to_regclass('public.kouponly_user_roles'));
   execute format('create view public.kouponly_entitlement_vendors as select id,name,status,catalogue_deal_id from %s',vendors);
   execute format('create view public.kouponly_entitlement_offers as select id,vendor_id,title,active,starts_at,ends_at,redemption_mode,sort_order from %s',offers);
   execute format('create view public.kouponly_entitlement_roles as select user_id,role from %s',roles);

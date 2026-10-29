@@ -1,1 +1,1 @@
-export { default } from './realx/search';
+export { default } from './kouponly/search';

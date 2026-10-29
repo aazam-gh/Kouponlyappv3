@@ -32,7 +32,7 @@ jest.mock('react-native-reanimated', () => {
   };
 });
 import AuthScreen from '../app/auth';
-import OnboardingScreen from '../app/realx/onboarding';
+import OnboardingScreen from '../app/kouponly/onboarding';
 import * as couponlyBackend from '../lib/couponlyBackend';
 
 describe('Kouponly account onboarding entry', () => {
@@ -41,7 +41,7 @@ describe('Kouponly account onboarding entry', () => {
     expect(view.getByText('Create account')).toBeTruthy();
     expect(view.getByText('Explore as Guest')).toBeTruthy();
     await fireEvent.press(view.getByText('Create account'));
-    await waitFor(() => expect(router.push).toHaveBeenCalledWith(expect.objectContaining({ pathname: '/realx/onboarding', params: expect.objectContaining({ flow: 'signup' }) })));
+    await waitFor(() => expect(router.push).toHaveBeenCalledWith(expect.objectContaining({ pathname: '/kouponly/onboarding', params: expect.objectContaining({ flow: 'signup' }) })));
     expect(view.queryByText('Join as a student')).toBeNull();
   });
   it('uses the source email-code login flow with the Supabase-backed action', async () => {

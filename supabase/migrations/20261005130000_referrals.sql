@@ -119,9 +119,9 @@ begin
   end if;
 
   if deal_key is not null then
-    select id into vendor_key from public.realx_vendors where catalogue_deal_id=deal_key::integer and status='Active';
+    select id into vendor_key from public.kouponly_vendors where catalogue_deal_id=deal_key::integer and status='Active';
     if not exists(select 1 from public.catalogue_deals where id=deal_key and published)
-      and (vendor_key is null or not exists(select 1 from public.realx_offers where vendor_id=vendor_key and active
+      and (vendor_key is null or not exists(select 1 from public.kouponly_offers where vendor_id=vendor_key and active
         and (starts_at is null or starts_at<=now()) and (ends_at is null or ends_at>now()))) then
       raise exception 'Offer is unavailable' using errcode='P0001';
     end if;

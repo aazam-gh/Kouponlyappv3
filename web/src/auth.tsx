@@ -30,7 +30,7 @@ async function loadRole(user: SupabaseUser | null) {
   if (!user) return {admin:false};
   let {data,error}=await supabase.from('couponly_user_roles').select('role').eq('user_id',user.id).maybeSingle();
   if(error && ['42P01','PGRST205'].includes(error.code)) {
-    ({data,error}=await supabase.from('realx_user_roles').select('role').eq('user_id',user.id).maybeSingle());
+    ({data,error}=await supabase.from('kouponly_user_roles').select('role').eq('user_id',user.id).maybeSingle());
   }
   if (error) throw error;
   return {admin:data?.role==='admin'};

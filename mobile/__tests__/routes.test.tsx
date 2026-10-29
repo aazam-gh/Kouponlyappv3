@@ -10,8 +10,8 @@ import MapScreen from "../components/screens/explore-screen";
 import MeScreen from "../app/(tabs)/me";
 
 import DealScreen from "../app/deal/[id]";
-import VendorRoute from "../app/realx/vendor/[id]";
-import HistoryScreen from '../app/realx/history';
+import VendorRoute from "../app/kouponly/vendor/[id]";
+import HistoryScreen from '../app/kouponly/history';
 
 jest.mock('../lib/benefits', () => ({ useBenefits: () => ({benefits: null, isAdmin: false}), isCouponOfferUsed: () => false }));
 
@@ -62,7 +62,7 @@ describe("reachable route coverage", () => {
   it('uses the source guest auth prompt for redemption history', async () => {
     const alert = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
     await wrap(<HistoryScreen />);
-    await waitFor(() => expect(router.replace).toHaveBeenCalledWith('/realx/profile'));
+    await waitFor(() => expect(router.replace).toHaveBeenCalledWith('/kouponly/profile'));
     expect(alert).toHaveBeenCalledWith('Create an account to continue', 'Log in or sign up to view redemption history.', expect.any(Array));
     alert.mockRestore();
   });
@@ -73,9 +73,9 @@ describe("reachable route coverage", () => {
     expect(view.getByText("Terms and Conditions")).toBeTruthy();
     expect(view.getByText("Privacy Policy")).toBeTruthy();
     await fireEvent.press(view.getByText("LOG IN"));
-    expect(router.push).toHaveBeenCalledWith({ pathname: '/realx/onboarding', params: { flow: 'login' } });
+    expect(router.push).toHaveBeenCalledWith({ pathname: '/kouponly/onboarding', params: { flow: 'login' } });
     await fireEvent.press(view.getByText("Create Account"));
-    expect(router.push).toHaveBeenCalledWith('/realx/welcome');
+    expect(router.push).toHaveBeenCalledWith('/kouponly/welcome');
   });
 
   it("shows Kouponly partner map locations and directions", async () => {
@@ -125,7 +125,7 @@ describe("reachable route coverage", () => {
     expect(view.getByTestId('redeem-offer-2')).toBeTruthy();
     await fireEvent.press(view.getByLabelText(/^Show vendor location/));
     expect(view.getByText('Branches')).toBeTruthy();
-    expect(view.getByText('Second branch')).toBeTruthy();
+    expect(view.getByLabelText('Directions to Second branch')).toBeTruthy();
   });
 
   it('renders vendor details directly from the catalogue vendor ID',async()=>{

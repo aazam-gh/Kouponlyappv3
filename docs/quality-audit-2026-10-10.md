@@ -8,7 +8,7 @@ This audit covers the Expo mobile app, Vite admin panel and Supabase backend. It
 - Offline bookmark/interests sync runs one writer per account, preserves actions added during synchronization, stops on failed earlier operations to retain order, and keeps unsynced local state. Account hydration cannot write the previous account's cache under another account's key.
 - Profile loading tolerates damaged local JSON and unavailable avatar URLs. Successful pending synchronization uses server edit flags. Permanent server validation failures are not retained as offline edits. Avatar uploads cancel on provider cleanup and recheck account ownership before updating the profile.
 - Fixed the unreachable onboarding `profile` state: incomplete sign-in accounts return to the signup form to enter their names.
-- Catalogue Realtime subscriptions target published `couponly_*` tables, while REST reads retain the `realx_*` compatibility views.
+- Catalogue Realtime subscriptions target published `couponly_*` tables, while REST reads retain the `kouponly_*` compatibility views.
 - Admin subscriptions ignore stale responses and callbacks after unsubscribe. Image compression releases object URLs on success and failure; bitmap conversion always closes decoded images. Existing public-media URLs use public downloads for both bucket aliases.
 - Removed unused prototype code generation and state-merging helpers, and over 700 lines of duplicate legacy Edge Function implementations. Legacy entry files import the canonical handlers.
 - Added 34 foreign-key indexes and removed direct REST execution privileges from two trigger-only functions. Existing client RPC permissions remain available.

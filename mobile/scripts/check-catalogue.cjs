@@ -25,14 +25,14 @@ async function request(endpoint, body) {
 }
 (async () => {
   const [vendors, offers, locations, categories, subcategories, assignments] = await Promise.all([
-    request('realx_vendors?select=*&status=eq.Active&order=sort_order'),
-    request('realx_offers?select=*&order=sort_order'),
-    request('realx_vendor_locations?select=*&order=sort_order'),
-    request('realx_categories?select=*&active=eq.true&order=sort_order'),
-    request('realx_subcategories?select=*&order=sort_order'),
-    request('realx_vendor_subcategories?select=*'),
+    request('kouponly_vendors?select=*&status=eq.Active&order=sort_order'),
+    request('kouponly_offers?select=*&order=sort_order'),
+    request('kouponly_vendor_locations?select=*&order=sort_order'),
+    request('kouponly_categories?select=*&active=eq.true&order=sort_order'),
+    request('kouponly_subcategories?select=*&order=sort_order'),
+    request('kouponly_vendor_subcategories?select=*'),
   ]);
-  const embedded = await request('realx_vendors?select=*,realx_categories(name),realx_vendor_subcategories(subcategory_id,realx_subcategories(name))&status=eq.Active');
+  const embedded = await request('kouponly_vendors?select=*,kouponly_categories(name),kouponly_vendor_subcategories(subcategory_id,kouponly_subcategories(name))&status=eq.Active');
   assert.equal(embedded.length, vendors.length, 'Admin/mobile vendor count mismatch');
   const catalogue = projectVendorCatalogue(vendors, offers, locations, {categories,subcategories,assignments});
   const now = Date.now();
@@ -46,8 +46,8 @@ async function request(endpoint, body) {
     assert.equal(deal.image, vendor.cover_image_url || vendor.image_url || vendor.logo_path || vendor.payload?.profilePicture || '');
     assert.equal(deal.description, vendor.description || vendor.payload?.shortDescription || available.find(o => o.vendor_id === vendor.id)?.description || '');
     const admin = embedded.find(v => v.id === vendor.id);
-    assert.equal(admin.realx_categories.name, deal.category);
-    assert.deepEqual([...deal.subcategoryIds].sort(), admin.realx_vendor_subcategories.map(s => s.subcategory_id).sort());
+    assert.equal(admin.kouponly_categories.name, deal.category);
+    assert.deepEqual([...deal.subcategoryIds].sort(), admin.kouponly_vendor_subcategories.map(s => s.subcategory_id).sort());
     assert.deepEqual(deal.galleryImages, vendor.gallery_images || []);
     assert.equal(deal.locations.length, locations.filter(l => l.vendor_id === vendor.id).length);
     for (const offer of deal.offers) {

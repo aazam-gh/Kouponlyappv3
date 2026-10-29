@@ -85,7 +85,7 @@ begin
   end if;
 
   current_profile.full_name := btrim(profile_name);
-  update public.realx_students set
+  update public.kouponly_students set
     first_name = case when first_changed then first_value else first_name end,
     last_name = case when last_changed then last_value else last_name end,
     phone = case when mobile_changed then nullif(current_profile.mobile, '') else phone end,
@@ -105,7 +105,7 @@ begin
     updated_at = now()
   where user_id = uid;
 
-  update public.realx_students set
+  update public.kouponly_students set
     profile = profile || jsonb_build_object('dob', current_profile.date_of_birth)
   where id = uid;
 

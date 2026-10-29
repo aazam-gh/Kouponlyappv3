@@ -20,7 +20,7 @@ create table public.mutation_receipts(user_id uuid references auth.users(id) on 
 create table public.redemptions(user_id uuid references auth.users(id) on delete cascade,redemption_id text,mode text,status text,code text,expires_at timestamptz,completed_at timestamptz,consumed_at timestamptz,primary key(user_id,redemption_id));
 create table public.saved_offers(user_id uuid references auth.users(id) on delete cascade,offer_id text not null,created_at timestamptz not null default now(),primary key(user_id,offer_id));
 create table public.offer_usage(user_id uuid references auth.users(id),offer_id text,use_count integer,period_start date);
-create table realx_categories(id text primary key,active boolean); insert into realx_categories values('test-category',true);
-create table realx_vendors(id text primary key,name text,status text,catalogue_deal_id integer,category_id text);
-create table realx_offers(id text primary key,vendor_id text,title text,active boolean,starts_at timestamptz,ends_at timestamptz,redemption_mode text,sort_order integer);
-create table realx_user_roles(user_id uuid,role text);
+create table kouponly_categories(id text primary key,active boolean); insert into kouponly_categories values('test-category',true);
+create table kouponly_vendors(id text primary key,name text,status text,catalogue_deal_id integer,category_id text);
+create table kouponly_offers(id text primary key,vendor_id text,title text,active boolean,starts_at timestamptz,ends_at timestamptz,redemption_mode text,sort_order integer);
+create table kouponly_user_roles(user_id uuid,role text);

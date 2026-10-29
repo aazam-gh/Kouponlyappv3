@@ -1,11 +1,11 @@
 -- The location table is the canonical source for branch coordinates. Keep
 -- vendor branch lookups and active offer selection index-backed.
-create index if not exists realx_vendor_locations_vendor_nearby_idx
-  on public.realx_vendor_locations(vendor_id, is_primary desc, sort_order)
+create index if not exists kouponly_vendor_locations_vendor_nearby_idx
+  on public.kouponly_vendor_locations(vendor_id, is_primary desc, sort_order)
   where latitude is not null and longitude is not null;
 
-create index if not exists realx_offers_nearby_vendor_sort_idx
-  on public.realx_offers(vendor_id, sort_order, created_at, id)
+create index if not exists kouponly_offers_nearby_vendor_sort_idx
+  on public.kouponly_offers(vendor_id, sort_order, created_at, id)
   where active = true;
 
 create or replace function public.get_nearby_food_offers(
@@ -43,8 +43,8 @@ as $$
     select v.id, v.catalogue_deal_id, v.name, v.rating, v.saving_label,
            v.offer_value, v.image_url, v.logo_path, v.description, v.website,
            v.payload, coalesce(nullif(c.name, ''), nullif(v.payload->>'mainCategory', ''), v.payload->>'category') as category_name
-    from public.realx_vendors v
-    left join public.realx_categories c on c.id = v.category_id
+    from public.kouponly_vendors v
+    left join public.kouponly_categories c on c.id = v.category_id
     where v.status = 'Active'
       and v.vendor_type = 'in_store'
       and lower(btrim(coalesce(nullif(c.name, ''), nullif(v.payload->>'mainCategory', ''), v.payload->>'category'))) = 'food'
@@ -65,7 +65,7 @@ as $$
     join lateral (
       select offer.id, offer.title, offer.saving_label, offer.offer_value, offer.discount_value,
              offer.description, offer.image_url, offer.redemption_mode
-      from public.realx_offers offer
+      from public.kouponly_offers offer
       where offer.vendor_id = v.id
         and offer.active
         and (offer.starts_at is null or offer.starts_at <= now())
@@ -80,7 +80,7 @@ as $$
                cos(radians(point.latitude)) * cos(radians(location.latitude)) *
                power(sin(radians((location.longitude - point.longitude) / 2)), 2)
              )))) as distance_km
-      from public.realx_vendor_locations location
+      from public.kouponly_vendor_locations location
       where location.vendor_id = v.id
         and location.latitude between -90 and 90
         and location.longitude between -180 and 180

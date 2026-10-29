@@ -17,7 +17,7 @@ begin
   end if;
 
   with tx as (
-    select t.* from public.realx_transactions t
+    select t.* from public.kouponly_transactions t
     where t.status = 'completed'
       and (p_from is null or t.created_at >= p_from::timestamptz)
       and (p_to is null or t.created_at < (p_to + 1)::timestamptz)
@@ -45,7 +45,7 @@ begin
     select u.id, u.created_at
     from auth.users u
     left join public.profiles p on p.user_id = u.id
-    left join public.realx_students s on s.id = u.id
+    left join public.kouponly_students s on s.id = u.id
     where not coalesce(u.is_anonymous, false)
       and (p.user_id is not null or s.id is not null or public.kouponly_school_email(u.email))
       and not exists (select 1 from public.couponly_user_roles role where role.user_id = u.id and role.role in ('admin','vendor'))
@@ -56,15 +56,15 @@ begin
     group by 1
   ), vendor_monthly as (
     select date_trunc('month', v.created_at)::date as month, count(*) as vendors
-    from public.realx_vendors v
+    from public.kouponly_vendors v
     where p_from is null or v.created_at >= p_from::timestamptz
     group by 1
   )
   select jsonb_build_object(
     'stats', jsonb_build_object(
       'students', (select count(*) from student_accounts s where (p_from is null or s.created_at >= p_from::timestamptz) and (p_to is null or s.created_at < (p_to + 1)::timestamptz)),
-      'vendors', (select count(*) from public.realx_vendors v where (p_from is null or v.created_at >= p_from::timestamptz) and (p_to is null or v.created_at < (p_to + 1)::timestamptz)),
-      'activeVendors', (select count(*) from public.realx_vendors v where v.status = 'Active'),
+      'vendors', (select count(*) from public.kouponly_vendors v where (p_from is null or v.created_at >= p_from::timestamptz) and (p_to is null or v.created_at < (p_to + 1)::timestamptz)),
+      'activeVendors', (select count(*) from public.kouponly_vendors v where v.status = 'Active'),
       'transactions', (select count(*) from activity),
       'volume', (select coalesce(sum(amount), 0) from activity),
       'redemptions', (select count(*) from redemptions)
@@ -72,7 +72,7 @@ begin
     'monthly', coalesce((select jsonb_agg(jsonb_build_object('month', to_char(months.month, 'YYYY-MM'), 'volume', coalesce(mo.volume,0), 'transactions', coalesce(mo.transactions,0), 'redemptions', coalesce(rm.redemptions,0), 'students', coalesce(sm.students,0), 'vendors', coalesce(vm.vendors,0)) order by months.month)
       from (select generate_series(
         date_trunc('month', coalesce(p_from, (select min(start_date) from (
-          select min(created_at)::date as start_date from public.realx_transactions
+          select min(created_at)::date as start_date from public.kouponly_transactions
           union all select min(created_at)::date from auth.users
           union all select min(consumed_at)::date from public.redemptions
         ) dates), current_date))::date,
@@ -82,11 +82,11 @@ begin
     'topVendors', coalesce((select jsonb_agg(jsonb_build_object('id', vendor_id, 'name', name, 'redemptions', redemptions, 'volume', volume) order by redemptions desc, volume desc)
       from (select r.vendor_id, coalesce(max(r.offer_snapshot->>'vendorName'), max(v.name), r.vendor_id, 'Unknown vendor') as name,
         count(*) as redemptions, coalesce(sum(coalesce((select a.updated_amount from public.kouponly_redemption_amount_audit a where a.user_id=r.user_id and a.redemption_id=r.redemption_id order by a.changed_at desc,a.id desc limit 1),nullif(r.offer_snapshot->>'payableAmount','')::numeric,greatest(coalesce(r.bill_amount,0)-coalesce(nullif(r.offer_snapshot->>'estimatedSavings','')::numeric,0),0))), 0) as volume
-        from redemptions r left join public.realx_vendors v on v.id = r.vendor_id group by r.vendor_id order by count(*) desc limit 10) q), '[]'::jsonb),
+        from redemptions r left join public.kouponly_vendors v on v.id = r.vendor_id group by r.vendor_id order by count(*) desc limit 10) q), '[]'::jsonb),
     'topOffers', coalesce((select jsonb_agg(jsonb_build_object('id', offer_id, 'offer', offer, 'vendor', vendor, 'redemptions', redemptions) order by redemptions desc)
       from (select r.offer_id, max(coalesce(r.offer_snapshot->>'title', r.offer_id)) as offer,
         max(coalesce(r.offer_snapshot->>'vendorName', v.name, r.vendor_id)) as vendor, count(*) as redemptions
-        from redemptions r left join public.realx_vendors v on v.id = r.vendor_id group by r.offer_id order by count(*) desc limit 10) q), '[]'::jsonb)
+        from redemptions r left join public.kouponly_vendors v on v.id = r.vendor_id group by r.offer_id order by count(*) desc limit 10) q), '[]'::jsonb)
   ) into result;
   return result;
 end;

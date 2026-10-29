@@ -3,6 +3,7 @@ import { AppState, Platform } from 'react-native';
 import * as Location from 'expo-location';
 import { fetchVendorMapLocations, type VendorMapLocation } from '@/lib/nearby-vendors';
 import { getCurrentPosition } from '@/lib/location';
+import { useCatalogue } from '@/lib/catalogue';
 import { nearestLocationsByVendor } from '@/lib/vendor-distance';
 
 type NearbyStatus = 'idle' | 'loading' | 'ready' | 'permission' | 'error';
@@ -26,6 +27,7 @@ export function NearbyProvider({ children }: { children: React.ReactNode }) {
   const [canAskAgain, setCanAskAgain] = useState(true);
   const request = useRef<Promise<void> | null>(null);
   const attempted = useRef(false);
+  const { revision } = useCatalogue();
   const hasData = useRef(false);
 
   const load = useCallback(({ askForPermission = false, force = false }: LoadOptions = {}) => {
@@ -66,6 +68,8 @@ export function NearbyProvider({ children }: { children: React.ReactNode }) {
     request.current = task;
     return task;
   }, []);
+
+  useEffect(() => { if (attempted.current) void load({ force: true }); }, [revision, load]);
 
   const value = useMemo(() => ({ locations, position, status, error, canAskAgain, load }), [locations, position, status, error, canAskAgain, load]);
 

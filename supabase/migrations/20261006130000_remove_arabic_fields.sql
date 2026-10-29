@@ -60,7 +60,7 @@ do $$
 declare
   definition text;
 begin
-  definition:=pg_get_functiondef(coalesce(to_regprocedure('public.couponly_sync_vendor_catalogue()'),to_regprocedure('public.realx_sync_vendor_catalogue()')));
+  definition:=pg_get_functiondef(coalesce(to_regprocedure('public.couponly_sync_vendor_catalogue()'),to_regprocedure('public.kouponly_sync_vendor_catalogue()')));
   definition:=replace(definition,'title,title_ar,description,description_ar,offer_type','title,description,offer_type');
   definition:=replace(definition,',item->>''titleAr''','');
   definition:=replace(definition,',item->>''descriptionAr''','');
@@ -76,7 +76,7 @@ begin
   if definition ~ '(title_ar|description_ar|name_ar|address_ar|titleAr|descriptionAr|nameAr|addressAr)' then raise exception 'Could not remove Arabic vendor catalogue fields'; end if;
   execute definition;
 
-  definition:=pg_get_functiondef(coalesce(to_regprocedure('public.couponly_sync_vendor_map()'),to_regprocedure('public.realx_sync_vendor_map()')));
+  definition:=pg_get_functiondef(coalesce(to_regprocedure('public.couponly_sync_vendor_map()'),to_regprocedure('public.kouponly_sync_vendor_map()')));
   definition:=replace(definition,'''titleAr'',offer->>''titleAr'',','');
   definition:=replace(definition,'''nameAr'',payload->>''nameAr'',','');
   definition:=replace(definition,'''vendorNameAr'',payload->>''nameAr'',','');
@@ -93,7 +93,7 @@ begin
 
   definition:=pg_get_functiondef('public.kouponly_sync_category_subcategories()'::regprocedure);
   if exists(select 1 from pg_catalog.pg_class where oid=to_regclass('public.couponly_subcategories') and relkind in ('r','p')) then
-    definition:=replace(definition,'public.realx_subcategories','public.couponly_subcategories');
+    definition:=replace(definition,'public.kouponly_subcategories','public.couponly_subcategories');
   end if;
   definition:=replace(definition,'id,category_id,name,name_ar,slug,image_path,sort_order','id,category_id,name,slug,image_path,sort_order');
   definition:=replace(definition,'new.id,btrim(item->>''nameEnglish''),coalesce(item->>''nameArabic'',''''),','new.id,btrim(item->>''nameEnglish''),');
@@ -112,7 +112,7 @@ declare
 begin
   for target in
     select p.oid from pg_catalog.pg_proc p join pg_catalog.pg_namespace n on n.oid=p.pronamespace
-    where n.nspname='public' and p.proname in ('realx_configure_badrgo_pilot','couponly_configure_badrgo_pilot','realx_get_badrgo_voucher_program','couponly_get_badrgo_voucher_program')
+    where n.nspname='public' and p.proname in ('kouponly_configure_badrgo_pilot','couponly_configure_badrgo_pilot','kouponly_get_badrgo_voucher_program','couponly_get_badrgo_voucher_program')
   loop
     definition:=pg_get_functiondef(target.oid);
     definition:=regexp_replace(definition,E'\n[ \t]*''(titleAr|descriptionAr|instructionsAr)'',[^\n]*,\n',E'\n','g');
@@ -151,7 +151,7 @@ declare
 begin
   if to_regclass('public.kouponly_entitlement_offers') is not null and to_regclass('public.couponly_offers') is not null then
     execute 'create or replace view public.kouponly_entitlement_offers as '||
-      replace(pg_get_viewdef('public.kouponly_entitlement_offers'::regclass),'realx_offers','couponly_offers');
+      replace(pg_get_viewdef('public.kouponly_entitlement_offers'::regclass),'kouponly_offers','couponly_offers');
   end if;
   for target in
     select c.oid::regclass as relation,c.relname,
@@ -160,11 +160,11 @@ begin
     join pg_catalog.pg_namespace n on n.oid=c.relnamespace
     join pg_catalog.pg_attribute a on a.attrelid=c.oid
     where n.nspname='public' and c.relkind in ('r','p')
-      and c.relname in ('realx_offers','couponly_offers','realx_vendor_locations','couponly_vendor_locations','realx_subcategories','couponly_subcategories')
+      and c.relname in ('kouponly_offers','couponly_offers','kouponly_vendor_locations','couponly_vendor_locations','kouponly_subcategories','couponly_subcategories')
       and a.attnum>0 and not a.attisdropped and a.attname ~ '_ar$'
     group by c.oid,c.relname
   loop
-    legacy_view:=replace(target.relname,'couponly_','realx_');
+    legacy_view:=replace(target.relname,'couponly_','kouponly_');
     has_legacy_view:=legacy_view<>target.relname and exists(
       select 1 from pg_catalog.pg_class where oid=to_regclass(format('public.%I',legacy_view)) and relkind='v'
     );

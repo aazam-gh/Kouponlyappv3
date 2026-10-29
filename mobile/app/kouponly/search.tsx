@@ -21,7 +21,7 @@ import { usePostHog } from 'posthog-react-native';
 
 const RECOMMENDATION_LIMIT = 6;
 
-export default function RealXSearchScreen() {
+export default function KouponlySearchScreen() {
   const posthog = usePostHog();
   const { q } = useLocalSearchParams<{ q?: string }>();
   const { t } = useTranslation();
@@ -43,7 +43,7 @@ export default function RealXSearchScreen() {
 
   const submit = () => { setCommitted(input.trim().toLocaleLowerCase()); if (input.trim()) posthog.capture('search_submitted'); Keyboard.dismiss(); };
   const tryAnother = () => { triggerSubtleHaptic(); setInput(''); setCommitted(''); requestAnimationFrame(() => inputRef.current?.focus()); };
-  const openVendor = (item: Deal) => router.push({ pathname: '/realx/vendor/[id]', params: { id: String(item.vendorId || item.id) } } as any);
+  const openVendor = (item: Deal) => router.push({ pathname: '/kouponly/vendor/[id]', params: { id: String(item.vendorId || item.id) } } as any);
   const renderCard = ({ item }: { item: Deal }) => <View style={s.cardWrap}>
     <RestaurantCard id={String(item.vendorId || item.id)} name={item.name} imageUri={item.image} logoUri={item.logo} distance={distanceByVendor.get(String(item.vendorId || item.id))?.label} xcardEnabled={item.xcard} badgeLabel={item.cardLabel} distanceOnImage overlapLogo contentStyle={{ minHeight: 32, justifyContent: 'flex-start', paddingTop: 0, paddingBottom: 8 }} onPress={() => openVendor(item)} />
   </View>;
