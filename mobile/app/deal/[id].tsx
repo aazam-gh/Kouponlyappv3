@@ -151,7 +151,7 @@ export default function DealDetail({ dealId }: { dealId?: string } = {}) {
           <AccessiblePressable accessibilityRole="button" accessibilityLabel={`More information about ${deal.name}`} onPress={() => setInfoOpen(true)} style={[s.actionPill, s.infoPill]}><Ionicons name="information-circle-outline" size={18} color="#FFFFFF"/><Text style={s.infoPillText}>Info</Text></AccessiblePressable>
         </View>
         {deal.locations?.length ? <View style={{ gap: 8 }}>
-          <Text style={s.infoTitle}>Offers at {branch?.name || branch?.address || 'this branch'}</Text>
+          <Text style={[s.infoTitle, { paddingTop: 8 }]}>Offers at {branch?.name || branch?.address || 'this branch'}</Text>
           {deal.locations.length > 1 ? <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
             {deal.locations.map(location => <AccessiblePressable key={location.id} accessibilityRole="button" accessibilityState={{ selected: branch?.id === location.id }} accessibilityLabel={`Select ${location.name || location.address}`} onPress={() => setChosenBranch(location.id)} style={[s.actionPill, branch?.id === location.id && { borderColor: C.lime }]}><Text style={s.callPillText}>{location.name || location.address}</Text></AccessiblePressable>)}
           </ScrollView> : null}
