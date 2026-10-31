@@ -18,7 +18,7 @@ const sections = [
   { title: 'Vendors & offers', url: '/admin/vendors' },
   { title: 'Students', url: '/admin/students' },
   { title: 'Transactions', url: '/admin/transactions' },
-  { title: 'School Domains', url: '/admin/school-domains' },
+  { title: 'Allowed email domains', url: '/admin/school-domains' },
   { title: 'Vendor Requests', url: '/admin/vendor-requests' },
   { title: 'Home content', url: '/admin/cms' },
   { title: 'Notifications', url: '/admin/notifications' },

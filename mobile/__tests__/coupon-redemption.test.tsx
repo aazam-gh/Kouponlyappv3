@@ -9,18 +9,19 @@ import { LocaleProvider } from '../context/LocaleContext';
 let mockUser: {id:string}|null={id:'alice'};
 let mockLocations: any[] | undefined;
 let mockOfferBranches: string[] | undefined;
+let mockOfferCapacity: {redemptionLimit?: number; redemptionCount?: number} = {};
 let mockBenefits: any={subscription:{roundId:'round-one'},usedVendorIds:[]};
 const mockRedeem=jest.fn(); const mockRefresh=jest.fn(async()=>{}); const mockRetry=jest.fn(async()=>{}); const mockCapture=jest.fn();
 jest.mock('../lib/auth',()=>({useAuth:()=>({user:mockUser})}));
 jest.mock('../lib/catalogue',()=>({useCatalogue:()=>({status:'ready'})}));
-jest.mock('../lib/data',()=>({dealById:()=>({name:'Test vendor',vendorId:'vendor-one',locations:mockLocations,offers:[{index:0,id:'offer-one',branchIds:mockOfferBranches,title:'Test offer',description:'Test description',redemption:'inStore',discountType:'percentage',discountValue:25},{index:1,id:'offer-two',title:'Second offer',redemption:'inStore',discountType:'percentage',discountValue:25}]})}));
+jest.mock('../lib/data',()=>({dealById:()=>({name:'Test vendor',vendorId:'vendor-one',locations:mockLocations,offers:[{...mockOfferCapacity,index:0,id:'offer-one',branchIds:mockOfferBranches,title:'Test offer',description:'Test description',redemption:'inStore',discountType:'percentage',discountValue:25},{index:1,id:'offer-two',title:'Second offer',redemption:'inStore',discountType:'percentage',discountValue:25}]})}));
 jest.mock('../lib/benefits',()=>({benefitsError:(message:string)=>message,isCouponOfferUsed:jest.requireActual('../lib/benefits').isCouponOfferUsed,useBenefits:()=>({benefits:mockBenefits,refresh:mockRefresh}),makeMutationId:()=> 'operation-one',redeemSubscriptionCoupon:(...args:any[])=>mockRedeem(...args)}));
 jest.mock('../lib/store',()=>({useStore:()=>({retrySync:mockRetry})}));
 jest.mock('posthog-react-native',()=>({usePostHog:()=>({capture:mockCapture})}));
 const params=useLocalSearchParams as jest.Mock;
 const wrap=(node:React.ReactNode)=>render(<SafeAreaProvider initialMetrics={{frame:{x:0,y:0,width:393,height:852},insets:{top:59,bottom:34,left:0,right:0}}}><AppThemeProvider><LocaleProvider>{node}</LocaleProvider></AppThemeProvider></SafeAreaProvider>);
 const result={id:'coupon-receipt',code:'AB7K2',vendorName:'Test vendor',offerTitle:'Test offer',consumedAt:Date.now(),billAmount:125.50,currency:'INR'};
-beforeEach(()=>{mockLocations=undefined;mockOfferBranches=undefined;jest.spyOn(Alert,'alert').mockImplementation(()=>{});params.mockReturnValue({id:'1',offerIndex:'0'});mockUser={id:'alice'};mockBenefits={subscription:{roundId:'round-one'},usedVendorIds:[]};mockRedeem.mockReset();mockCapture.mockReset();mockRefresh.mockReset().mockResolvedValue(undefined);mockRetry.mockReset().mockResolvedValue(undefined);});
+beforeEach(()=>{mockOfferCapacity={};mockLocations=undefined;mockOfferBranches=undefined;jest.spyOn(Alert,'alert').mockImplementation(()=>{});params.mockReturnValue({id:'1',offerIndex:'0'});mockUser={id:'alice'};mockBenefits={subscription:{roundId:'round-one'},usedVendorIds:[]};mockRedeem.mockReset();mockCapture.mockReset();mockRefresh.mockReset().mockResolvedValue(undefined);mockRetry.mockReset().mockResolvedValue(undefined);});
 afterEach(()=>{cleanup();jest.restoreAllMocks();});
 it('keeps a successful receipt when analytics and synchronization fail',async()=>{
  mockRedeem.mockResolvedValue(result);mockCapture.mockImplementation(()=>{throw Error('analytics');});mockRefresh.mockRejectedValue(Error('offline'));mockRetry.mockRejectedValue(Error('offline'));
@@ -139,4 +140,35 @@ it('requires branch selection for a multi-branch direct redemption link', async 
   await fireEvent.press(view.getByText('Confirm redemption'));
   expect(view.getByText('Select a branch on the vendor page before redeeming.')).toBeTruthy();
   expect(mockRedeem).not.toHaveBeenCalled();
+});
+
+it('does not offer confirmation when the total coupon limit has been reached', async () => {
+  mockOfferCapacity = { redemptionLimit: 100, redemptionCount: 100 };
+  const view = await wrap(<RedeemScreen/>);
+  expect(view.getByText('Fully redeemed · All available coupons have been used.')).toBeTruthy();
+  expect(view.queryByText('Confirm redemption')).toBeNull();
+  expect(view.queryByTestId('bill-amount')).toBeNull();
+  expect(mockRedeem).not.toHaveBeenCalled();
+});
+
+it('shows fully redeemed when another student takes the last coupon while this screen is open', async () => {
+  mockRedeem.mockRejectedValue(new Error('OFFER_EXHAUSTED'));
+  const view = await wrap(<RedeemScreen/>);
+  await fireEvent.changeText(view.getByTestId('bill-amount'), '100');
+  await fireEvent.press(view.getByText('Confirm redemption'));
+  await waitFor(() => expect(view.getByText('Fully redeemed · All available coupons have been used.')).toBeTruthy());
+  expect(view.queryByText('Confirm redemption')).toBeNull();
+});
+
+it('can recover an uncertain successful receipt after the offer reaches its global limit', async () => {
+  mockRedeem.mockRejectedValueOnce(new Error('offline')).mockResolvedValueOnce(result);
+  const view = await wrap(<RedeemScreen/>);
+  await fireEvent.changeText(view.getByTestId('bill-amount'), '100');
+  await fireEvent.press(view.getByText('Confirm redemption'));
+  await waitFor(() => expect(view.getByText('offline')).toBeTruthy());
+  mockOfferCapacity = { redemptionLimit: 100, redemptionCount: 100 };
+  await view.rerender(<SafeAreaProvider><AppThemeProvider><LocaleProvider><RedeemScreen/></LocaleProvider></AppThemeProvider></SafeAreaProvider>);
+  await fireEvent.press(view.getByText('Confirm redemption'));
+  await waitFor(() => expect(view.getByLabelText('Unique redemption code')).toBeTruthy());
+  expect(mockRedeem.mock.calls[0]).toEqual(mockRedeem.mock.calls[1]);
 });

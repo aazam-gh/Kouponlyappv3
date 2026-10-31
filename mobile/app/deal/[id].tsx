@@ -19,7 +19,7 @@ import { isCouponOfferUsed, useBenefits } from '@/lib/benefits';
 import { useAppLocale } from '@/context/LocaleContext';
 import { StatusBar } from 'expo-status-bar';
 import { distanceBetweenKm } from '@/lib/vendor-distance';
-import { dealAtBranch, offerBranchLabel } from '@/lib/vendor-branches';
+import { dealAtBranch, isOfferExhausted, offerBranchLabel } from '@/lib/vendor-branches';
 import { safeWebUrl } from '@/lib/vendor-links';
 import { Colors } from '@/constants/Colors';
 import ProfileSprites from '@/components/profile/ProfileSprites';
@@ -168,6 +168,7 @@ export default function DealDetail({ dealId }: { dealId?: string } = {}) {
           <Text accessibilityRole="header" style={s.promosHeading}>Available Promos</Text>
         </View>
         <View style={s.offersList}>{(deal.offers ?? [{id:offerKey,index:0,title:deal.offer,description:deal.description,saving:deal.saving,redemption:deal.redemption??'inStore'}]).map(offer=>{
+          const exhausted=isOfferExhausted(offer);
           const count=isCouponOfferUsed(benefits, offer.id, deal.vendorId, branch?.branchId || branch?.id || '') ? 1 : 0;
           const expanded = expandedOfferId === offer.id;
           const closing = closingOfferId === offer.id;
@@ -197,12 +198,13 @@ export default function DealDetail({ dealId }: { dealId?: string } = {}) {
               {showDetails ? <Animated.View onLayout={event => { const height = event?.nativeEvent?.layout?.height; if (height) setOfferDetailsHeights(heights => ({ ...heights, [offer.id]: height })); }} entering={FadeInDown.duration(220).easing(Easing.bezier(0.22, 1, 0.36, 1)).reduceMotion(ReduceMotion.System)} exiting={FadeOutUp.duration(OFFER_DETAILS_EXIT_MS).easing(Easing.bezier(0.4, 0, 1, 1)).reduceMotion(ReduceMotion.System)} style={s.offerDetails}><Text style={s.offerDetailsTitle}>Offer details</Text>{offer.description ? <Text selectable style={s.offerDetailsText}>{offer.description}</Text> : null}{offer.terms ? <><Text style={s.offerDetailsTitle}>Terms and exclusions</Text><Text selectable style={s.offerDetailsText}>{offer.terms}</Text></> : null}{offer.redemptionInstructions ? <><Text style={s.offerDetailsTitle}>How to redeem</Text><Text selectable style={s.offerDetailsText}>{offer.redemptionInstructions}</Text></> : null}</Animated.View> : null}
             </View> : null}
             <View style={s.couponLimit}>
-              {benefits?.subscription ? <Text accessibilityLabel={`Coupons remaining: ${count ? 0 : 1} of 1`} style={s.couponCount}>{count ? '0/1' : '1/1'} coupon remaining</Text> : null}
-              {count && benefits?.subscription ? <><Text style={s.offerDetailsText}>Available again {new Date(benefits.subscription.endsAt).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })} IST. {benefits.rewardedReferrals < benefits.referralLimit ? 'Invite friends to earn an earlier coupon refresh.' : 'Your referral refresh limit has been reached.'}</Text><AccessiblePressable accessibilityRole="button" onPress={() => router.push('/invite-code')}><Text style={s.offerDetailsTitle}>Invite friends</Text></AccessiblePressable></> : null}
+              {exhausted ? <Text style={s.offerDetailsText}>Fully redeemed · All available coupons have been used.</Text> : null}
+              {benefits?.subscription && !exhausted ? <Text accessibilityLabel={`Coupons remaining: ${count ? 0 : 1} of 1`} style={s.couponCount}>{count ? '0/1' : '1/1'} coupon remaining</Text> : null}
+              {count && benefits?.subscription && !exhausted ? <><Text style={s.offerDetailsText}>Available again {new Date(benefits.subscription.endsAt).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })} IST. {benefits.rewardedReferrals < benefits.referralLimit ? 'Invite friends to earn an earlier coupon refresh.' : 'Your referral refresh limit has been reached.'}</Text><AccessiblePressable accessibilityRole="button" onPress={() => router.push('/invite-code')}><Text style={s.offerDetailsTitle}>Invite friends</Text></AccessiblePressable></> : null}
             </View>
             <View style={[s.offerActionsRow, isRTL && s.rowReverse]}>
               <AccessiblePressable accessibilityRole="button" accessibilityLabel={`${state.savedOffers.includes(offer.id) ? 'Remove' : 'Save'} ${offer.title}`} accessibilityState={{ selected: state.savedOffers.includes(offer.id) }} onPress={() => toggleSavedOffer(offer.id)} style={s.saveOffer}><Ionicons name={state.savedOffers.includes(offer.id) ? 'bookmark' : 'bookmark-outline'} size={18} color={C.ink}/><Text style={s.saveOfferText}>{state.savedOffers.includes(offer.id) ? 'Saved' : 'Save'}</Text></AccessiblePressable>
-              <AccessiblePressable testID={`redeem-offer-${offer.index}`} disabled={count>0} onPress={()=>router.push({pathname:'/redeem/[id]',params:{id:String(deal.id),vendorId:deal.vendorId,offerIndex:String(offer.index),branch:branch?.id}} as any)} style={[s.redeem,count>0&&s.disabled]}><Ionicons name="flash" size={18} color="#FFFFFF"/><Text style={s.redeemText}>{count?'Used up':'Redeem offer'}</Text></AccessiblePressable>
+              <AccessiblePressable testID={`redeem-offer-${offer.index}`} disabled={count>0 || exhausted} onPress={()=>router.push({pathname:'/redeem/[id]',params:{id:String(deal.id),vendorId:deal.vendorId,offerIndex:String(offer.index),branch:branch?.id}} as any)} style={[s.redeem,(count>0 || exhausted)&&s.disabled]}><Ionicons name="flash" size={18} color="#FFFFFF"/><Text style={s.redeemText}>{exhausted?'Fully redeemed':count?'Used up':'Redeem offer'}</Text></AccessiblePressable>
             </View>
           </Animated.View>;
         })}</View>

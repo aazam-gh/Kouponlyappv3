@@ -57,7 +57,7 @@ describe('Kouponly account onboarding entry', () => {
     sendCode.mockRestore();
     jest.mocked(useLocalSearchParams).mockReturnValue({} as any);
   });
-  it('allows a non-Rajagiri email to request a signup code', async () => {
+  it('allows an additional email domain when the server approves it', async () => {
     jest.mocked(useLocalSearchParams).mockReturnValue({ flow: 'signup' } as any);
     const alert = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
     const sendCode = jest.spyOn(couponlyBackend, 'sendCouponlyEmailCode').mockResolvedValue({ success: true, expiresIn: 60 } as any);
@@ -73,7 +73,7 @@ describe('Kouponly account onboarding entry', () => {
     sendCode.mockRestore();
     jest.mocked(useLocalSearchParams).mockReturnValue({} as any);
   });
-  it('shows a generic failure if the signup server returns its obsolete Rajagiri-only error', async () => {
+  it('shows the server email-domain restriction instead of hiding it as a temporary failure', async () => {
     jest.mocked(useLocalSearchParams).mockReturnValue({ flow: 'signup' } as any);
     const sendCode = jest.spyOn(couponlyBackend, 'sendCouponlyEmailCode').mockRejectedValue(new Error('Use your @rajagiri.edu.in email address'));
     const view = await render(<SafeAreaProvider initialMetrics={{frame:{x:0,y:0,width:393,height:852},insets:{top:59,left:0,right:0,bottom:34}}}><OnboardingScreen/></SafeAreaProvider>);
@@ -82,8 +82,8 @@ describe('Kouponly account onboarding entry', () => {
     await fireEvent.changeText(view.getByLabelText('Last name'), 'Student');
     await fireEvent.press(view.getByText('Send Verification Code'));
     await waitFor(() => expect(sendCode).toHaveBeenCalledWith('student@gmail.com', 'signup'));
-    expect(view.queryByText('Use your @rajagiri.edu.in email address')).toBeNull();
-    expect(view.getByText('Unable to send the verification code right now. Please try again later.')).toBeTruthy();
+    expect(view.getByText('Use your @rajagiri.edu.in email address')).toBeTruthy();
+    expect(view.queryByText('Unable to send the verification code right now. Please try again later.')).toBeNull();
     sendCode.mockRestore();
     jest.mocked(useLocalSearchParams).mockReturnValue({} as any);
   });

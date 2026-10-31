@@ -23,3 +23,26 @@ KPN_TEST_DATABASE_URL=postgresql://localhost:55439/benefits_v2 python3 supabase/
 ```
 
 The `--setup` flag installs the existing subscription/reset migrations and minimal catalogue fixtures, then the branch-slot migration. Omit it for subsequent test runs. The suite tests three branches, independent offers/students, restricted/disabled offers, duplicate prevention at the database index, concurrent redemptions and retries, changed retry branches, actual referral refreshes and monthly allocation, old receipts, branchless compatibility, BOGO amounts, and anonymous access denial.
+
+## Total offer redemption limit
+
+In **Offers → Create/Edit offer**, set **Total redemption limit** to a positive whole number (for example, 100), or leave it blank for unlimited. This is a shared pool for that offer across all students and valid branches, separate from each student's per-branch allowance. Successful consumed redemptions within `[startsAt, endsAt)` count toward it; without validity dates the limit covers the offer's lifetime. Monthly and referral resets do not replenish this pool. Increasing the limit adds capacity; changing the validity dates recounts redemptions in the new window. Reducing a limit below existing usage immediately exhausts the offer. Deleting development redemption records releases their capacity.
+
+Apply `20261031130000_offer_redemption_limits.sql` before releasing the updated client. Existing offers remain unlimited. The migration backfills usage, refreshes the catalogue compatibility view, and installs atomic server-side enforcement for every redemption entry point. Usage is server-managed and cannot be overwritten by an ordinary offer edit. Exhausted offers remain visible with **Fully redeemed**, and their redemption action is disabled. A stale client is still rejected by the database with `OFFER_EXHAUSTED`; replaying a successful mutation returns its original receipt without consuming capacity again.
+
+After the empty local `benefits_v2` branch-coupon fixture above is prepared, run:
+
+```sh
+psql postgresql://localhost:55439/benefits_v2 -v ON_ERROR_STOP=1 -f supabase/migrations/20261031130000_offer_redemption_limits.sql
+KPN_TEST_DATABASE_URL=postgresql://localhost:55439/benefits_v2 python3 supabase/tests/offer_redemption_limits.py
+```
+
+This tests 105 concurrent requests against a 100-redemption limit, protected usage counters, invalid limits/bills, transaction rollback, idempotency, referrals and monthly rollover, unlimited offers, limit edits, validity recounting, and deletion cleanup. Use a fresh fixture when applying migrations; omit the migration command when rerunning only the tests.
+
+## Allowed student email domains
+
+**Admin → Allowed email domains** (`/admin/school-domains`) controls student access. Enter an exact domain, `@domain`, or `*@domain`. Enable/disable entries to change access without another app release. Matching is case-insensitive, allows no implicit subdomains, and does not accept look-alike suffixes. `20261031140000_enforce_allowed_email_domains.sql` starts with only `rajagiri.edu.in` active and removes the old individual-email exceptions.
+
+The OTP gateway checks the list before sending or accepting student sign-up/login/verification codes. Student enrollment and coupon eligibility are checked in the database; disabling a domain blocks new enrollments and existing accounts' coupon access. The mobile client also checks restored sessions and rechecks on foreground. Existing Auth identities are preserved, and trusted admin roles retain panel access regardless of their email domain. Vendor/admin Auth provisioning remains separate from student enrollment. Apply the migration before deploying the updated gateway and mobile app.
+
+Verification: `supabase/tests/allowed_email_domains.sql` runs rollback-only policy/enrollment/RLS checks against a migrated test database; `deno test --config supabase/functions/deno.json --allow-env supabase/tests/allowed_email_gateway.test.ts` tests the real OTP gateway with network/email delivery mocked.

@@ -1,14 +1,14 @@
 import * as Clipboard from 'expo-clipboard';
 import { normalizeDigits } from '@/utils/numbers';
 import ScalePressable from '@/components/ScalePressable';
-import { isSchoolEmail, SCHOOL_EMAIL_MESSAGE } from '@/lib/school-email';
 import * as ImagePicker from 'expo-image-picker';
+import DateTimePicker, { type DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Image as ExpoImage } from 'expo-image';
 import { router, useLocalSearchParams } from 'expo-router';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-import { Alert, Linking, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Alert, Linking, Modal, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { InlineNotice, OnboardingField, OnboardingPrimaryButton, OnboardingScaffold, OnboardingTextButton } from '@/components/onboarding/OnboardingUI';
 import { benefitsRpc, makeMutationId } from '@/lib/benefits';
 import { useAuth } from '@/lib/auth';
@@ -22,6 +22,8 @@ type Flow = 'signup' | 'login' | 'verification';
 type Step = 'email' | 'code' | 'document' | 'status' | 'done';
 type PickedImage = { base64: string; uri: string; extension: string; contentType: string };
 const MAX_ID_BYTES = 3 * 1024 * 1024;
+const dateValue = (value: Date) => `${value.getFullYear()}-${String(value.getMonth() + 1).padStart(2, '0')}-${String(value.getDate()).padStart(2, '0')}`;
+const parseDate = (value: string) => /^\d{4}-\d{2}-\d{2}$/.test(value) ? new Date(`${value}T12:00:00`) : new Date(2000, 0, 1);
 
 export default function KouponlyOnboardingScreen() {
   const params = useLocalSearchParams<{ flow?: Flow; step?: Step; email?: string; requestId?: string; statusToken?: string }>();
@@ -39,6 +41,8 @@ export default function KouponlyOnboardingScreen() {
   const [lastName, setLastName] = React.useState('');
   const [dob, setDob] = React.useState('');
   const [phone, setPhone] = React.useState('');
+  const [showDatePicker, setShowDatePicker] = React.useState(false);
+  const [dateDraft, setDateDraft] = React.useState(() => parseDate(''));
   const role: VerificationRole = 'student';
   const [image, setImage] = React.useState<PickedImage | null>(null);
   const [request, setRequest] = React.useState<{ requestId: string; statusToken: string } | null>(typeof params.requestId === 'string' && typeof params.statusToken === 'string' ? { requestId: params.requestId, statusToken: params.statusToken } : null);
@@ -48,6 +52,13 @@ export default function KouponlyOnboardingScreen() {
   const [resendCooldown, setResendCooldown] = React.useState(0);
   const autoSubmitted = React.useRef('');
   const verificationInFlight = React.useRef(false);
+
+  const openDatePicker = () => { setDateDraft(parseDate(dob)); setShowDatePicker(true); };
+  const onDateChange = (_event: DateTimePickerEvent, selected?: Date) => {
+    if (!selected) { if (Platform.OS === 'android') setShowDatePicker(false); return; }
+    if (Platform.OS === 'android') { setShowDatePicker(false); setDob(dateValue(selected)); }
+    else setDateDraft(selected);
+  };
 
   React.useEffect(() => { if (user?.email) setEmail(user.email); }, [user?.email]);
   React.useEffect(() => {
@@ -69,12 +80,8 @@ export default function KouponlyOnboardingScreen() {
   React.useEffect(() => {
     if (step === 'status' && status && status !== 'pending' && status !== 'approving') void clearPendingVerification();
   }, [step, status]);
-  React.useEffect(() => {
-    if (flow === 'signup' && message.toLowerCase().includes('use your @rajagiri.edu.in email address')) setMessage('');
-  }, [flow, message]);
 
   const sendCode = async () => {
-    if (flow === 'verification' && !isSchoolEmail(email)) { Alert.alert('School email required', SCHOOL_EMAIL_MESSAGE); return; }
     if (flow === 'signup' && dob.trim() && (!/^\d{4}-\d{2}-\d{2}$/.test(dob.trim()) || !Number.isFinite(Date.parse(dob.trim())) || new Date(dob.trim()).toISOString().slice(0, 10) !== dob.trim() || Date.parse(dob.trim()) > Date.now())) { setMessage('Enter a valid date of birth as YYYY-MM-DD.'); return; }
     setBusy(true); setMessage('');
     try {
@@ -85,9 +92,7 @@ export default function KouponlyOnboardingScreen() {
       setMessage(flow === 'verification' ? 'We sent a code to confirm your email before ID review.' : flow === 'signup' ? 'Enter the verification code from your email.' : 'Enter the sign-in code from your email.');
     } catch (error) {
       const detail = error instanceof Error ? error.message : 'Unable to send the email code.';
-      setMessage(flow === 'signup' && detail.toLowerCase().includes('@rajagiri.edu.in')
-        ? 'Unable to send the verification code right now. Please try again later.'
-        : detail);
+      setMessage(detail);
     } finally { setBusy(false); }
   };
   const verifyCode = async () => {
@@ -208,8 +213,14 @@ export default function KouponlyOnboardingScreen() {
       {flow === 'signup' ? <>
         <OnboardingField label={t('first_name_placeholder')} value={firstName} onChangeText={setFirstName} autoComplete="given-name" autoCapitalize="words" editable={!busy} />
         <OnboardingField label={t('last_name_placeholder')} value={lastName} onChangeText={setLastName} autoComplete="family-name" autoCapitalize="words" editable={!busy} />
-        <OnboardingField label="Date of birth (optional, YYYY-MM-DD)" value={dob} onChangeText={setDob} autoCapitalize="none" maxLength={10} editable={!busy} />
-        <OnboardingField label="Phone number (optional)" value={phone} onChangeText={setPhone} keyboardType="phone-pad" autoComplete="tel" maxLength={40} editable={!busy} />
+        <View style={{ gap: 8 }}>
+          <Text style={{ color: C.ink, fontSize: 14 }}>Date of birth (optional)</Text>
+          <ScalePressable accessibilityRole="button" accessibilityLabel="Choose date of birth" onPress={openDatePicker} disabled={busy} style={{ minHeight: 56, borderRadius: 16, borderWidth: 1.5, borderColor: C.line, backgroundColor: C.card, paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+            <Text style={{ color: dob ? C.ink : C.muted }}>{dob || 'YYYY-MM-DD'}</Text>
+            <Ionicons name="calendar-outline" size={20} color={C.muted} />
+          </ScalePressable>
+        </View>
+        <OnboardingField label="Phone number (optional)" value={phone} onChangeText={value => setPhone(normalizeDigits(value).replace(/\D/g, ''))} keyboardType="phone-pad" autoComplete="tel" maxLength={15} editable={!busy} />
         <OnboardingField label="Invite code (optional)" value={inviteCode} onChangeText={text => setInviteCode(text.toUpperCase())} autoCapitalize="characters" autoCorrect={false} maxLength={5} editable={!busy} />
       </> : null}
       {flow === 'signup' ? <Text style={styles.legal}>{t('onboarding_v2_legal')}</Text> : null}
@@ -238,6 +249,19 @@ export default function KouponlyOnboardingScreen() {
     {step === 'done' ? <InlineNotice tone="success">{t('onboarding_v2_success_preview')}</InlineNotice> : null}
     {/waitlist|wait.list|invite.only|signups?.*(disabled|restricted|not allowed)/i.test(message) ? <><InlineNotice tone="info">Pre-launch access is currently limited to the waitlist. Complete the waitlist form and we’ll let you know when you can join.</InlineNotice><OnboardingTextButton label="Join the Kouponly waitlist" onPress={() => void Linking.openURL('https://kouponly.in/waitlist#waitlist-form').catch(() => setMessage('Unable to open the waitlist. Visit kouponly.in.'))} /></> : null}
     {message && step !== 'document' ? <InlineNotice tone={step === 'done' ? 'info' : 'error'}>{message}</InlineNotice> : null}
+    {Platform.OS === 'ios' ? <Modal visible={showDatePicker} transparent animationType="fade" onRequestClose={() => setShowDatePicker(false)}>
+      <View style={{ flex: 1, justifyContent: 'center', paddingHorizontal: 24, backgroundColor: 'rgba(0,0,0,0.42)' }}>
+        <Pressable style={StyleSheet.absoluteFill} onPress={() => setShowDatePicker(false)} accessibilityRole="button" accessibilityLabel="Cancel" />
+        <View style={{ alignSelf: 'center', width: '100%', maxWidth: 420, borderRadius: 28, backgroundColor: C.card, padding: 20, gap: 8 }}>
+          <View style={{ minHeight: 44, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+            <Text style={{ color: C.ink, fontSize: 17 }}>Date of birth</Text>
+            <ScalePressable onPress={() => setShowDatePicker(false)} accessibilityRole="button" style={{ minHeight: 44, justifyContent: 'center' }}><Text style={{ color: C.muted }}>Cancel</Text></ScalePressable>
+          </View>
+          <DateTimePicker value={dateDraft} mode="date" display="spinner" onChange={onDateChange} maximumDate={new Date()} textColor={C.ink} />
+          <ScalePressable onPress={() => { setDob(dateValue(dateDraft)); setShowDatePicker(false); }} accessibilityRole="button" style={{ minHeight: 52, borderRadius: 26, alignItems: 'center', justifyContent: 'center', backgroundColor: C.lime }}><Text style={{ color: C.ink }}>Done</Text></ScalePressable>
+        </View>
+      </View>
+    </Modal> : showDatePicker ? <DateTimePicker value={dateDraft} mode="date" display="default" onChange={onDateChange} maximumDate={new Date()} /> : null}
   </OnboardingScaffold>;
 }
 

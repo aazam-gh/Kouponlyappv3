@@ -1,3 +1,5 @@
+import { assertAllowedStudentEmail, SCHOOL_EMAIL_MESSAGE } from './school-email';
+import { AppState } from 'react-native';
 import * as Linking from 'expo-linking';
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import type { Session, User } from '@supabase/supabase-js';
@@ -77,6 +79,9 @@ async function handleAuthUrl(url: string, setRecoveryMode: (value: boolean) => v
 }
 
 async function accountAccess(uid: string): Promise<'student' | 'admin' | 'incomplete'> {
+  const { data: allowed, error: policyError } = await getSupabase().rpc('kouponly_student_email_allowed');
+  if (policyError) throw policyError;
+  if (allowed !== true) return 'incomplete';
   const { data, error } = await getSupabase().from('kouponly_students').select('id').eq('id', uid).maybeSingle();
   if (error) throw error;
   if (data) return 'student';
@@ -154,6 +159,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   useEffect(() => {
+    const listener=AppState.addEventListener('change', state => {
+      if(state==='active' && sessionOwner.current) void refreshStudentAccess().catch(() => {});
+    });
+    return () => listener.remove();
+  }, [refreshStudentAccess]);
+
+  useEffect(() => {
     const request=++accessRequest.current;
     const uid = session?.user.id;
     if (!uid) { setStudentStatus('none'); return; }
@@ -168,12 +180,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signIn = useCallback(async (email: string, password: string): Promise<AuthResult> => {
     try {
       const { error } = await getSupabase().auth.signInWithPassword({ email: email.trim(), password });
-      return error ? { error: error.message } : {};
+      if (error) return { error: error.message };
+      const { data: allowed, error: policyError } = await getSupabase().rpc('kouponly_student_email_allowed');
+      if (policyError) throw policyError;
+      if (allowed !== true) { await getSupabase().auth.signOut({ scope: 'local' }); return { error: SCHOOL_EMAIL_MESSAGE }; }
+      return {};
     } catch (error) { return { error: authError(error) }; }
   }, []);
 
   const signUp = useCallback(async (name: string, email: string, password: string, referralCode?: string): Promise<AuthResult> => {
     try {
+      await assertAllowedStudentEmail(email);
       const { data, error } = await getSupabase().auth.signUp({
         email: email.trim(),
         password,
@@ -199,6 +216,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const updateEmail = useCallback(async (email: string): Promise<AuthResult> => {
     try {
+      await assertAllowedStudentEmail(email);
       const { error } = await getSupabase().auth.updateUser({ email: email.trim() });
       return error ? { error: error.message } : {};
     } catch (error) { return { error: authError(error) }; }

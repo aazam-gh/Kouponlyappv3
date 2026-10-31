@@ -33,7 +33,7 @@ const data = {
     { title: "Vendors & offers", url: "/admin/vendors", icon: IconMapPin },
     { title: "Students", url: "/admin/students", icon: IconUsers },
     { title: "Transactions", url: "/admin/transactions", icon: IconReceipt },
-    { title: "School Domains", url: "/admin/school-domains", icon: IconUsers },
+    { title: "Allowed email domains", url: "/admin/school-domains", icon: IconUsers },
     { title: "Vendor Requests", url: "/admin/vendor-requests", icon: IconMapPin },
   ],
   navContent: [

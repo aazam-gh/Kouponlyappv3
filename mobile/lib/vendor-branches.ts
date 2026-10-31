@@ -18,3 +18,7 @@ export function offerBranchLabel(offer: VendorOffer, locations: VendorLocation[]
   if (!offer.branchIds?.length) return locations.length > 1 ? 'All branches' : locations[0]?.name || locations[0]?.address || 'In-store';
   return locations.filter(branch => offerAppliesToBranch(offer, branch)).map(branch => branch.name || branch.address).filter(Boolean).join(', ') || 'Selected branches';
 }
+
+export function isOfferExhausted(offer: VendorOffer) {
+  return offer.redemptionLimit != null && (offer.redemptionCount ?? 0) >= offer.redemptionLimit;
+}

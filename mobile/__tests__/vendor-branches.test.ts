@@ -45,3 +45,10 @@ test('keeps branch discounts independent and excludes a disabled branch offer', 
   const enabled = dealAtBranch(deal, 'tvm');
   expect(enabled.offers?.find(offer => offer.id === 'tvm-offer')?.discountValue).toBe(20);
 });
+
+test('retains exhausted offers and their server usage counts for the consumed state', () => {
+  const projected = projectVendorCatalogue([vendor], offers.map(offer => ({ ...offer, redemption_limit: 100, redemption_count: 100 })), locations, taxonomy).deals[0];
+  expect(projected.offers).toHaveLength(3);
+  expect(projected.offers![0].redemptionLimit).toBe(100);
+  expect(projected.offers![0].redemptionCount).toBe(100);
+});

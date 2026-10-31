@@ -1,5 +1,14 @@
-import { isSchoolEmail } from '../lib/school-email';
-it('accepts only the exact school domain, ignoring case and surrounding whitespace', () => {
-  expect(isSchoolEmail(' Student@Rajagiri.edu.in ')).toBe(true);
-  for (const email of ['student@gmail.com', 'student@rajagiri.edu.in.attacker.com', 'student@sub.rajagiri.edu.in', '@rajagiri.edu.in', 'student@@rajagiri.edu.in', 'student x@rajagiri.edu.in']) expect(isSchoolEmail(email)).toBe(false);
+import { assertAllowedStudentEmail, SCHOOL_EMAIL_MESSAGE } from '../lib/school-email';
+const mockRpc=jest.fn();
+jest.mock('../lib/supabase',()=>({getSupabase:()=>({rpc:mockRpc})}));
+it('uses the server policy for added domains instead of a fixed Rajagiri regex',async()=>{
+ mockRpc.mockResolvedValue({data:true,error:null});
+ await assertAllowedStudentEmail(' Student@NewCollege.edu ');
+ expect(mockRpc).toHaveBeenCalledWith('kouponly_school_email',{p_email:'student@newcollege.edu'});
+});
+it('rejects inactive domains and fails closed if policy lookup fails',async()=>{
+ mockRpc.mockResolvedValue({data:false,error:null});
+ await expect(assertAllowedStudentEmail('student@gmail.com')).rejects.toThrow(SCHOOL_EMAIL_MESSAGE);
+ mockRpc.mockResolvedValue({data:null,error:new Error('offline')});
+ await expect(assertAllowedStudentEmail('student@rajagiri.edu.in')).rejects.toThrow('offline');
 });

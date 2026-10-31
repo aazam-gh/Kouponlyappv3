@@ -168,6 +168,7 @@ export function OffersSettings({ vendorId }: OffersSettingsProps) {
     const saveMutation = useMutation({
         mutationFn: async (data: Partial<EmbeddedOffer>) => {
             if (!vendorId) throw new Error("Vendor ID is missing")
+            if (data.redemptionLimit != null && (!Number.isSafeInteger(data.redemptionLimit) || data.redemptionLimit < 1 || data.redemptionLimit > 2147483647)) throw new Error('Enter a whole-number redemption limit of at least 1, or leave it empty for unlimited.');
             if (!data.titleEn?.trim()) throw new Error('Enter an offer title before saving.')
             if (!['buy1get1', 'free'].includes(data.discountType || '') && (!Number.isFinite(data.discountValue) || data.discountValue! < 0 || (data.discountType === 'percentage' && data.discountValue! > 100))) throw new Error('Enter a valid discount or exclusive price. Percentages must be between 0 and 100.');
             if (validityType === 'date_range' && (!data.startsAt || !data.endsAt || !Number.isFinite(Date.parse(data.startsAt)) || !Number.isFinite(Date.parse(data.endsAt)) || Date.parse(data.endsAt) <= Date.parse(data.startsAt))) throw new Error('Choose a valid start and end time. The end must be after the start.');
@@ -177,6 +178,7 @@ export function OffersSettings({ vendorId }: OffersSettingsProps) {
                 id: data.id,
                 titleEn: data.titleEn.trim(),
                 branchIds: data.branchIds || [],
+                redemptionLimit: data.redemptionLimit,
                 descriptionEn: data.descriptionEn,
                 badgeLabel: data.badgeLabel?.trim() || undefined,
                 discountType: data.discountType || 'percentage',
@@ -405,6 +407,11 @@ export function OffersSettings({ vendorId }: OffersSettingsProps) {
                             </div>}
                             <p className="text-xs text-muted-foreground">Offers appear in the mobile app only during the selected date and time range.</p>
                         </div>
+                        <div className="space-y-2 rounded-xl border p-4">
+                            <Label htmlFor="redemptionLimit">Total redemption limit</Label>
+                            <Input id="redemptionLimit" type="number" min="1" max="2147483647" step="1" value={formData.redemptionLimit ?? ''} onChange={e => setFormData(prev => ({ ...prev, redemptionLimit: e.target.value === '' ? undefined : Number(e.target.value) }))} placeholder="Unlimited" />
+                            <p className="text-sm text-muted-foreground">Shared by all students and branches during this offer’s validity period. Monthly and referral refreshes do not reset this total.</p>
+                        </div>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div className="space-y-2 md:col-span-2">
                                 <Label htmlFor="termsEn">Terms and conditions</Label>
@@ -469,6 +476,7 @@ export function OffersSettings({ vendorId }: OffersSettingsProps) {
                                 {offer.discountType === 'free' ? 'Free eligible item' : ['combo', 'fixed_price'].includes(offer.discountType) ? `Exclusive price ${offer.currency === 'INR' ? '₹' : offer.currency} ${offer.discountValue}` : offer.discountType === 'buy1get1' ? 'Buy 1 Get 1' : offer.discountType === 'percentage' ? `${offer.discountValue}% off` : `${offer.currency === 'INR' ? '₹' : offer.currency || 'INR'} ${offer.discountValue} off`}
                             </span>
                             <p className="mt-3 text-sm font-medium">{offer.active === false ? 'Disabled' : 'Enabled'} · {offer.branchIds?.length ? (vendor.locations || []).filter(branch => offer.branchIds!.includes(branch.id)).map(branch => branch.name || branch.address || branch.id).join(', ') : 'All branches'}</p>
+                            <p className="mt-2 text-sm text-muted-foreground">{offer.redemptionLimit ? `${offer.redemptionLimit} total redemptions allowed` : 'Unlimited total redemptions'}</p>
                             <h3 className="mt-4 text-lg font-semibold">{offer.titleEn || 'Untitled offer'}</h3>
                             <p className="mt-2 flex-1 text-sm leading-relaxed text-muted-foreground">{offer.descriptionEn || 'No description provided.'}</p>
                             <Button variant="outline" className="mt-5 w-fit" disabled={reorderMutation.isPending} onClick={() => setEditingIndex(index)}><SquarePen className="size-4" />Edit offer</Button>

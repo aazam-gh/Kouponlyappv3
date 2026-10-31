@@ -1,5 +1,5 @@
 import type { Deal } from './data';
-import { offerAppliesToBranch } from './vendor-branches';
+import { isOfferExhausted, offerAppliesToBranch } from './vendor-branches';
 import { AppState } from 'react-native';
 import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { useAuth } from './auth';
@@ -18,11 +18,13 @@ export type AccountBenefits = {
 };
 export type ClaimResult = { kind: 'invite' | 'voucher'; status: string; rewardRecipient: 'self' | 'inviter'; benefits: AccountBenefits };
 const messages: Record<string, string> = {
+  EMAIL_DOMAIN_NOT_ALLOWED: 'Use an email domain enabled by Kouponly. Rajagiri students can use @rajagiri.edu.in.',
   INVALID_CODE: 'This code is not valid. Check it and try again.', SELF_REFERRAL: 'You cannot use your own invite code.',
   INVITE_ALREADY_ATTACHED: 'An invite code has already been applied to this account.', INVITE_WINDOW_CLOSED: 'Invite codes can be entered within seven days of signup.',
   SUBSCRIPTION_REQUIRED: 'Verify your email to access free coupons.', VOUCHER_EXPIRED: 'This voucher has expired or is not active.',
   VOUCHER_ALREADY_USED: 'You have already used this voucher.', VOUCHER_EXHAUSTED: 'This voucher has reached its claim limit.',
   RATE_LIMITED: 'Too many attempts. Wait a minute and try again.', ROUND_CHANGED: 'Your coupons have refreshed. Review the offer and confirm again.',
+  OFFER_EXHAUSTED: 'This offer has been fully redeemed. All available coupons have been used.',
   OFFER_UNAVAILABLE: 'This offer is no longer available.',
   BRANCH_REQUIRED: 'Select a branch before redeeming this offer.', BRANCH_UNAVAILABLE: 'This branch is no longer available.',
   OFFER_UNAVAILABLE_AT_BRANCH: 'This offer is not available at this branch.',
@@ -73,7 +75,7 @@ export function BenefitsProvider({ children }: { children: React.ReactNode }) {
     try {
       const value = await benefitsRpc<AccountBenefits>('kouponly_account_benefits');
       if (owner.current === id && sequence.current === seq) setSnapshot({ userId: id, value });
-    } catch (e) { if (owner.current === id && sequence.current === seq) { const message = e instanceof Error ? e.message : 'Unable to load account benefits.'; if (message === 'Verified email required' || message === 'Verified @rajagiri.edu.in email required' || message === 'Account access unavailable') setSnapshot(null); setError(message); throw e; } }
+    } catch (e) { if (owner.current === id && sequence.current === seq) { const message = e instanceof Error ? e.message : 'Unable to load account benefits.'; if (message === benefitsError('EMAIL_DOMAIN_NOT_ALLOWED') || message === 'Verified email required' || message === 'Verified @rajagiri.edu.in email required' || message === 'Account access unavailable') setSnapshot(null); setError(message); throw e; } }
     finally { if (owner.current === id && sequence.current === seq) setLoading(false); }
   }, [user?.id]);
   useEffect(() => {
@@ -104,7 +106,7 @@ export function useBenefits() { const value = useContext(Context); if (!value) t
 export { makeMutationId };
 
 export function hasAvailableBranchCoupon(deal: Deal, benefits: AccountBenefits | null) {
-  return (deal.offers || []).some(offer => deal.locations?.length
+  return (deal.offers || []).some(offer => !isOfferExhausted(offer) && (deal.locations?.length
     ? deal.locations.some(branch => offerAppliesToBranch(offer, branch) && !isCouponOfferUsed(benefits, offer.id, deal.vendorId, branch.branchId || branch.id))
-    : !isCouponOfferUsed(benefits, offer.id, deal.vendorId, ''));
+    : !isCouponOfferUsed(benefits, offer.id, deal.vendorId, '')));
 }

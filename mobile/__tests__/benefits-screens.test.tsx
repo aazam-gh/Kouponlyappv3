@@ -50,11 +50,11 @@ it('routes guests to authentication instead of claiming', async () => {
   expect(mockClaim).not.toHaveBeenCalled(); expect(router.push).toHaveBeenCalledWith({pathname:'/kouponly/onboarding',params:{flow:'login'}});
 });
 
-it('shares an invite that welcomes every verified email domain', async () => {
+it('shares an invite that requires an approved email domain', async () => {
   const share=jest.spyOn(Share,'share').mockResolvedValue({action:Share.sharedAction});
   const view=await wrap(<InviteCodeCard />);
-  expect(view.getByText(/friends using any email address/)).toBeTruthy();
+  expect(view.getByText(/friends using an approved email domain/)).toBeTruthy();
   await fireEvent.press(view.getByText('Share code'));
-  expect(share).toHaveBeenCalledWith({message:'Join me on Kouponly! Enter my invite code AB234. Free coupons with any verified email address.'});
+  expect(share).toHaveBeenCalledWith({message:'Join me on Kouponly! Enter my invite code AB234. Free coupons with an approved school email.'});
   share.mockRestore();
 });

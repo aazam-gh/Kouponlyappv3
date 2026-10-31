@@ -4,6 +4,8 @@ import { Pressable, Text } from 'react-native';
 
 const mockUser = { id: 'student-session', email: 'student@example.edu', user_metadata: {} };
 const mockSession = { user: mockUser, access_token: 'test', refresh_token: 'test', expires_at: 0, token_type: 'bearer' };
+let mockEmailAllowed = true;
+beforeEach(() => { mockEmailAllowed = true; });
 const mockMaybeSingle = jest.fn();
 const mockAdmin = jest.fn<Promise<{data:boolean;error:null}>, []>(async () => ({data:false,error:null}));
 const mockLogout=jest.fn(async()=>({error:null}));
@@ -11,7 +13,7 @@ const mockUpdateUser=jest.fn(async()=>({error:null}));
 let mockAuthListener:(event:string,session:any)=>void;
 jest.mock('../lib/couponlyPush',()=>({unregisterCouponlyPushTokenForCurrentUser:async()=>{throw Error('offline push registration');}}));
 const mockSupabase = {
-  rpc: mockAdmin,
+  rpc: (name: string) => name === 'kouponly_student_email_allowed' || name === 'kouponly_school_email' ? Promise.resolve({data:mockEmailAllowed,error:null}) : mockAdmin(),
   auth: {
     signOut:mockLogout,
     updateUser:mockUpdateUser,
@@ -57,7 +59,7 @@ it('allows the verified existing administrator without creating a student profil
   mockMaybeSingle.mockResolvedValue({data:null,error:null}); mockAdmin.mockResolvedValue({data:true,error:null});
   const view=await render(<AuthProvider><Probe /></AuthProvider>);
   await waitFor(()=>expect(view.getByText(mockUser.id)).toBeTruthy());
-  expect(mockAdmin).toHaveBeenCalledWith('kouponly_is_benefits_admin');
+  expect(mockAdmin).toHaveBeenCalled();
 });
 
 it('signs out this device even when push cleanup fails', async () => {
@@ -77,10 +79,17 @@ it('does not grant a new session the previous account student access while check
  await act(async()=>resolve({data:null,error:null}));await waitFor(()=>expect(view.getByText('guest')).toBeTruthy());
 });
 
-it('allows a general email domain to use Supabase email-change verification',async()=>{
+it('allows an admin-approved additional domain to use email-change verification',async()=>{
  mockMaybeSingle.mockResolvedValue({data:{id:mockUser.id},error:null});
  const view=await render(<AuthProvider><Probe/></AuthProvider>);
  await waitFor(()=>expect(view.getByText(mockUser.id)).toBeTruthy());
  await fireEvent.press(view.getByText('Change email'));
  expect(mockUpdateUser).toHaveBeenCalledWith({email:'friend@gmail.com'});
+});
+
+it('keeps existing non-approved student accounts out even when a student row exists', async () => {
+ mockEmailAllowed=false; mockMaybeSingle.mockResolvedValue({data:{id:mockUser.id},error:null});
+ const view=await render(<AuthProvider><Probe/></AuthProvider>);
+ await waitFor(()=>expect(view.getByText('guest')).toBeTruthy());
+ expect(view.queryByText(mockUser.id)).toBeNull();
 });

@@ -1,0 +1,55 @@
+begin;
+do $$
+declare student uuid:=gen_random_uuid(); outsider uuid:=gen_random_uuid(); admin uuid:=gen_random_uuid();
+begin
+ assert public.kouponly_school_email(' Student@RAJAGIRI.EDU.IN ');
+ assert not public.kouponly_school_email('student@rajagiri.edu.in.attacker.com');
+ assert not public.kouponly_school_email('student@sub.rajagiri.edu.in');
+ assert not public.kouponly_school_email('student@@rajagiri.edu.in');
+ assert not public.kouponly_school_email('@rajagiri.edu.in');
+ assert not public.kouponly_school_email('student x@rajagiri.edu.in');
+ assert not public.kouponly_school_email('pauljasonthykatt@gmail.com'),'Legacy exceptions must not survive';
+ assert not public.kouponly_school_email('info@kouponly.in'),'Admin email is not a public student exception';
+ insert into auth.users(id,email,email_confirmed_at) values(student,student||'@rajagiri.edu.in',now()),(outsider,outsider||'@gmail.com',now()),(admin,admin||'@example.net',now());
+ perform set_config('test.student_uid',student::text,true);
+ perform set_config('test.admin_uid',admin::text,true);
+ assert public.kouponly_has_verified_email(student);
+ assert not public.kouponly_has_verified_email(outsider);
+ perform set_config('request.jwt.claim.sub',outsider::text,true);
+ assert not public.kouponly_student_email_allowed();
+ begin perform public.kouponly_ensure_free_month(outsider); raise exception 'Outsider received coupons';
+ exception when insufficient_privilege then assert sqlerrm='EMAIL_DOMAIN_NOT_ALLOWED'; end;
+ begin insert into public.couponly_students(id,email) values(outsider,outsider||'@gmail.com'); raise exception 'Outsider enrolled';
+ exception when insufficient_privilege then null; end;
+ insert into public.couponly_students(id,email) values(student,student||'@rajagiri.edu.in');
+ insert into public.kouponly_school_email_domains(domain,active) values('example.org',true);
+ update auth.users set email=outsider||'@example.org' where id=outsider;
+ assert public.kouponly_has_verified_email(outsider);
+ assert public.kouponly_student_email_allowed();
+ perform public.kouponly_ensure_free_month(outsider);
+ insert into public.couponly_students(id,email) values(outsider,outsider||'@example.org');
+ update public.kouponly_school_email_domains set active=false where domain='example.org';
+ assert not public.kouponly_has_verified_email(outsider),'Disabling a domain must revoke existing eligibility';
+ assert not public.kouponly_student_email_allowed();
+ insert into public.kouponly_user_roles(user_id,role) values(admin,'admin');
+ perform set_config('request.jwt.claim.sub',admin::text,true);
+ assert public.kouponly_student_email_allowed(),'Admins must retain access to their panel';
+ assert not public.kouponly_school_email(admin||'@example.net'),'Admin exemption must not allow everyone with the same domain';
+end $$;
+set local role authenticated;
+select set_config('request.jwt.claim.sub',current_setting('test.student_uid'),true);
+do $$ begin
+ assert (select count(*)=0 from public.kouponly_school_email_domains),'Student can list policy rows';
+ begin insert into public.kouponly_school_email_domains(domain) values('unauthorized.edu'); raise exception 'Student altered policy';
+ exception when insufficient_privilege then null; end;
+end $$;
+select set_config('request.jwt.claim.sub',current_setting('test.admin_uid'),true);
+do $$ begin
+ insert into public.kouponly_school_email_domains(domain) values('admin-added.edu');
+ assert public.kouponly_school_email('student@admin-added.edu');
+ update public.kouponly_school_email_domains set active=false where domain='admin-added.edu';
+ assert not public.kouponly_school_email('student@admin-added.edu');
+ delete from public.kouponly_school_email_domains where domain='admin-added.edu';
+end $$;
+reset role;
+rollback;

@@ -9,6 +9,7 @@ export interface EmbeddedOffer {
     titleEn: string
     descriptionEn?: string
     branchIds?: string[]
+    redemptionLimit?: number
     badgeLabel?: string
     discountType: 'percentage' | 'amount' | 'buy1get1' | 'free' | 'combo' | 'fixed_price'
     discountValue?: number

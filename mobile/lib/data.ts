@@ -5,7 +5,7 @@ export type Deal = {
 };
 
 export const onlineUrlFor = (name:string, explicitUrl?:string) => explicitUrl || `https://www.google.com/search?q=${encodeURIComponent(name)}`;
-export type VendorOffer = {branchIds?:string[]; currency?:string; id:string; index:number; title:string; badgeLabel?:string; logo?:string; description:string; saving:string; terms?:string; redemptionInstructions?:string; redemption:"online"|"inStore"; discountType?:string; discountValue?:number};
+export type VendorOffer = {redemptionLimit?:number; redemptionCount?:number; branchIds?:string[]; currency?:string; id:string; index:number; title:string; badgeLabel?:string; logo?:string; description:string; saving:string; terms?:string; redemptionInstructions?:string; redemption:"online"|"inStore"; discountType?:string; discountValue?:number};
 export function dealDiscountLabel(deal: Deal): string | undefined {
   const offer = deal.offers?.filter(row => ['percentage', 'amount'].includes(row.discountType || '') && Number.isFinite(row.discountValue) && row.discountValue! > 0)
     .reduce<VendorOffer | undefined>((highest, row) => !highest || row.discountValue! > highest.discountValue! ? row : highest, undefined) ?? deal.offers?.[0];

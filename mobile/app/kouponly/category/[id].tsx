@@ -24,7 +24,7 @@ export default function KouponlyCategoryScreen() {
   const { status, revision, refresh } = useCatalogue();
   const { distanceByVendor } = useNearbyDistances();
   const { benefits } = useBenefits();
-  const [filter, setFilter] = React.useState('all');
+  const [filter, setFilter] = React.useState('top');
   const [sortMode, setSortMode] = React.useState<VendorSortMode>('alphabetical');
   const [subcategory, setSubcategory] = React.useState('all');
   const [input, setInput] = React.useState('');

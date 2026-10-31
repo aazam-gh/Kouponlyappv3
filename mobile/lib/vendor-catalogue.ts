@@ -88,7 +88,7 @@ export function projectVendorCatalogue(
       id, vendorId: vendor.id, categoryId: mainCategory.id, categoryIds, subcategoryIds,
       offers: vendorOffers.map(row => {
         const badgeLabel = stringValue(row.payload?.badgeLabel);
-        return { branchIds: Array.isArray(row.payload?.branchIds) ? row.payload.branchIds.filter((id: unknown): id is string => typeof id === 'string') : [], currency: stringValue(row.currency) || undefined, id: row.id, index: offerIndexes.get(row.id)!, title: row.title, ...(badgeLabel ? { badgeLabel } : {}),
+        return { redemptionLimit: row.redemption_limit ?? undefined, redemptionCount: numberValue(row.redemption_count), branchIds: Array.isArray(row.payload?.branchIds) ? row.payload.branchIds.filter((id: unknown): id is string => typeof id === 'string') : [], currency: stringValue(row.currency) || undefined, id: row.id, index: offerIndexes.get(row.id)!, title: row.title, ...(badgeLabel ? { badgeLabel } : {}),
           logo: vendorLogo, description: row.description || '', saving: row.saving_label || '', terms: row.terms || undefined, redemptionInstructions: row.redemption_instructions || undefined,
           redemption: row.redemption_mode === 'online' ? 'online' : 'inStore', discountType: row.discount_type || row.payload?.discountType, discountValue: numberValue(row.discount_value ?? row.payload?.discountValue, NaN) };
       }),

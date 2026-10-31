@@ -8,11 +8,10 @@ import React from 'react';
 import { ActivityIndicator, FlatList, Keyboard, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
-import RestaurantCard from '@/components/category/RestaurantCard';
+import NewDealListCard from '@/components/opportunities/NewDealListCard';
 import { HeaderIconButton } from '@/components/navigation/AppHeader';
 import { useAppTheme } from '@/context/AppThemeContext';
 import { useCatalogue } from '@/lib/catalogue';
-import { useNearbyDistances } from '@/lib/nearby';
 import { deals, type Deal } from '@/lib/data';
 import { searchVendors } from '@/lib/vendor-search';
 import { F } from '@/lib/theme';
@@ -27,7 +26,6 @@ export default function KouponlySearchScreen() {
   const { t } = useTranslation();
   const { isDark, theme } = useAppTheme();
   const { status, revision, refresh } = useCatalogue();
-  const { distanceByVendor } = useNearbyDistances();
   const [input, setInput] = React.useState(typeof q === 'string' ? q : '');
   const [committed, setCommitted] = React.useState(typeof q === 'string' ? q.trim().toLocaleLowerCase() : '');
   const inputRef = React.useRef<TextInput>(null);
@@ -45,14 +43,14 @@ export default function KouponlySearchScreen() {
   const tryAnother = () => { triggerSubtleHaptic(); setInput(''); setCommitted(''); requestAnimationFrame(() => inputRef.current?.focus()); };
   const openVendor = (item: Deal) => router.push({ pathname: '/kouponly/vendor/[id]', params: { id: String(item.vendorId || item.id) } } as any);
   const renderCard = ({ item }: { item: Deal }) => <View style={s.cardWrap}>
-    <RestaurantCard id={String(item.vendorId || item.id)} name={item.name} imageUri={item.image} logoUri={item.logo} distance={distanceByVendor.get(String(item.vendorId || item.id))?.label} xcardEnabled={item.xcard} badgeLabel={item.cardLabel} distanceOnImage overlapLogo contentStyle={{ minHeight: 32, justifyContent: 'flex-start', paddingTop: 0, paddingBottom: 8 }} onPress={() => openVendor(item)} />
+    <NewDealListCard name={item.name} imageUri={item.image} logoUri={item.logo} onPress={() => openVendor(item)} />
   </View>;
   const noMatches = !!committed && results.length === 0;
 
   return <SafeAreaView style={[s.root, { backgroundColor: theme.background }]} edges={['top']}>
     <StatusBar style={isDark ? 'light' : 'dark'} animated />
     <View style={s.header}>
-      <HeaderIconButton icon={'arrow-back'} onPress={() => router.back()} accessibilityLabel={t('back')} />
+      <HeaderIconButton icon={'arrow-back'} onPress={() => router.canGoBack() ? router.back() : router.replace('/kouponly' as any)} accessibilityLabel={t('back')} />
       <View style={[s.search, { backgroundColor: theme.inputBackground, borderColor: theme.inputBorder }]}>
         <Ionicons name="search" size={18} color={theme.brand} />
         <TextInput testID="vendor-search-input" ref={inputRef} style={[s.input, { color: theme.text, textAlign: 'left', writingDirection: 'ltr' }]} placeholder={t('search_offers_placeholder')} placeholderTextColor={theme.inputPlaceholder} value={input} onChangeText={text => { setInput(text); setCommitted(text.trim().toLocaleLowerCase()); }} onSubmitEditing={submit} returnKeyType="search" submitBehavior="blurAndSubmit" accessibilityLabel={t('search_offers_placeholder')} />
@@ -107,5 +105,5 @@ const s = StyleSheet.create({
   emptyTitle: { fontSize: 18, textAlign: 'center', lineHeight: 24, fontWeight: '600' }, emptyBody: { fontSize: 14, textAlign: 'center', lineHeight: 20, maxWidth: 280, marginTop: 6 },
   noResultHeader: { alignItems: 'center', paddingHorizontal: 20, paddingTop: 20 }, tryAnother: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 16, paddingVertical: 6 }, tryAnotherText: { fontSize: 14, fontWeight: '600' },
   recommendationsTitle: { alignSelf: 'flex-start', fontSize: 18, fontWeight: '600', paddingTop: 28, paddingBottom: 16 }, resultCountRow: { width: '100%', alignItems: 'flex-start', paddingHorizontal: 20 }, resultCount: { fontSize: 14, paddingTop: 8, paddingBottom: 16 },
-  cardWrap: { flex: 1, paddingHorizontal: 20, marginBottom: 8 }, listBottom: { paddingBottom: 24 },
+  cardWrap: { flex: 1, paddingHorizontal: 20, marginBottom: 16 }, listBottom: { paddingBottom: 24 },
 });

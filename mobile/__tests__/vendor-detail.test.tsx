@@ -177,3 +177,12 @@ it('uses a separate coupon for the same offer at each branch', async () => {
   expect(view.getByTestId('redeem-offer-0')).toBeEnabled();
   expect(view.getByLabelText('Coupons remaining: 1 of 1')).toBeTruthy();
 });
+
+it('keeps an exhausted offer visible but disables redemption independently of personal usage', async () => {
+  mockDeal.offers[0].redemptionLimit = 100;
+  mockDeal.offers[0].redemptionCount = 100;
+  const view = await screen();
+  expect(view.getByText('Fully redeemed · All available coupons have been used.')).toBeTruthy();
+  expect(view.getByTestId('redeem-offer-0')).toBeDisabled();
+  expect(view.getByTestId('redeem-offer-1')).toBeEnabled();
+});

@@ -11,7 +11,7 @@ import { useAppTheme } from '../../context/AppThemeContext';
 import { Typography } from '../../constants/Typography';
 import { useAuth } from '../../lib/auth';
 import { useCatalogue } from '../../lib/catalogue';
-import { dealAtBranch, offerBranchLabel } from '../../lib/vendor-branches';
+import { dealAtBranch, isOfferExhausted, offerBranchLabel } from '../../lib/vendor-branches';
 import { dealById } from '../../lib/data';
 import { benefitsError, isCouponOfferUsed, makeMutationId, redeemSubscriptionCoupon, useBenefits } from '../../lib/benefits';
 import { usePostHog } from 'posthog-react-native';
@@ -45,6 +45,7 @@ export default function RedeemScreen() {
   const subscription = benefits?.subscription; const used = !!offer?.id && isCouponOfferUsed(benefits, offer.id, deal?.vendorId, branchKey);
   const confirm = async () => {
     if (inFlight.current || !subscription || !offer) return;
+    if (isOfferExhausted(offer) && !request.current.mutation) { setError(benefitsError('OFFER_EXHAUSTED')); return; }
     if (branchMissing) { setError('Select a branch on the vendor page before redeeming.'); return; }
     const amount = request.current.billAmount ?? parseBillAmount(billAmount);
     if (amount === null) { setBillError('Enter a positive bill amount with at most two decimal places.'); return; }
@@ -102,7 +103,7 @@ export default function RedeemScreen() {
           </> : null}
         </View>
         {loading && !benefits ? <ActivityIndicator color={theme.actionSolid} /> : subscription ? <>
-          {used ? <><Text style={styles.error}>This offer’s coupon is already used. Available again {new Date(subscription.endsAt).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })} IST. {benefits.rewardedReferrals < benefits.referralLimit ? 'Invite friends to earn an earlier coupon refresh.' : 'Your referral refresh limit has been reached.'}</Text><Action label="Invite friends" onPress={() => router.push('/invite-code')} />{error && request.current.mutation ? <Action label="Recover confirmation" disabled={busy} onPress={() => void confirm()} /> : null}</> : offer.redemption === 'online' ? <Text style={styles.body}>Online coupon redemption is not available.</Text> : <>
+          {(isOfferExhausted(offer) && !request.current.mutation) || error === benefitsError('OFFER_EXHAUSTED') ? <Text style={styles.body}>Fully redeemed · All available coupons have been used.</Text> : used ? <><Text style={styles.error}>This offer’s coupon is already used. Available again {new Date(subscription.endsAt).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })} IST. {benefits.rewardedReferrals < benefits.referralLimit ? 'Invite friends to earn an earlier coupon refresh.' : 'Your referral refresh limit has been reached.'}</Text><Action label="Invite friends" onPress={() => router.push('/invite-code')} />{error && request.current.mutation ? <Action label="Recover confirmation" disabled={busy} onPress={() => void confirm()} /> : null}</> : offer.redemption === 'online' ? <Text style={styles.body}>Online coupon redemption is not available.</Text> : <>
             <OnboardingField label={`Bill total (${offer.currency || 'INR'})`} testID="bill-amount" value={billAmount} onChangeText={value => { setBillAmount(value); setBillError(''); }} error={billError} keyboardType="decimal-pad" maxLength={13} editable={!busy && !request.current.mutation} placeholder="0.00" />
             {offer.discountType === 'buy1get1' ? <OnboardingField label="Cheaper item price (free item)" value={freeItemAmount} onChangeText={value => { setFreeItemAmount(value); setBillError(''); }} keyboardType="decimal-pad" editable={!busy && !request.current.mutation} placeholder="0.00" /> : null}
             {amounts ? <AmountSummary currency={offer.currency || 'INR'} payable={amounts.payable} saved={amounts.saved} /> : null}
