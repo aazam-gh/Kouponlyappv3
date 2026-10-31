@@ -12,7 +12,7 @@ import { deals } from '@/lib/data';
 import { useNearby, useNearbyDistances } from '@/lib/nearby';
 import { homeQueryOptions } from '@/utils/homeQueries';
 import FilterTabs from '@/components/category/FilterTabs';
-import { isCouponOfferUsed, useBenefits } from '@/lib/benefits';
+import { hasAvailableBranchCoupon, useBenefits } from '@/lib/benefits';
 import { sortVendors, type VendorSortMode } from '@/lib/vendor-sorting';
 import TrendingOfferListCard from '@/components/opportunities/TrendingOfferListCard';
 import NewDealListCard from '@/components/opportunities/NewDealListCard';
@@ -41,8 +41,8 @@ export default function VendorsScreen() {
     const available = (item: (typeof items)[number]) => {
       if (!benefits?.subscription) return true;
       const vendorId = String(item.vendorId || item.id);
-      const offers = deals.find(deal => String(deal.vendorId || deal.id) === vendorId)?.offers ?? [];
-      return offers.some(offer => !isCouponOfferUsed(benefits, offer.id, vendorId));
+      const deal = deals.find(deal => String(deal.vendorId || deal.id) === vendorId);
+      return !!deal && hasAvailableBranchCoupon(deal, benefits);
     };
     if (filter === 'nearest') return [...items].sort((a, b) => (distanceByVendor.get(String(a.vendorId || a.id))?.distanceKm ?? Infinity) - (distanceByVendor.get(String(b.vendorId || b.id))?.distanceKm ?? Infinity));
     if (filter === 'top') return [...items].sort((a, b) => Number((b as any).trend || 0) - Number((a as any).trend || 0));

@@ -45,6 +45,7 @@ export default function CategoryGrid({ categories: propCategories, onCategoryPre
 
     const openCategory = (item: CategoryItem) => {
         triggerSubtleHaptic();
+        if (moreVisible) setMoreVisible(false);
         if (onCategoryPress) onCategoryPress(item);
         else router.push({ pathname: '/kouponly/category/[id]', params: { id: item.id, name: item.name, englishName: item.englishName || item.name } } as any);
     };
@@ -108,8 +109,8 @@ export default function CategoryGrid({ categories: propCategories, onCategoryPre
                             accessibilityRole="button"
                             accessibilityLabel={t('more')}
                         >
-                            <View style={[styles.moreButton, { width: imageSize, height: imageSize, backgroundColor: theme.surface, borderColor: BorderPalette.border }]}>
-                                <Ellipsis size={28} color={theme.text} />
+                            <View style={[styles.moreButton, { width: imageSize, height: imageSize, backgroundColor: theme.actionSolid, borderColor: theme.actionSolid }]}>
+                                <Ellipsis size={28} color="#FFFFFF" />
                             </View>
                             <Text style={[styles.categoryName, { color: theme.text }]} numberOfLines={1}>{t('more')}</Text>
                         </ScalePressable>

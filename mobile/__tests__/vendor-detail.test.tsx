@@ -1,11 +1,12 @@
 import React from 'react';
-import { Linking, Share } from 'react-native';
-import { cleanup, fireEvent, render } from '@testing-library/react-native';
+import { Alert, Linking, Share } from 'react-native';
+import { cleanup, fireEvent, render, waitFor } from '@testing-library/react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import DealDetail from '../app/deal/[id]';
 import { AppThemeProvider } from '../context/AppThemeContext';
 import { LocaleProvider } from '../context/LocaleContext';
 
+jest.mock('expo-device', () => ({ isDevice: true }));
 const mockPush = jest.fn();
 const mockNotify = jest.fn();
 const mockToggleSavedOffer = jest.fn();
@@ -23,7 +24,7 @@ jest.mock('expo-router', () => ({
 jest.mock('../lib/nearby', () => ({ useNearbyDistances: () => ({ distanceByVendor: mockDistances }) }));
 jest.mock('../lib/catalogue', () => ({ useCatalogue: () => ({ status: 'cloud' }) }));
 jest.mock('../lib/auth', () => ({ useAuth: () => ({ user: null }) }));
-jest.mock('../lib/benefits', () => ({ useBenefits: () => ({ benefits: mockBenefits }), isCouponOfferUsed: (benefits: any, offerId: string, vendorId?: string | null) => Array.isArray(benefits?.usedOfferIds) ? benefits.usedOfferIds.includes(offerId) : Boolean(vendorId && benefits?.usedVendorIds?.includes(vendorId)) }));
+jest.mock('../lib/benefits', () => ({ useBenefits: () => ({ benefits: mockBenefits }), isCouponOfferUsed: jest.requireActual('../lib/benefits').isCouponOfferUsed }));
 jest.mock('../lib/store', () => ({ useStore: () => ({
   state: { saved: [], savedOffers: [] }, notify: mockNotify, toggleSaved: jest.fn(), toggleSavedOffer: mockToggleSavedOffer,
 }) }));
@@ -44,6 +45,7 @@ beforeEach(() => {
   mockDeal.vendorInformation = undefined;
   mockDeal.openingHours = undefined;
   mockDeal.locations = undefined;
+  jest.spyOn(Alert, 'alert').mockImplementation(() => {});
   jest.spyOn(Linking, 'openURL').mockResolvedValue(true);
   jest.spyOn(Share, 'share').mockResolvedValue({ action: Share.dismissedAction });
 });
@@ -59,7 +61,7 @@ it('shares a link to this vendor and opens normalized contact links', async () =
   await fireEvent.press(view.getByLabelText('Vendor Instagram'));
   expect(Linking.openURL).toHaveBeenCalledWith('https://www.instagram.com/vendor/');
   await fireEvent.press(view.getByLabelText('Call +91 12345'));
-  expect(Linking.openURL).toHaveBeenCalledWith('tel:+9112345');
+  await waitFor(() => expect(Linking.openURL).toHaveBeenCalledWith('tel:+9112345'));
 });
 
 it('shows vendor information in a dismissible bottom sheet', async () => {
@@ -97,7 +99,7 @@ it('hides invalid links and reports an external-link failure', async () => {
   expect(view.queryByLabelText('Vendor Instagram')).toBeNull();
   jest.mocked(Linking.openURL).mockRejectedValueOnce(new Error('Unable to open'));
   await fireEvent.press(view.getByLabelText('Call +91 12345'));
-  expect(mockNotify).toHaveBeenCalledWith('Unable to open this link. Please try again.');
+  await waitFor(() => expect(Alert.alert).toHaveBeenCalledWith('Call unavailable', '+91 12345'));
 });
 
 it('opens offer details from the promo title', async () => {
@@ -154,4 +156,24 @@ it('shows an empty state when the selected branch has no coupon', async () => {
   await fireEvent.press(view.getByLabelText('Select TVM'));
   expect(view.getByText('No coupons available at this branch. Choose another branch to see its offers.')).toBeTruthy();
   expect(view.queryByTestId('redeem-offer-0')).toBeNull();
+});
+
+it('omits branch controls and branch labels for a single-location vendor', async () => {
+  mockDeal.locations = [{ id: 'kochi', name: 'Kochi', address: 'Kochi address' }];
+  const view = await screen();
+  expect(view.queryByText('Offers at Kochi')).toBeNull();
+  expect(view.queryByLabelText('Select Kochi')).toBeNull();
+  expect(view.queryByText('Kochi')).toBeNull();
+  expect(view.getByText('Promo 0')).toBeTruthy();
+});
+
+it('uses a separate coupon for the same offer at each branch', async () => {
+  mockDeal.locations = [{ id: 'vendor-1:a', branchId: 'a', name: 'Branch A' }, { id: 'vendor-1:b', branchId: 'b', name: 'Branch B' }];
+  mockDeal.offers = [mockDeal.offers[0]];
+  mockBenefits = { subscription: { roundId: 'round-1', endsAt: '2026-12-01' }, usedOfferIds: ['offer-0'], usedVendorIds: ['vendor-1'], usedOfferBranches: [{ offerId: 'offer-0', branchId: 'a' }] };
+  const view = await screen();
+  expect(view.getByTestId('redeem-offer-0')).toBeDisabled();
+  await fireEvent.press(view.getByLabelText('Select Branch B'));
+  expect(view.getByTestId('redeem-offer-0')).toBeEnabled();
+  expect(view.getByLabelText('Coupons remaining: 1 of 1')).toBeTruthy();
 });

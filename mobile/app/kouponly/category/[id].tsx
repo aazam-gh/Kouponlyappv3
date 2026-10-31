@@ -11,7 +11,7 @@ import { categories, deals, type Deal } from '@/lib/data';
 import { useAppTheme } from '@/context/AppThemeContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNearbyDistances } from '@/lib/nearby';
-import { isCouponOfferUsed, useBenefits } from '@/lib/benefits';
+import { hasAvailableBranchCoupon, useBenefits } from '@/lib/benefits';
 import { dealAtBranch } from '@/lib/vendor-branches';
 import { sortVendors, type VendorSortMode } from '@/lib/vendor-sorting';
 
@@ -49,7 +49,7 @@ export default function KouponlyCategoryScreen() {
       (distanceByVendor.get(String(a.vendorId || a.id))?.distanceKm ?? Infinity)
       - (distanceByVendor.get(String(b.vendorId || b.id))?.distanceKm ?? Infinity));
     if (filter === 'top') return matching.sort((a, b) => b.trend - a.trend);
-    return sortVendors(matching, sortMode, vendor => !benefits?.subscription || (vendor.offers ?? []).some(offer => !isCouponOfferUsed(benefits, offer.id, vendor.vendorId || String(vendor.id))));
+    return sortVendors(matching, sortMode, vendor => !benefits?.subscription || hasAvailableBranchCoupon(vendor, benefits));
   }, [benefits, category?.id, distanceByVendor, filter, query, revision, sortMode, subcategory]);
   const cardWidth = width - 40;
   const submitSearch = () => { setQuery(input.trim()); setSubcategory('all'); Keyboard.dismiss(); };

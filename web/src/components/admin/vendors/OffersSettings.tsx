@@ -186,7 +186,7 @@ export function OffersSettings({ vendorId }: OffersSettingsProps) {
                 redemptionInstructionsEn: data.redemptionInstructionsEn?.trim(),
                 startsAt: validityType === 'date_range' ? data.startsAt : undefined,
                 endsAt: validityType === 'date_range' ? data.endsAt : undefined,
-                active: true,
+                active: data.active !== false,
                 redemptionMode: 'inStore',
             }
             delete offer.savingLabel
@@ -314,13 +314,17 @@ export function OffersSettings({ vendorId }: OffersSettingsProps) {
 
                         <div className="space-y-3 rounded-xl border p-4">
                             <Label>Valid branches</Label>
-                            <p className="text-sm text-muted-foreground">Leave all unchecked for all branches, or choose where this coupon is valid.</p>
+                            <p className="text-sm text-muted-foreground">Create a separate offer for each branch to set different discounts and availability. Leave all unchecked to apply this offer to every branch.</p>
                             {(vendor?.locations || []).map(branch => <Label key={branch.id} className="flex min-h-12 cursor-pointer items-center gap-3 rounded-lg border p-3">
                                 <Checkbox className="size-6" checked={formData.branchIds?.includes(branch.id) || false} onCheckedChange={checked => setFormData(prev => ({ ...prev, branchIds: checked === true ? [...(prev.branchIds || []), branch.id] : (prev.branchIds || []).filter(id => id !== branch.id) }))} />
                                 <span>{branch.name || branch.address || branch.id}</span>
                             </Label>)}
                             {!vendor?.locations?.length && <p className="text-sm text-muted-foreground">Add branch locations before assigning branch-specific coupons.</p>}
                         </div>
+                        <Label className="flex min-h-14 cursor-pointer items-center gap-3 rounded-xl border p-4">
+                            <Checkbox className="size-6" checked={formData.active !== false} onCheckedChange={checked => setFormData(prev => ({ ...prev, active: checked === true }))} />
+                            <span><span className="block font-medium">Offer enabled</span><span className="text-sm font-normal text-muted-foreground">Disable to hide this offer from students at its assigned branches.</span></span>
+                        </Label>
                         {/* Descriptions */}
                         <div className="space-y-4">
                             <div className="space-y-2">
@@ -464,6 +468,7 @@ export function OffersSettings({ vendorId }: OffersSettingsProps) {
                             <span className="w-fit rounded-lg bg-emerald-50 px-3 py-1.5 text-sm font-semibold text-primary">
                                 {offer.discountType === 'free' ? 'Free eligible item' : ['combo', 'fixed_price'].includes(offer.discountType) ? `Exclusive price ${offer.currency === 'INR' ? '₹' : offer.currency} ${offer.discountValue}` : offer.discountType === 'buy1get1' ? 'Buy 1 Get 1' : offer.discountType === 'percentage' ? `${offer.discountValue}% off` : `${offer.currency === 'INR' ? '₹' : offer.currency || 'INR'} ${offer.discountValue} off`}
                             </span>
+                            <p className="mt-3 text-sm font-medium">{offer.active === false ? 'Disabled' : 'Enabled'} · {offer.branchIds?.length ? (vendor.locations || []).filter(branch => offer.branchIds!.includes(branch.id)).map(branch => branch.name || branch.address || branch.id).join(', ') : 'All branches'}</p>
                             <h3 className="mt-4 text-lg font-semibold">{offer.titleEn || 'Untitled offer'}</h3>
                             <p className="mt-2 flex-1 text-sm leading-relaxed text-muted-foreground">{offer.descriptionEn || 'No description provided.'}</p>
                             <Button variant="outline" className="mt-5 w-fit" disabled={reorderMutation.isPending} onClick={() => setEditingIndex(index)}><SquarePen className="size-4" />Edit offer</Button>

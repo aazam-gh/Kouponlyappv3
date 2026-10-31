@@ -1,4 +1,3 @@
-import { Colors as BorderPalette } from '@/constants/Colors';
 import { useMemo } from 'react';
 import { useRouter } from 'expo-router';
 import { ScrollView, StyleSheet, useWindowDimensions } from 'react-native';
@@ -49,10 +48,9 @@ export default function NewDealsSection({ scrollY, viewportHeight, bottomInset, 
                 distanceOnImage
                 overlapLogo
                 badgeLabel={deal.cardLabel}
-                borderColor={BorderPalette.cardOutline}
                 titleCaseName
                 contentStyle={{ minHeight: 48, justifyContent: 'center', paddingTop: 10, paddingBottom: 10 }}
-                style={{ width: width * 0.6, borderWidth: 1, borderColor: BorderPalette.cardOutline, borderRadius: 20, overflow: 'hidden' }}
+                style={{ width: width * 0.6, borderWidth: 0, borderRadius: 20, overflow: 'hidden' }}
                 onPress={() => router.push({ pathname: '/kouponly/vendor/[id]', params: { id: String(deal.vendorId || deal.id) } } as any)}
               />
             ))}

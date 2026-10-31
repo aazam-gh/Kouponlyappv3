@@ -123,9 +123,10 @@ describe("reachable route coverage", () => {
     await fireEvent.press(view.getByLabelText('Show details for Sweets discount'));
     expect(view.getByLabelText(/^Show vendor location/)).toBeTruthy();
     expect(view.getByTestId('redeem-offer-2')).toBeTruthy();
-    await fireEvent.press(view.getByLabelText(/^Show vendor location/));
-    expect(view.getByText('Branches')).toBeTruthy();
-    expect(view.getByLabelText('Directions to Second branch')).toBeTruthy();
+    expect(view.getByLabelText('Select Second branch')).toBeTruthy();
+    await fireEvent.press(view.getByLabelText('More information about Test Kitchen'));
+    expect(view.getByText('Branch addresses')).toBeTruthy();
+    expect(view.getAllByText('Second branch').length).toBeGreaterThan(0);
   });
 
   it('renders vendor details directly from the catalogue vendor ID',async()=>{

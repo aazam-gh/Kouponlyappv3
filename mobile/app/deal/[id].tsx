@@ -3,8 +3,9 @@ import { useMotionPreferences } from '@/lib/theme';
 import Animated, { Easing, FadeInDown, FadeOutUp, LinearTransition, ReduceMotion, SlideInDown, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
+import * as Device from 'expo-device';
 import React, { useMemo, useState } from 'react';
-import { AppState, Image, Linking, Share, Modal, Platform, Pressable, ScrollView, StatusBar as NativeStatusBar, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import { Alert, AppState, Image, Linking, Share, Modal, Platform, Pressable, ScrollView, StatusBar as NativeStatusBar, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import { AccessiblePressable, Empty, Screen, safeGoBack } from '@/components/ui';
@@ -67,7 +68,6 @@ export default function DealDetail({ dealId }: { dealId?: string } = {}) {
   const [expandedOfferId, setExpandedOfferId] = useState<string | null>(null);
   const [closingOfferId, setClosingOfferId] = useState<string | null>(null);
   const [offerDetailsHeights, setOfferDetailsHeights] = useState<Record<string, number>>({});
-  const [locationsOpen, setLocationsOpen] = useState(false);
   const [infoOpen, setInfoOpen] = useState(false);
   React.useEffect(() => {
     if (!closingOfferId) return;
@@ -111,6 +111,13 @@ export default function DealDetail({ dealId }: { dealId?: string } = {}) {
   const openLink = async (url: string) => { try { await Linking.openURL(url); } catch { notify('Unable to open this link. Please try again.'); } };
   const share = async () => { try { await Share.share({ message: `${deal.name} on Kouponly\nhttps://kouponly.in/vendor/${encodeURIComponent(String(deal.vendorId || deal.id))}` }); } catch { notify('Unable to share this vendor. Please try again.'); } };
   const phone = branch?.phoneNumber || deal.phoneNumber;
+  const branchAddresses = deal.locations?.filter(location => location.address) ?? [];
+  const callVendor = () => {
+    if (!phone) return;
+    const dial = () => void Linking.openURL(`tel:${phone.replace(/[^\d+]/g,'')}`).catch(() => Alert.alert('Call unavailable', phone));
+    if (Platform.OS === 'ios' && !Device.isDevice) return Alert.alert('Call', phone, [{ text: 'Cancel', style: 'cancel' }, { text: 'Call', onPress: dial }]);
+    dial();
+  };
   const hours = branch?.openingHours || deal.openingHours;
   const openLocation = (location = branch) => {
     const query = location?.latitude != null && location.longitude != null ? `${location.latitude},${location.longitude}` : `${deal.name}, ${location?.address || deal.place}`;
@@ -146,22 +153,22 @@ export default function DealDetail({ dealId }: { dealId?: string } = {}) {
           <Text accessibilityRole="header" style={[s.title, isRTL && s.textRtl]}>{deal.name}</Text>
         </View>
         <View style={[s.actionMetaRow, isRTL && s.rowReverse]}>
-          {phone ? <AccessiblePressable accessibilityLabel={`Call ${phone}`} onPress={() => void openLink(`tel:${phone.replace(/[^\d+]/g,'')}`)} style={s.actionPill}><Ionicons name="call-outline" size={17} color={C.ink}/><Text style={s.callPillText}>Call</Text></AccessiblePressable> : null}
-          <AccessiblePressable accessibilityLabel={`Show vendor location${branchDistance ? `, ${branchDistance}` : ''}`} onPress={()=>deal.locations && deal.locations.length>1?setLocationsOpen(true):openLocation()} style={s.actionPill}><Ionicons name="navigate-outline" size={16} color={C.ink}/><Text numberOfLines={1} style={s.callPillText}>{branchDistance || 'Directions'}</Text></AccessiblePressable>
+          {phone ? <AccessiblePressable accessibilityLabel={`Call ${phone}`} onPress={callVendor} style={s.actionPill}><Ionicons name="call-outline" size={17} color={C.ink}/><Text style={s.callPillText}>Call</Text></AccessiblePressable> : null}
+          <AccessiblePressable accessibilityLabel={`Show vendor location${branchDistance ? `, ${branchDistance}` : ''}`} onPress={() => openLocation()} style={s.actionPill}><Ionicons name="navigate-outline" size={16} color={C.ink}/><Text numberOfLines={1} style={s.callPillText}>{branchDistance || 'Directions'}</Text></AccessiblePressable>
           <AccessiblePressable accessibilityRole="button" accessibilityLabel={`More information about ${deal.name}`} onPress={() => setInfoOpen(true)} style={[s.actionPill, s.infoPill]}><Ionicons name="information-circle-outline" size={18} color="#FFFFFF"/><Text style={s.infoPillText}>Info</Text></AccessiblePressable>
         </View>
-        {deal.locations?.length ? <View style={{ gap: 8 }}>
+        {(deal.locations?.length ?? 0) > 1 ? <View style={{ gap: 8 }}>
           <Text style={[s.infoTitle, { paddingTop: 8 }]}>Offers at {branch?.name || branch?.address || 'this branch'}</Text>
-          {deal.locations.length > 1 ? <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
-            {deal.locations.map(location => <AccessiblePressable key={location.id} accessibilityRole="button" accessibilityState={{ selected: branch?.id === location.id }} accessibilityLabel={`Select ${location.name || location.address}`} onPress={() => setChosenBranch(location.id)} style={[s.actionPill, branch?.id === location.id && { borderColor: C.lime }]}><Text style={s.callPillText}>{location.name || location.address}</Text></AccessiblePressable>)}
-          </ScrollView> : null}
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
+            {deal.locations?.map(location => <AccessiblePressable key={location.id} accessibilityRole="button" accessibilityState={{ selected: branch?.id === location.id }} accessibilityLabel={`Select ${location.name || location.address}`} onPress={() => setChosenBranch(location.id)} style={[s.actionPill, branch?.id === location.id && { borderColor: C.lime }]}><Text style={s.callPillText}>{location.name || location.address}</Text></AccessiblePressable>)}
+          </ScrollView>
         </View> : null}
         {deal.offers && !deal.offers.length ? <Text style={s.offerDetailsText}>No coupons available at this branch. Choose another branch to see its offers.</Text> : null}
         <View style={[s.promosHeader, isRTL && s.rowReverse]}>
           <Text accessibilityRole="header" style={s.promosHeading}>Available Promos</Text>
         </View>
         <View style={s.offersList}>{(deal.offers ?? [{id:offerKey,index:0,title:deal.offer,description:deal.description,saving:deal.saving,redemption:deal.redemption??'inStore'}]).map(offer=>{
-          const count=isCouponOfferUsed(benefits, offer.id, deal.vendorId) ? 1 : 0;
+          const count=isCouponOfferUsed(benefits, offer.id, deal.vendorId, branch?.branchId || branch?.id || '') ? 1 : 0;
           const expanded = expandedOfferId === offer.id;
           const closing = closingOfferId === offer.id;
           const showDetails = expanded && !closing;
@@ -181,7 +188,7 @@ export default function DealDetail({ dealId }: { dealId?: string } = {}) {
                 <View style={[s.offerTags, isRTL && s.rowReverse]}>
                   {offer.saving ? <View style={s.offerTag}><Text style={s.offerTagText}>{offer.saving}</Text></View> : null}
                   <View style={s.offerTag}><Ionicons name={offer.redemption === 'online' ? 'globe-outline' : 'storefront-outline'} size={15} color={C.muted}/><Text style={s.offerTagText}>{offer.redemption === 'online' ? 'Online' : 'In-store'}</Text></View>
-                  {deal.locations?.length ? <View style={s.offerTag}><Ionicons name="location-outline" size={15} color={C.muted}/><Text style={s.offerTagText}>{offerBranchLabel(offer, deal.locations)}</Text></View> : null}
+                  {(deal.locations?.length ?? 0) > 1 ? <View style={s.offerTag}><Ionicons name="location-outline" size={15} color={C.muted}/><Text style={s.offerTagText}>{offerBranchLabel(offer, deal.locations)}</Text></View> : null}
                   {deal.xcard ? <View style={s.offerTag}><Ionicons name="cash-outline" size={14} color={C.success}/><Text style={s.offerTagText}>Cashback</Text></View> : null}
                 </View>
               </View>
@@ -201,7 +208,6 @@ export default function DealDetail({ dealId }: { dealId?: string } = {}) {
         })}</View>
       </View>
     </Screen>
-    <Modal visible={locationsOpen && Boolean(deal.locations?.length)} transparent animationType={reduceMotion ? "fade" : "slide"} onRequestClose={()=>setLocationsOpen(false)}><Pressable style={s.modalOverlay} onPress={()=>setLocationsOpen(false)}><Pressable style={[s.branchSheet,{paddingBottom:Math.max(insets.bottom,20)}]} onPress={event=>event.stopPropagation()}><View style={s.handle}/><View style={s.branchHeader}><Text style={s.sectionTitle}>Branches</Text><AccessiblePressable accessibilityLabel="Close branches" onPress={()=>setLocationsOpen(false)} style={s.imageAction}><Ionicons name="close-circle" size={25} color={C.ink}/></AccessiblePressable></View><ScrollView showsVerticalScrollIndicator={false}>{deal.locations?.map((location,index)=><AccessiblePressable key={location.id} accessibilityLabel={`Directions to ${location.name || location.address}`} onPress={()=>{setLocationsOpen(false);openLocation(location)}} pressedScale={1} style={[s.branchRow, isRTL && s.rowReverse]}><View style={s.branchIcon}><Ionicons name="location-outline" size={19} color={C.lime}/></View><View style={{flex:1}}><Text style={[s.locationText, isRTL && s.textRtl]}>{location.name || `Branch ${index+1}`}</Text>{location.address ? <Text style={[s.branchAddress, isRTL && s.textRtl]}>{location.address}</Text>:null}{location.phoneNumber ? <Text style={[s.branchAddress, isRTL && s.textRtl]}>{location.phoneNumber}</Text>:null}</View><Ionicons name="navigate-outline" size={17} color={C.lime}/></AccessiblePressable>)}</ScrollView></Pressable></Pressable></Modal>
     <Modal testID="vendor-info-modal" visible={infoOpen} transparent animationType="none" statusBarTranslucent navigationBarTranslucent onRequestClose={() => setInfoOpen(false)}>
       <Pressable testID="vendor-info-backdrop" style={s.modalOverlay} onPress={() => setInfoOpen(false)}>
         <AnimatedPressable testID="vendor-info-sheet" entering={reduceMotion ? undefined : INFO_SHEET_ENTER} style={[s.branchSheet, { paddingBottom: Math.max(insets.bottom, 20) }]} onPress={event => event.stopPropagation()}>
@@ -216,8 +222,8 @@ export default function DealDetail({ dealId }: { dealId?: string } = {}) {
             {formattedHours ? <View style={s.infoCard}><View style={s.infoHeading}><Ionicons name="time-outline" size={20} color={C.lime}/><Text style={s.infoTitle}>Store timings</Text></View><Text style={[s.hours, isRTL && s.textRtl]}>{formattedHours}</Text></View> : null}
             {deal.vendorInformation?.message ? <View style={s.vendorInfo}><View style={s.infoHeading}><Ionicons name="information-circle-outline" size={22} color={C.lime}/><Text style={s.infoTitle}>{deal.vendorInformation.title || 'Store information'}</Text></View><Text style={[s.hours, isRTL && s.textRtl]}>{deal.vendorInformation.message}</Text></View> : null}
             {deal.description ? <View style={s.infoCard}><Text accessibilityRole="header" style={s.infoTitle}>About {deal.name}</Text><Text selectable style={s.offerDetailsText}>{deal.description}</Text></View> : null}
-            {branch?.address ? <View style={s.infoCard}><View style={s.infoHeading}><Ionicons name="location-outline" size={20} color={C.lime}/><Text style={s.infoTitle}>Address</Text></View><Text selectable style={[s.hours, isRTL && s.textRtl]}>{branch.address}</Text></View> : null}
-            {!website && !instagram && !formattedHours && !deal.vendorInformation?.message && !deal.description && !branch?.address ? <Text style={s.hours}>More store information will appear here when available.</Text> : null}
+            {branchAddresses.length ? <View style={s.infoCard}><View style={s.infoHeading}><Ionicons name="location-outline" size={20} color={C.lime}/><Text style={s.infoTitle}>{branchAddresses.length > 1 ? 'Branch addresses' : 'Address'}</Text></View>{branchAddresses.map((location, index) => <View key={location.id} style={{ gap: 2 }}>{branchAddresses.length > 1 ? <Text style={s.offerDetailsTitle}>{location.name || `Branch ${index + 1}`}</Text> : null}<Text selectable style={[s.hours, isRTL && s.textRtl]}>{location.address}</Text></View>)}</View> : null}
+            {!website && !instagram && !formattedHours && !deal.vendorInformation?.message && !deal.description && !branchAddresses.length ? <Text style={s.hours}>More store information will appear here when available.</Text> : null}
           </ScrollView>
         </AnimatedPressable>
       </Pressable>

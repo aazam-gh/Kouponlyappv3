@@ -36,9 +36,9 @@ export default function FilterTabs({ selectedFilter, onFilterChange, filters, so
     const [outerWidth, setOuterWidth] = useState(0);
 
     const currentFilters = useMemo<FilterOption[]>(() => filters || [
-        { id: 'all', label: 'Sort', icon: 'options-outline' },
-        { id: 'nearest', label: t('nearest'), icon: 'navigate-outline' },
         { id: 'top', label: t('filter_top'), icon: 'flame' },
+        { id: 'nearest', label: t('nearest'), icon: 'navigate-outline' },
+        { id: 'all', label: 'Sort', icon: 'options-outline' },
     ], [filters, t]);
 
     const containerWidth = Math.max(0, (outerWidth || width) - horizontalPadding * 2);

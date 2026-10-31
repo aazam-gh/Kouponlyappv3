@@ -5,6 +5,7 @@ export function offerAppliesToBranch(offer: VendorOffer, branch: VendorLocation)
 }
 
 export function dealAtBranch(deal: Deal, locationId?: string): Deal {
+  if (locationId === undefined) return deal;
   const branch = deal.locations?.find(row => row.id === locationId || row.branchId === locationId);
   if (!branch) return deal;
   const offers = (deal.offers || []).filter(offer => offerAppliesToBranch(offer, branch));

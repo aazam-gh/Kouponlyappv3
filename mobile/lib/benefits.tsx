@@ -1,3 +1,5 @@
+import type { Deal } from './data';
+import { offerAppliesToBranch } from './vendor-branches';
 import { AppState } from 'react-native';
 import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { useAuth } from './auth';
@@ -10,6 +12,7 @@ export type AccountBenefits = {
   subscription: { periodId: string; roundId: string; roundNumber: number; startsAt: string; endsAt: string; planName: string; cancelAtPeriodEnd: boolean } | null;
   /** Consumed offer slots in the active coupon round. */
   usedOfferIds?: string[];
+  usedOfferBranches?: { offerId: string; branchId: string | null }[];
   /** Kept in the API during rollout for clients that still expect vendor-level usage. */
   usedVendorIds: string[];
 };
@@ -21,16 +24,22 @@ const messages: Record<string, string> = {
   VOUCHER_ALREADY_USED: 'You have already used this voucher.', VOUCHER_EXHAUSTED: 'This voucher has reached its claim limit.',
   RATE_LIMITED: 'Too many attempts. Wait a minute and try again.', ROUND_CHANGED: 'Your coupons have refreshed. Review the offer and confirm again.',
   OFFER_UNAVAILABLE: 'This offer is no longer available.',
-  OFFER_ALREADY_USED: 'You have already used this offer in the current round.', IDEMPOTENCY_MISMATCH: 'This request changed. Reopen the screen and try again.',
+  BRANCH_REQUIRED: 'Select a branch before redeeming this offer.', BRANCH_UNAVAILABLE: 'This branch is no longer available.',
+  OFFER_UNAVAILABLE_AT_BRANCH: 'This offer is not available at this branch.',
+  OFFER_ALREADY_USED: 'You have already used this offer at this branch in the current round.', IDEMPOTENCY_MISMATCH: 'This request changed. Reopen the screen and try again.',
   BILL_AMOUNT_REQUIRED: 'Enter the bill amount before confirming redemption.', INVALID_BILL_AMOUNT: 'Enter a positive bill amount with at most two decimal places.',
 };
 export function benefitsError(message: string) { return messages[message] ?? message; }
 export function isCouponOfferUsed(
-  benefits: Pick<AccountBenefits, 'usedOfferIds' | 'usedVendorIds'> | null | undefined,
+  benefits: Pick<AccountBenefits, 'usedOfferIds' | 'usedVendorIds' | 'usedOfferBranches'> | null | undefined,
   offerId: string,
   vendorId?: string | null,
+  branchId?: string,
 ) {
   if (!benefits) return false;
+  if (Array.isArray(benefits.usedOfferBranches) && branchId !== undefined) {
+    return benefits.usedOfferBranches.some(slot => slot.offerId === offerId && (slot.branchId === null || slot.branchId === branchId));
+  }
   if (Array.isArray(benefits.usedOfferIds)) return benefits.usedOfferIds.includes(offerId);
   // Older server responses are vendor-scoped; keep them safe until the new RPC is deployed.
   return Boolean(vendorId && benefits.usedVendorIds.includes(vendorId));
@@ -41,9 +50,9 @@ export async function benefitsRpc<T>(name: string, args?: Record<string, unknown
   if (data?.error) throw new Error(benefitsError(data.error));
   return data as T;
 }
-export async function redeemSubscriptionCoupon(offerId: string, roundId: string, mutationId: string, billAmount: number, freeItemAmount?: number) {
-  return benefitsRpc<{ id: string; code?: string; status: 'success'; consumedAt: number; vendorName: string; offerTitle: string; billAmount: number; estimatedSavings?: number; payableAmount?: number; currency: string; benefits: AccountBenefits }>(
-    'kouponly_redeem_coupon', { p_offer_id: offerId, p_round_id: roundId, p_mutation_id: mutationId, p_bill_amount: billAmount, ...(freeItemAmount !== undefined ? { p_free_item_amount: freeItemAmount } : {}) });
+export async function redeemSubscriptionCoupon(offerId: string, roundId: string, mutationId: string, billAmount: number, freeItemAmount?: number, branchId?: string) {
+  return benefitsRpc<{ id: string; code?: string; status: 'success'; consumedAt: number; vendorName: string; offerTitle: string; billAmount: number; estimatedSavings?: number; payableAmount?: number; currency: string; branchId?: string; branchName?: string; benefits: AccountBenefits }>(
+    'kouponly_redeem_coupon', { p_offer_id: offerId, p_round_id: roundId, p_mutation_id: mutationId, p_bill_amount: billAmount, ...(branchId !== undefined ? { p_branch_id: branchId, p_free_item_amount: freeItemAmount ?? null } : freeItemAmount !== undefined ? { p_free_item_amount: freeItemAmount } : {}) });
 }
 type Value = { benefits: AccountBenefits | null; loading: boolean; error: string; isAdmin: boolean; refresh: () => Promise<void>; claim: (code: string, mutationId: string) => Promise<ClaimResult> };
 const Context = createContext<Value | null>(null);
@@ -93,3 +102,9 @@ export function BenefitsProvider({ children }: { children: React.ReactNode }) {
 }
 export function useBenefits() { const value = useContext(Context); if (!value) throw new Error('useBenefits must be inside BenefitsProvider'); return value; }
 export { makeMutationId };
+
+export function hasAvailableBranchCoupon(deal: Deal, benefits: AccountBenefits | null) {
+  return (deal.offers || []).some(offer => deal.locations?.length
+    ? deal.locations.some(branch => offerAppliesToBranch(offer, branch) && !isCouponOfferUsed(benefits, offer.id, deal.vendorId, branch.branchId || branch.id))
+    : !isCouponOfferUsed(benefits, offer.id, deal.vendorId, ''));
+}

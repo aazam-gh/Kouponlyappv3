@@ -114,7 +114,7 @@ export default function ProfileScreen() {
                   <Text style={[styles.guestPrimaryActionText, { color: theme.onActionSolid }]}>{t('onboarding_login_action')}</Text>
                 </ScalePressable>
                 <ScalePressable
-                  style={[styles.guestSecondaryAction, { borderColor: BorderPalette.border }]}
+                  style={styles.guestSecondaryAction}
                   onPress={() => { void endGuestSession().finally(() => router.push('/kouponly/welcome' as any)); }}
                   activeOpacity={0.85}
                 >
@@ -226,7 +226,7 @@ export default function ProfileScreen() {
             isRTL={isRTL}
           />
           <ScalePressable
-            style={[styles.logoutPill, { backgroundColor: isDark ? 'rgba(255,107,95,0.12)' : '#FFF1F0', borderColor: BorderPalette.border }]}
+            style={[styles.logoutPill, { backgroundColor: isDark ? 'rgba(255,107,95,0.12)' : '#FFF1F0' }]}
             onPress={handleLogout}
             activeOpacity={0.7}
           >
@@ -265,7 +265,7 @@ function MenuItem({
       pressedScale={1}
       style={[
         styles.menuItem,
-        { backgroundColor: bgColor || theme.cardMuted, borderColor: BorderPalette.border },
+        { backgroundColor: bgColor || theme.cardMuted },
       ]}
       accessibilityRole="button"
       accessibilityLabel={label}
@@ -300,15 +300,11 @@ const styles = StyleSheet.create({
   },
   topPill: {
     borderRadius: 30,
-    borderWidth: 1,
-    borderColor: BorderPalette.border,
     padding: 16,
     marginBottom: 16,
   },
   bottomPill: {
     borderRadius: 30,
-    borderWidth: 1,
-    borderColor: BorderPalette.border,
     paddingVertical: 24,
     paddingHorizontal: 8,
     marginBottom: 16,
@@ -355,8 +351,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderRadius: 30,
-    borderWidth: 1,
-    borderColor: BorderPalette.border,
   },
   badgeText: {
     color: '#FFFFFF',
@@ -391,8 +385,6 @@ const styles = StyleSheet.create({
     flex: 1,
     minHeight: 46,
     borderRadius: 23,
-    borderWidth: 1,
-    borderColor: BorderPalette.border,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -400,7 +392,6 @@ const styles = StyleSheet.create({
     flex: 1,
     minHeight: 46,
     borderRadius: 23,
-    borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -440,7 +431,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 20,
     borderRadius: 24,
-    borderWidth: 1,
   },
   menuItemLeft: {
     flexDirection: 'row',
@@ -455,7 +445,6 @@ const styles = StyleSheet.create({
     borderRadius: 30,
     paddingVertical: 20,
     alignItems: 'center',
-    borderWidth: 1,
   },
   logoutContent: {
     flexDirection: 'row',

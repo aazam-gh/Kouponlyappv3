@@ -37,3 +37,11 @@ test('keeps stable coupon indexes, supports raw branch IDs and never invents an 
   expect(dealAtBranch(deal)).toBe(deal);
   expect(deal.offers).toHaveLength(3);
 });
+
+test('keeps branch discounts independent and excludes a disabled branch offer', () => {
+  const projected = projectVendorCatalogue([vendor], offers.map(offer => ({ ...offer, active: offer.id !== 'tvm-offer' })), locations, taxonomy).deals[0];
+  expect(dealAtBranch(projected, 'kochi').offers?.find(offer => offer.id === 'kochi-offer')?.discountValue).toBe(50);
+  expect(dealAtBranch(projected, 'tvm').offers?.map(offer => offer.id)).toEqual(['all-offer']);
+  const enabled = dealAtBranch(deal, 'tvm');
+  expect(enabled.offers?.find(offer => offer.id === 'tvm-offer')?.discountValue).toBe(20);
+});
