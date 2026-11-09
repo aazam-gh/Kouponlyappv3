@@ -110,6 +110,6 @@ test.each([84, 120, 200])('strip height and following content move one-for-one w
 
 test('opposing pointy edges use identical horizontal phase, with complementary cutouts and no seam stroke', () => {
   const boundary = 'M 0 0 L 12 10 L 24 0 L 36 10 L 48 0';
-  expect(interlockingZigzagPath(48)).toBe(`${boundary} L 48 0 L 0 0 Z`);
+  expect(interlockingZigzagPath(48)).toBe(`${boundary} L 48 -1 L 0 -1 Z`);
   expect(interlockingZigzagPath(48, true)).toBe(`${boundary} L 48 10 L 0 10 Z`);
 });

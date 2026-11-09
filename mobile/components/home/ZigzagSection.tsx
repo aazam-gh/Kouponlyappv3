@@ -11,7 +11,7 @@ const EDGE_HEIGHT = 10;
 export function interlockingZigzagPath(width: number, bottom = false) {
     let path = 'M 0 0';
     for (let x = 0; x < width; x += 24) path += ` L ${x + 12} ${EDGE_HEIGHT} L ${x + 24} 0`;
-    const outside = bottom ? EDGE_HEIGHT : 0;
+    const outside = bottom ? EDGE_HEIGHT : -1;
     return `${path} L ${width} ${outside} L 0 ${outside} Z`;
 }
 

@@ -43,6 +43,11 @@
         {
           "image": "./assets/images/kouponly-logo.png",
           "imageWidth": 240,
+          "android": {
+            "image": "./assets/images/kouponly-splash-android.png",
+            "imageWidth": 240,
+            "resizeMode": "contain"
+          },
           "resizeMode": "contain",
           "backgroundColor": "#FFFFFF"
         }
