@@ -48,7 +48,7 @@ export default function KouponlyCategoryScreen() {
     if (filter === 'nearest') return matching.sort((a, b) =>
       (distanceByVendor.get(String(a.vendorId || a.id))?.distanceKm ?? Infinity)
       - (distanceByVendor.get(String(b.vendorId || b.id))?.distanceKm ?? Infinity));
-    if (filter === 'top') return matching.sort((a, b) => b.trend - a.trend);
+    if (filter === 'top') return matching.sort((a, b) => a.trend - b.trend || a.name.localeCompare(b.name));
     return sortVendors(matching, sortMode, vendor => !benefits?.subscription || hasAvailableBranchCoupon(vendor, benefits));
   }, [benefits, category?.id, distanceByVendor, filter, query, revision, sortMode, subcategory]);
   const cardWidth = width - 40;

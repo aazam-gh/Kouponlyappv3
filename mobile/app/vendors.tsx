@@ -45,7 +45,10 @@ export default function VendorsScreen() {
       return !!deal && hasAvailableBranchCoupon(deal, benefits);
     };
     if (filter === 'nearest') return [...items].sort((a, b) => (distanceByVendor.get(String(a.vendorId || a.id))?.distanceKm ?? Infinity) - (distanceByVendor.get(String(b.vendorId || b.id))?.distanceKm ?? Infinity));
-    if (filter === 'top') return [...items].sort((a, b) => Number((b as any).trend || 0) - Number((a as any).trend || 0));
+    if (filter === 'top') {
+      const ranked = [...items].sort((a, b) => Number((a as any).trend || 0) - Number((b as any).trend || 0) || String(a.name || '').localeCompare(String(b.name || '')));
+      return section === 'top' ? ranked.filter(item => Number((item as any).trend) > 0) : ranked;
+    }
     return sortVendors(items, sortMode, available);
   }, [items, benefits, distanceByVendor, filter, sortMode]);
   const loading = query ? query.isLoading : status === 'loading';
