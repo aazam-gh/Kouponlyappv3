@@ -30,9 +30,10 @@ type FeaturedBannerItem = HomeFeaturedBannerItem;
 type FeaturedBannerProps = {
     item?: FeaturedBannerItem | null;
     style?: StyleProp<ViewStyle>;
+    priority?: 'high' | 'low';
 };
 
-export default function FeaturedBanner({ item, style }: FeaturedBannerProps) {
+export default function FeaturedBanner({ item, style, priority }: FeaturedBannerProps) {
     const router = useRouter();
     const { isRTL } = useAppLocale();
     const {
@@ -101,6 +102,7 @@ export default function FeaturedBanner({ item, style }: FeaturedBannerProps) {
                     contentFit="cover"
                     contentPosition={{ top: `${imagePositionY}%`, left: '50%' }}
                     cachePolicy="memory-disk"
+                    priority={priority}
                     accessibilityLabel={accessibilityTitle}
                 />
                 <View style={[styles.content, isRTL && styles.contentRTL]}>

@@ -26,3 +26,17 @@ The domain's DNS is managed in the separate `Info@kouponly.in` Cloudflare accoun
 project. Cloudflare Pages serves the SPA for direct visits to `/admin/...`.
 
 Deployments are manual; pushing code alone does not update this project.
+
+## Public mobile Home feed
+
+Set `SUPABASE_URL` and `SUPABASE_PUBLIC_KEY` in the Pages runtime environment
+for `kouponly-admin`. Use the same Supabase project as the mobile app and a
+publishable or legacy anon key. Deploy from `web/` so Pages picks up
+`functions/home.json.js`. Verify `https://dashboard.kouponly.in/home.json` returns
+version 1 JSON before setting that URL as `EXPO_PUBLIC_HOME_FEED_URL` in the
+mobile build environment. The app can fall back to its direct Supabase reads.
+
+The feed reads saved CMS content on cache misses. A published change can take
+up to 60 seconds to appear at an edge location. Apply
+`20261111130000_home_preview_cards.sql` before releasing the mobile build to
+enable the bounded New Deals, Trending Offers and Top Brands previews.

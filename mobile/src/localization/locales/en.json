@@ -10,6 +10,7 @@
   "offers_near_you_highlight": "Near You",
   "offers_near_location_title": "Location access needed",
   "offers_near_location_message": "Allow location access to find the 10 closest vendors.",
+  "offers_near_allow_location": "Show nearby offers",
   "greeting_prefix": "Hi, ",
   "greeting_savings_suffix": " saved!",
   "redeem": "Redeem Discount",

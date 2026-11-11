@@ -1,16 +1,14 @@
 import { Colors as BorderPalette } from '@/constants/Colors';
 import ScalePressable from '@/components/ScalePressable';
-import { useQuery } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { Ellipsis } from 'lucide-react-native';
 import { Typography } from '../../constants/Typography';
 import { useAppTheme } from '../../context/AppThemeContext';
 import { triggerSubtleHaptic } from '../../utils/haptics';
-import { homeQueryOptions, type HomeCategoryItem } from '../../utils/homeQueries';
-import { logger } from '../../utils/logger';
+import type { HomeCategoryItem } from '../../utils/homeQueries';
 import { RemoteImage } from '../RemoteImage';
 import { StateSurface } from '../StateSurface';
 import AndroidBottomSheetModal from '../AndroidBottomSheetModal';
@@ -19,26 +17,20 @@ import ZigzagSection from './ZigzagSection';
 type CategoryItem = HomeCategoryItem;
 
 type Props = {
-    categories?: CategoryItem[];
+    categories: CategoryItem[];
+    loading?: boolean;
+    error?: boolean;
+    onRetry?: () => void;
+    onContentLayout?: () => void;
     onCategoryPress?: (category: CategoryItem) => void;
 };
 
-export default function CategoryGrid({ categories: propCategories, onCategoryPress }: Props) {
+export default function CategoryGrid({ categories, loading, error, onRetry, onContentLayout, onCategoryPress }: Props) {
     const router = useRouter();
     const { t } = useTranslation();
     const { width, height } = useWindowDimensions();
     const { theme } = useAppTheme();
     const [moreVisible, setMoreVisible] = useState(false);
-    const { data: fetchedCategories = [], error, isLoading, refetch } = useQuery({
-        ...homeQueryOptions.categories('en'),
-        enabled: !propCategories,
-    });
-
-    useEffect(() => {
-        if (error) logger.error('Error fetching categories:', error);
-    }, [error]);
-
-    const categories = propCategories || fetchedCategories;
     const columnWidth = (width - 8) / 5;
     const imageSize = Math.min(64, Math.max(48, columnWidth - 12));
     const rowHeight = imageSize + 31;
@@ -72,10 +64,10 @@ export default function CategoryGrid({ categories: propCategories, onCategoryPre
         </ScalePressable>
     );
 
-    if (!propCategories && isLoading) {
+    if (loading && !categories.length) {
         return <ZigzagSection width={width} cutoutColor={theme.background} contentStyle={styles.sectionContent} collapseCompletely backgroundColor="transparent">
             <View style={[styles.container, styles.grid]}>
-                {Array.from({ length: 10 }, (_, index) => (
+                {Array.from({ length: 5 }, (_, index) => (
                     <View key={`category-skeleton-${index}`} style={[styles.categoryItem, { width: columnWidth }]}>
                         <View style={[styles.categorySkeleton, { width: imageSize, height: imageSize, backgroundColor: theme.cardMuted }]} />
                     </View>
@@ -84,7 +76,7 @@ export default function CategoryGrid({ categories: propCategories, onCategoryPre
         </ZigzagSection>;
     }
 
-    if (!propCategories && error) return <StateSurface kind="error" compact onRetry={() => void refetch()} />;
+    if (error && !categories.length) return <StateSurface kind="error" compact onRetry={onRetry} />;
     if (categories.length === 0) return null;
 
     const hasMore = categories.length > 4;
@@ -98,7 +90,7 @@ export default function CategoryGrid({ categories: propCategories, onCategoryPre
 
     return <>
         <ZigzagSection width={width} cutoutColor={theme.background} contentStyle={styles.sectionContent} collapseCompletely backgroundColor="transparent">
-            <View style={[styles.container, { minHeight: rowHeight }]}>
+            <View onLayout={onContentLayout} style={[styles.container, { minHeight: rowHeight }]}>
                 <View style={styles.homeRow}>
                     {visibleCategories.map(item => renderCategory(item))}
                     {hasMore ? (

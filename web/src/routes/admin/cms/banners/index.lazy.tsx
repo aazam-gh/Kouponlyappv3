@@ -16,7 +16,7 @@ import { cn } from '@/lib/utils'
 import { Link } from '@tanstack/react-router'
 import type { BannerItem } from '@/types/banners'
 import { getVendorList, type VendorOption } from '@/lib/vendorList'
-import { uploadImage, deletePublicMedia } from '@/lib/upload'
+import { uploadImageWithDimensions, deletePublicMedia } from '@/lib/upload'
 import { CmsClickSummary } from '@/components/admin/cms/CmsClickSummary'
 
 export const Route = createLazyFileRoute('/admin/cms/banners/')({
@@ -97,10 +97,10 @@ function BannersManagement() {
 
         setUploading(type)
         try {
-            const downloadURL = await uploadImage(
+            const uploaded = await uploadImageWithDimensions(
                 `banners/${type}/${Date.now()}_${file.name}`,
                 file,
-                { maxWidth: 1920, quality: 0.8 }
+                { maxWidth: 1000, quality: 0.78, versioned: true }
             )
 
             const updatedBanners = banners.map(b => {
@@ -110,9 +110,10 @@ function BannersManagement() {
                     }
                     return {
                         ...b,
+                        mobileDimensions: { width: uploaded.width, height: uploaded.height },
                         images: {
                             ...b.images,
-                            [type]: downloadURL
+                            [type]: uploaded.url
                         }
                     }
                 }

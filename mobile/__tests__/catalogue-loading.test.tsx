@@ -41,21 +41,15 @@ it('keeps a failed initial load empty and permits retry',async()=>{
   await waitFor(()=>expect(view.getByText('No offers available yet')).toBeTruthy());
 });
 
-it('refreshes the saved layout and preserves it if the next request fails', async () => {
-  const { DEFAULT_HOME_SECTION_ORDER } = require('../lib/home-layout');
-  const reversed = [...DEFAULT_HOME_SECTION_ORDER].reverse();
-  let refresh!: () => Promise<void>;
-  function LayoutProbe() {
-    const state = useCatalogue(); refresh = state.refresh;
-    return <Text>{state.homeSectionOrder.join(',')}</Text>;
+it('does not load the marketplace until a consumer requests it', async () => {
+  function Probe({ enabled }: { enabled: boolean }) {
+    const { status } = useCatalogue(enabled);
+    return <Text>{status}</Text>;
   }
-  mockFetch.mockResolvedValueOnce({ ...empty, homeSectionOrder: reversed });
-  const view = await screen(<LayoutProbe />);
-  await waitFor(() => expect(view.getByText(reversed.join(','))).toBeTruthy());
-  mockFetch.mockRejectedValue(new Error('Offline'));
-  await act(async () => { await refresh(); });
-  expect(view.getByText(reversed.join(','))).toBeTruthy();
   mockFetch.mockResolvedValue(empty);
-  await act(async () => { await refresh(); });
-  expect(view.getByText(DEFAULT_HOME_SECTION_ORDER.join(','))).toBeTruthy();
+  const view = await screen(<Probe enabled={false} />);
+  expect(mockFetch).not.toHaveBeenCalled();
+  await view.rerender(<ThemeProvider><CatalogueProvider><Probe enabled /></CatalogueProvider></ThemeProvider>);
+  await waitFor(() => expect(view.getByText('cloud')).toBeTruthy());
+  expect(mockFetch).toHaveBeenCalledTimes(1);
 });

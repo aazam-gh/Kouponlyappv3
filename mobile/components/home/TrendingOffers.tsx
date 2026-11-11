@@ -3,7 +3,7 @@ import { useMotionPreferences } from '@/lib/theme';
 import { useQuery } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
+import { ActivityIndicator, FlatList, StyleSheet, useWindowDimensions, View } from 'react-native';
 import type { NativeScrollEvent, NativeSyntheticEvent } from 'react-native';
 import RestaurantCard from '../category/RestaurantCard';
 import { StateSurface } from '../StateSurface';
@@ -11,7 +11,7 @@ import { useTranslation } from 'react-i18next';
 import { logger } from '../../utils/logger';
 import { useAppTheme } from '../../context/AppThemeContext';
 import { useAppLocale } from '../../context/LocaleContext';
-import { homeQueryOptions } from '../../utils/homeQueries';
+import { homeQueryOptions, type HomeOfferCard } from '../../utils/homeQueries';
 import { useNearbyDistances } from '@/lib/nearby';
 import HomeSectionHeading from './HomeSectionHeading';
 import {
@@ -20,6 +20,7 @@ import {
 } from './layout';
 
 type TrendingOffersProps = {
+    previews?: HomeOfferCard[];
     onVendorPress?: (vendor: any) => void;
 };
 
@@ -27,21 +28,22 @@ const OFFER_CARD_GAP = HOME_CAROUSEL_GAP;
 const OFFER_SIDE_PADDING = HOME_HORIZONTAL_GUTTER;
 const OFFER_CARD_WIDTH_RATIO = 0.60;
 const OFFER_AUTO_SCROLL_MS = 4000;
-export default function TrendingOffers({ onVendorPress }: TrendingOffersProps) {
+export default function TrendingOffers({ onVendorPress, previews }: TrendingOffersProps) {
     const { t } = useTranslation();
     const { theme } = useAppTheme();
     const { reduceMotion } = useMotionPreferences();
     const { isRTL } = useAppLocale();
     const { distanceByVendor } = useNearbyDistances();
     const {
-        data: vendors = [],
+        data: fetchedVendors = [],
         error,
         isLoading,
         refetch,
-    } = useQuery(homeQueryOptions.offers());
+    } = useQuery({ ...homeQueryOptions.offers(), enabled: previews === undefined });
+    const vendors = previews ?? fetchedVendors;
     const [currentIndex, setCurrentIndex] = useState(0);
     const currentIndexRef = useRef(0);
-    const scrollViewRef = useRef<ScrollView | null>(null);
+    const scrollViewRef = useRef<FlatList<HomeOfferCard> | null>(null);
     const isUserInteractingRef = useRef(false);
     const { width: screenWidth } = useWindowDimensions();
     const router = useRouter();
@@ -81,8 +83,8 @@ export default function TrendingOffers({ onVendorPress }: TrendingOffersProps) {
         const maxIndex = Math.max(0, displayedVendors.length - 1);
         const safeIndex = Math.min(currentIndex, maxIndex);
 
-        scrollViewRef.current.scrollTo({
-            x: safeIndex * offerScrollInterval,
+        scrollViewRef.current.scrollToOffset({
+            offset: safeIndex * offerScrollInterval,
             animated: !reduceMotion,
         });
     }, [currentIndex, displayedVendors.length, offerScrollInterval, reduceMotion]);
@@ -115,7 +117,7 @@ export default function TrendingOffers({ onVendorPress }: TrendingOffersProps) {
         }
     };
 
-    if (isLoading) {
+    if (!previews && isLoading) {
         return (
             <View style={[styles.container, styles.loaderContainer]}>
                 <ActivityIndicator size="small" color={theme.brand} />
@@ -123,7 +125,7 @@ export default function TrendingOffers({ onVendorPress }: TrendingOffersProps) {
         );
     }
 
-    if (error && displayedVendors.length === 0) {
+    if (!previews && error && displayedVendors.length === 0) {
         return <StateSurface kind="error" compact onRetry={() => void refetch()} />;
     }
 
@@ -134,8 +136,13 @@ export default function TrendingOffers({ onVendorPress }: TrendingOffersProps) {
     return (
         <View style={styles.container}>
             <HomeSectionHeading prefix={labelPrefix} highlight={labelHighlight} onSeeMore={() => router.push({ pathname: '/vendors', params: { section: 'trending' } } as any)} />
-            <ScrollView
+            <FlatList
                 ref={scrollViewRef}
+                data={displayedVendors}
+                keyExtractor={vendor => vendor.id}
+                initialNumToRender={3}
+                windowSize={3}
+                ItemSeparatorComponent={() => <View style={{ width: OFFER_CARD_GAP }} />}
                 horizontal
                 showsHorizontalScrollIndicator={false}
                 nestedScrollEnabled
@@ -149,14 +156,12 @@ export default function TrendingOffers({ onVendorPress }: TrendingOffersProps) {
                 onMomentumScrollBegin={handleScrollBegin}
                 onScrollEndDrag={handleScrollEnd}
                 onMomentumScrollEnd={handleScrollEnd}
-                contentContainerStyle={[styles.scrollContent, { flexDirection: 'row' }]}
-            >
-                {displayedVendors.map((vendor) => {
+                contentContainerStyle={styles.scrollContent}
+                renderItem={({ item: vendor }) => {
                     const name = vendor.nameEn || vendor.vendorName || 'Vendor';
 
                     return (
                         <RestaurantCard
-                            key={vendor.id}
                             id={vendor.id}
                             name={name}
                             imageUri={vendor.bannerImage || vendor.coverImage}
@@ -182,8 +187,8 @@ export default function TrendingOffers({ onVendorPress }: TrendingOffersProps) {
                             }}
                         />
                     );
-                })}
-            </ScrollView>
+                }}
+            />
         </View>
     );
 }
@@ -204,6 +209,5 @@ const styles = StyleSheet.create({
     },
     scrollContent: {
         paddingHorizontal: OFFER_SIDE_PADDING,
-        gap: OFFER_CARD_GAP,
     },
 });

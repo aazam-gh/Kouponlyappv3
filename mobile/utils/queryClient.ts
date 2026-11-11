@@ -23,6 +23,7 @@ export type CachedVendor = {
 
 export const queryKeys = {
     catalogueHome: () => ['catalogue-home'] as const,
+    homeEditorial: () => ['home-editorial'] as const,
     category: (categoryId: string) => ['category', categoryId] as const,
     categories: (language: string) => ['categories', language] as const,
     cmsDocument: (documentId: string) => ['cmsDocument', documentId] as const,

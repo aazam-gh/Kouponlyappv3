@@ -10,7 +10,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import { AccessiblePressable, Empty, Screen, safeGoBack } from '@/components/ui';
 import { CatalogueNotice, useCatalogue } from '@/lib/catalogue';
-import { dealById } from '@/lib/data';
+import { dealById, type Deal } from '@/lib/data';
 import { getSupabase } from '@/lib/supabase';
 import { useNearbyDistances } from '@/lib/nearby';
 import { useStore } from '@/lib/store';
@@ -29,8 +29,8 @@ const OFFER_DETAILS_EXIT_MS = 180;
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 const INFO_SHEET_ENTER = SlideInDown.duration(260).reduceMotion(ReduceMotion.System);
 
-export default function DealDetail({ dealId }: { dealId?: string } = {}) {
-  const {status} = useCatalogue();
+export default function DealDetail({ dealId, loadedDeal }: { dealId?: string; loadedDeal?: Deal } = {}) {
+  const {status} = useCatalogue(!loadedDeal);
   const { distanceByVendor, position } = useNearbyDistances();
   const router = useRouter();
   const { colors: C } = useAppTheme();
@@ -42,7 +42,7 @@ export default function DealDetail({ dealId }: { dealId?: string } = {}) {
   const { reduceMotion } = useMotionPreferences();
   const { width } = useWindowDimensions();
   const params = useLocalSearchParams<{ id: string; offer?: string; branch?: string }>();
-  const id = dealId || params.id;
+  const id = loadedDeal ? String(loadedDeal.id) : dealId || params.id;
   const offerParam = params.offer;
   const selectedIndex = Number(offerParam ?? 0);
   const [vendorLookup, setVendorLookup] = useState<{ id: string; resolvedId?: string; failed: boolean } | null>(null);
@@ -57,7 +57,7 @@ export default function DealDetail({ dealId }: { dealId?: string } = {}) {
   }, [id]);
   const resolvedId = vendorLookup?.id === id ? vendorLookup.resolvedId : undefined;
   const lookupFailed = vendorLookup?.id === id && vendorLookup.failed;
-  const vendorDeal = dealById(id) ?? (resolvedId ? dealById(resolvedId) : undefined);
+  const vendorDeal = loadedDeal ?? dealById(id) ?? (resolvedId ? dealById(resolvedId) : undefined);
   const [chosenBranch, setChosenBranch] = useState<string>();
   const nearestBranch = vendorDeal ? distanceByVendor.get(String(vendorDeal.vendorId || vendorDeal.id))?.location.locationId : undefined;
   const branchId = chosenBranch || params.branch || nearestBranch || vendorDeal?.locations?.[0]?.id;

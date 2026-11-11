@@ -1,9 +1,9 @@
 import type { TextStyle } from 'react-native';
 
 const FontFamilyTokens = {
-    display: 'Outfit_700Bold',
-    body: 'Outfit_400Regular',
-    bodyStrong: 'Outfit_600SemiBold',
+    display: 'Outfit-Bold',
+    body: 'Outfit-Regular',
+    bodyStrong: 'Outfit-SemiBold',
 } as const;
 
 export type TextVariant = 'display' | 'body' | 'bodyStrong';
@@ -49,9 +49,9 @@ export const Typography = {
         bold: FontFamilyTokens.display,
     },
     outfit: {
-        medium: 'Outfit_600SemiBold',
+        medium: 'Outfit-SemiBold',
         semiBold: FontFamilyTokens.bodyStrong,
-        bold: 'Outfit_700Bold',
+        bold: 'Outfit-Bold',
     },
     fontFamily: FontFamilyTokens,
     variants: textVariantStyles,

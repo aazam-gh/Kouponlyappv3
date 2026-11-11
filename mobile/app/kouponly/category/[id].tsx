@@ -10,7 +10,7 @@ import { CatalogueNotice, useCatalogue } from '@/lib/catalogue';
 import { categories, deals, type Deal } from '@/lib/data';
 import { useAppTheme } from '@/context/AppThemeContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useNearbyDistances } from '@/lib/nearby';
+import { useNearby, useNearbyDistances } from '@/lib/nearby';
 import { hasAvailableBranchCoupon, useBenefits } from '@/lib/benefits';
 import { dealAtBranch } from '@/lib/vendor-branches';
 import { sortVendors, type VendorSortMode } from '@/lib/vendor-sorting';
@@ -23,6 +23,7 @@ export default function KouponlyCategoryScreen() {
   const insets = useSafeAreaInsets();
   const { status, revision, refresh } = useCatalogue();
   const { distanceByVendor } = useNearbyDistances();
+  const { load: loadNearby } = useNearby();
   const { benefits } = useBenefits();
   const [filter, setFilter] = React.useState('top');
   const [sortMode, setSortMode] = React.useState<VendorSortMode>('alphabetical');
@@ -65,7 +66,7 @@ export default function KouponlyCategoryScreen() {
       ListHeaderComponent={<>
         <CategoryHeader onBackPress={() => router.back()} accessory={<SearchBar compact placeholder={t('search_placeholder_category', { category: String(title).toLocaleLowerCase() })} value={input} onChangeText={setInput} onSubmit={submitSearch} />} />
         {isCategoryActive ? <>
-          <FilterTabs selectedFilter={filter} onFilterChange={setFilter} sortMode={sortMode} onSortModeChange={setSortMode} />
+          <FilterTabs selectedFilter={filter} onFilterChange={next => { setFilter(next); if (next === 'nearest') void loadNearby({ askForPermission: true }); }} sortMode={sortMode} onSortModeChange={setSortMode} />
           {subcategories.length > 1 ? <SubCategoryChips subCategories={subcategories} selectedId={subcategory} onSelect={item => setSubcategory(item.id)} /> : null}
         </> : null}
         {status === 'offline' ? <View style={{ paddingHorizontal: 20 }}><CatalogueNotice /></View> : null}

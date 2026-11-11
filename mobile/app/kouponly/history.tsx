@@ -11,6 +11,7 @@ import AppHeader from '@/components/navigation/AppHeader';
 import { StateSurface } from '@/components/StateSurface';
 import { useAuth } from '@/lib/auth';
 import { deals } from '@/lib/data';
+import { useCatalogue } from '@/lib/catalogue';
 import { getSupabase } from '@/lib/supabase';
 import { F } from '@/lib/theme';
 import { useAppTheme as useDesignTheme } from '@/context/AppThemeContext';
@@ -20,6 +21,7 @@ import ProfileSprites from '@/components/profile/ProfileSprites';
 export default function KouponlyHistoryScreen() {
   const styles = React.useMemo(() => makeStyles(), []); const { user, loading: authLoading } = useAuth(); const { t } = useTranslation(); const { isRTL } = useAppLocale(); const { theme: design } = useDesignTheme();
   const isFocused = useIsFocused();
+  useCatalogue(isFocused && Boolean(user));
   const [snapshot, setSnapshot] = React.useState<{userId:string; rows:any[]} | null>(null);
   const owner = React.useRef(user?.id); owner.current = user?.id;
   const rows = snapshot?.userId === user?.id ? snapshot?.rows ?? [] : [];

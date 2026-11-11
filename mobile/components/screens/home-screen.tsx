@@ -1,3 +1,5 @@
+import { useQuery } from '@tanstack/react-query';
+import { homeQueryOptions } from '@/utils/homeQueries';
 import React from 'react';
 import Animated, { useAnimatedScrollHandler, useSharedValue } from 'react-native-reanimated';
 import ScrollCrunchSection from '@/components/home/ScrollCrunchSection';
@@ -20,19 +22,53 @@ import { useAppTheme } from '@/context/AppThemeContext';
 import { useTabBarScrollVisibility } from '@/components/TabBarScrollVisibility';
 import { queryClient } from '@/utils/queryClient';
 import { triggerSubtleHaptic } from '@/utils/haptics';
-import type { HomeSectionId } from '@/lib/home-layout';
+import { DEFAULT_HOME_SECTION_ORDER, type HomeSectionId } from '@/lib/home-layout';
+import { useHomeContent } from '@/utils/useHomeContent';
+import HomeLaunchPromotion from '@/components/home/HomeLaunchPromotion';
 
 const VENDOR_PAGE_SIZE = 10;
 
 export default function HomeScreen() {
   const { user } = useAuth();
-  const { revision, refresh: refreshCatalogue, homeSectionOrder } = useCatalogue();
-  const { load: loadNearby } = useNearby();
+  const { categories, editorial } = useHomeContent();
+  const homeSectionOrder = editorial.data?.order ?? DEFAULT_HOME_SECTION_ORDER;
+  const nearby = useNearby();
   const { t } = useTranslation();
   const { isDark, theme } = useAppTheme();
   const insets = useSafeAreaInsets();
   const [searchQuery, setSearchQuery] = React.useState('');
   const [refreshing, setRefreshing] = React.useState(false);
+  const [showLaterSections, setShowLaterSections] = React.useState(false);
+  const visibleSections = editorial.isPending ? [] : showLaterSections ? homeSectionOrder : homeSectionOrder.slice(0, 2);
+  const needsCatalogue = visibleSections.some(id => id === 'new-deals' || id === 'trending-offers' || id === 'brand-logos');
+  const previews = useQuery({ ...homeQueryOptions.previews(), enabled: needsCatalogue });
+  const useFullCatalogue = needsCatalogue && previews.isError && !previews.data;
+  const { revision, refresh: refreshCatalogue } = useCatalogue(useFullCatalogue || Boolean(searchQuery.trim()));
+  const trendingPreviews = React.useMemo(() => previews.data?.trending.map(card => ({
+    ...card, nameEn: card.name, coverImage: card.image, profilePicture: card.logo,
+  })), [previews.data]);
+  const contentShown = React.useRef(false);
+  const frame = React.useRef<number | undefined>(undefined);
+  const onFirstContentLayout = React.useCallback(() => {
+    if (contentShown.current) return;
+    contentShown.current = true;
+    frame.current = requestAnimationFrame(() => {
+      performance.mark?.('kouponly.home.first-content');
+      setShowLaterSections(true);
+    });
+  }, []);
+  React.useEffect(() => () => { if (frame.current !== undefined) cancelAnimationFrame(frame.current); }, []);
+  React.useEffect(() => {
+    if (showLaterSections || editorial.isPending || (homeSectionOrder.includes('categories') && categories.isPending)) return;
+    const fallback = setTimeout(() => setShowLaterSections(true), 400);
+    return () => clearTimeout(fallback);
+  }, [categories.isPending, editorial.isPending, homeSectionOrder, showLaterSections]);
+  const partnerImageShown = React.useRef(false);
+  const onFirstBannerDisplay = React.useCallback(() => {
+    if (!partnerImageShown.current) performance.mark?.('kouponly.home.first-banner');
+    partnerImageShown.current = true;
+    onFirstContentLayout();
+  }, [onFirstContentLayout]);
   const vendors = React.useMemo(() => [...deals], [revision]);
   const visibleVendors = React.useMemo(() => [...vendors].sort((a, b) => b.trend - a.trend).slice(0, VENDOR_PAGE_SIZE), [vendors]);
   const suggestions = React.useMemo(() => {
@@ -51,14 +87,14 @@ export default function HomeScreen() {
     ? String(user.user_metadata.full_name).split(' ')[0]
     : t('guest_home_name');
   const refreshHome = React.useCallback(() => Promise.all([
-    refreshCatalogue(),
+    useFullCatalogue || revision > 0 ? refreshCatalogue() : Promise.resolve(),
     queryClient.refetchQueries({
-      predicate: query => ['catalogue-home', 'categories', 'cmsDocument', 'trendingOffers', 'vendor'].includes(String(query.queryKey[0])),
+      predicate: ({ queryKey: [scope, id] }) => scope === 'home-previews' || scope === 'home-editorial' || scope === 'categories' || (scope === 'cmsDocument' && id !== 'brand'),
       type: 'active',
     }),
-    loadNearby({ force: true }),
-  ]), [loadNearby, refreshCatalogue]);
-  const refreshControl = <RefreshControl refreshing={refreshing} onRefresh={async () => { setRefreshing(true); try { await Promise.all([refreshHome(), new Promise(resolve => setTimeout(resolve, 800))]); } finally { setRefreshing(false); } }} tintColor="transparent" colors={['transparent']} progressBackgroundColor="transparent" />;
+    nearby.status === 'ready' ? nearby.load({ force: true }) : Promise.resolve(),
+  ]), [nearby.load, nearby.status, useFullCatalogue, refreshCatalogue, revision]);
+  const refreshControl = <RefreshControl refreshing={refreshing} onRefresh={async () => { setRefreshing(true); try { await refreshHome(); } finally { setRefreshing(false); } }} tintColor="transparent" colors={['transparent']} progressBackgroundColor="transparent" />;
   const tabBarScrollVisibility = useTabBarScrollVisibility();
   const search = () => {
     Keyboard.dismiss();
@@ -73,15 +109,14 @@ export default function HomeScreen() {
   };
 
   const sections: Record<HomeSectionId, React.ReactNode> = {
-    'partner-banners': <PartnerBannerCarousel onBannerPress={banner => openVendor(banner.vendorId)} />,
-    'categories': <ScrollCrunchSection testID="category-scroll-crunch" scrollY={scrollY} viewportHeight={viewportHeight} bottomInset={64 + insets.bottom} pinBelowHeader={searchHeaderHeight}><CategoryGrid /></ScrollCrunchSection>,
+    'partner-banners': <PartnerBannerCarousel banners={editorial.data?.banners ?? []} onBannerPress={banner => openVendor(banner.vendorId)} onFirstImageDisplay={onFirstBannerDisplay} />,
+    'categories': <ScrollCrunchSection testID="category-scroll-crunch" scrollY={scrollY} viewportHeight={viewportHeight} bottomInset={64 + insets.bottom} pinBelowHeader={searchHeaderHeight}><CategoryGrid categories={categories.data ?? []} loading={categories.isPending} error={categories.isError} onRetry={() => void categories.refetch()} onContentLayout={onFirstContentLayout} /></ScrollCrunchSection>,
     'nearby-vendors': <NewDeals onVendorPress={vendor => openVendor(vendor.vendorId || String(vendor.id))} />,
-    'new-deals': <NewDealsSection scrollY={scrollY} viewportHeight={viewportHeight} bottomInset={64 + insets.bottom} searchHeaderHeight={searchHeaderHeight} />,
+    'new-deals': <NewDealsSection previews={previews.data?.newDeals ?? (useFullCatalogue ? undefined : [])} scrollY={scrollY} viewportHeight={viewportHeight} bottomInset={64 + insets.bottom} searchHeaderHeight={searchHeaderHeight} />,
     'featured-showcase': <HomeBannerCarousel />,
-    'trending-offers': <TrendingOffers onVendorPress={vendor => openVendor(vendor.vendorId || vendor.id)} />,
-    'brand-logos': <BrandGrid />,
+    'trending-offers': <TrendingOffers previews={trendingPreviews ?? (useFullCatalogue ? undefined : [])} onVendorPress={vendor => openVendor(vendor.vendorId || vendor.id)} />,
+    'brand-logos': <BrandGrid previews={previews.data?.brands ?? (useFullCatalogue ? undefined : [])} />,
   };
-
 
   return <SafeAreaView style={[s.screen, { backgroundColor: theme.background }]} edges={Platform.OS === 'ios' ? [] : ['bottom']}>
     <StatusBar style={isDark ? 'light' : 'dark'} />
@@ -89,7 +124,8 @@ export default function HomeScreen() {
     <View style={s.wrapper}>
       <Animated.ScrollView ref={listRef} style={{ backgroundColor: theme.background }} keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag" showsVerticalScrollIndicator={false} decelerationRate="fast" contentContainerStyle={[s.content, { paddingBottom: 64 + insets.bottom + 16 }]} refreshControl={refreshControl} {...tabBarScrollVisibility} onScroll={scrollHandler} scrollEventThrottle={16} onLayout={event => viewportHeight.set(event.nativeEvent.layout.height)}>
         <VerificationStatusBanner />
-        {homeSectionOrder.map(id => <React.Fragment key={id}>{sections[id]}</React.Fragment>)}
+        {visibleSections.map(id => <React.Fragment key={id}>{sections[id]}</React.Fragment>)}
+        {showLaterSections && user ? <HomeLaunchPromotion /> : null}
       </Animated.ScrollView>
       {refreshing ? <View accessibilityRole="progressbar" accessibilityLabel={t('loading')} pointerEvents="none" style={s.refreshing}>
         <ActivityIndicator size="large" color={theme.brand} />

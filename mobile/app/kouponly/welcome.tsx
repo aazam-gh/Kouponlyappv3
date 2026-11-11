@@ -13,6 +13,7 @@ import { useAppTheme } from '../../context/AppThemeContext';
 import { useAppLocale } from '../../context/LocaleContext';
 import { Typography } from '../../constants/Typography';
 import { Colors } from '../../constants/Colors';
+import { markFirstRunComplete } from '@/lib/first-run';
 import ProfileSprites from '@/components/profile/ProfileSprites';
 
 export default function OnboardingScreen() {
@@ -36,6 +37,7 @@ export default function OnboardingScreen() {
     };
 
     const handleGuest = () => {
+        void markFirstRunComplete();
         router.replace('/kouponly' as any);
     };
 

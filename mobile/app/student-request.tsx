@@ -40,7 +40,7 @@ export default function StudentRequestScreen() {
   };
   const field = (key: keyof Omit<StudentRequest, 'kind'>, label: string, keyboardType: 'default' | 'email-address' | 'phone-pad' = 'default') => <View key={key} style={{ gap: 8 }}>
     <AppText variant="callout">{label}</AppText>
-    <TextInput accessibilityLabel={label} value={draft[key] || ''} editable={!busy} onChangeText={value => { setDraft(current => ({ ...current, [key]: value })); setError(''); }} keyboardType={keyboardType} autoCapitalize={key === 'email' || key === 'domain' ? 'none' : 'words'} autoCorrect={false} maxLength={key === 'phone' ? 40 : key === 'domain' || key === 'email' ? 254 : 160} returnKeyType="done" style={{ minHeight: 54, padding: 14, borderWidth: 1, borderColor: C.line, borderRadius: 16, color: C.ink, backgroundColor: C.card, fontFamily: 'Outfit_400Regular', fontSize: 16 }} />
+    <TextInput accessibilityLabel={label} value={draft[key] || ''} editable={!busy} onChangeText={value => { setDraft(current => ({ ...current, [key]: value })); setError(''); }} keyboardType={keyboardType} autoCapitalize={key === 'email' || key === 'domain' ? 'none' : 'words'} autoCorrect={false} maxLength={key === 'phone' ? 40 : key === 'domain' || key === 'email' ? 254 : 160} returnKeyType="done" style={{ minHeight: 54, padding: 14, borderWidth: 1, borderColor: C.line, borderRadius: 16, color: C.ink, backgroundColor: C.card, fontFamily: 'Outfit-Regular', fontSize: 16 }} />
   </View>;
   return <Screen testID="student-request-screen">
     <AppHeader title={kind === 'school' ? 'Suggest a school' : 'Request a restaurant'} back />

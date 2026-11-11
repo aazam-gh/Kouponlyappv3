@@ -29,7 +29,7 @@ export default function ContactUsScreen() {
   };
   const field = (key: keyof ContactMessage, label: string, multiline = false) => <View key={key} style={{ gap: 8 }}>
     <AppText variant="callout">{label}</AppText>
-    <TextInput accessibilityLabel={label} value={draft[key]} onChangeText={value => { setDraft(current => ({ ...current, [key]: value })); setError(''); }} editable={!busy} multiline={multiline} textAlignVertical={multiline ? 'top' : 'center'} keyboardType={key === 'email' ? 'email-address' : 'default'} autoCapitalize={key === 'email' ? 'none' : 'sentences'} autoCorrect={key === 'email' ? false : undefined} maxLength={key === 'name' ? 100 : key === 'email' ? 254 : 4000} placeholder={label} placeholderTextColor={C.muted} style={{ minHeight: multiline ? 150 : 54, padding: 14, borderWidth: 1, borderColor: C.line, borderRadius: 16, color: C.ink, backgroundColor: C.card, fontFamily: 'Outfit_400Regular', fontSize: 16 }} />
+    <TextInput accessibilityLabel={label} value={draft[key]} onChangeText={value => { setDraft(current => ({ ...current, [key]: value })); setError(''); }} editable={!busy} multiline={multiline} textAlignVertical={multiline ? 'top' : 'center'} keyboardType={key === 'email' ? 'email-address' : 'default'} autoCapitalize={key === 'email' ? 'none' : 'sentences'} autoCorrect={key === 'email' ? false : undefined} maxLength={key === 'name' ? 100 : key === 'email' ? 254 : 4000} placeholder={label} placeholderTextColor={C.muted} style={{ minHeight: multiline ? 150 : 54, padding: 14, borderWidth: 1, borderColor: C.line, borderRadius: 16, color: C.ink, backgroundColor: C.card, fontFamily: 'Outfit-Regular', fontSize: 16 }} />
   </View>;
   return <Screen testID="contact-us-screen">
     <AppHeader title="Contact Us" back />

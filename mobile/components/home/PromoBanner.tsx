@@ -1,16 +1,13 @@
 import { useMotionPreferences } from '@/lib/theme';
 import ScalePressable from '@/components/ScalePressable';
-import { useQuery } from '@tanstack/react-query';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Alert, Animated, ScrollView, StyleSheet, useWindowDimensions, View, type AlertButton } from 'react-native';
+import { Alert, Animated, ScrollView, StyleSheet, useWindowDimensions, View, type AlertButton } from 'react-native';
 import type { NativeScrollEvent, NativeSyntheticEvent } from 'react-native';
 
-import { useAppTheme } from '../../context/AppThemeContext';
-import { StateSurface } from '../StateSurface';
 import { triggerSubtleHaptic } from '../../utils/haptics';
-import { homeQueryOptions, type HomeBannerItem } from '../../utils/homeQueries';
+import { fetchBannerVendorNames, type HomeBannerItem } from '../../utils/homeQueries';
 import { logger } from '../../utils/logger';
 import { HOME_HORIZONTAL_GUTTER } from './layout';
 import { recordCmsClick } from '@/lib/cms-clicks';
@@ -24,20 +21,17 @@ const BANNER_AUTO_SCROLL_MS = 4000;
 export type BannerItem = HomeBannerItem;
 
 type PromoBannerProps = {
-    banners?: BannerItem[];
+    banners: BannerItem[];
     onBannerPress?: (banner: BannerItem) => void;
+    onFirstImageDisplay?: () => void;
 };
 
-export default function PromoBanner({ banners: bannersOverride, onBannerPress }: PromoBannerProps) {
-    const { theme } = useAppTheme();
+export default function PromoBanner({ banners, onBannerPress, onFirstImageDisplay }: PromoBannerProps) {
     const { reduceMotion } = useMotionPreferences();
-    const {
-        data: fetchedBanners = [],
-        error,
-        isLoading,
-        refetch,
-    } = useQuery({ ...homeQueryOptions.promoBanners(), enabled: !bannersOverride });
-    const banners = bannersOverride ?? fetchedBanners;
+    const firstSlide = banners.length > 1 ? 1 : 0;
+    const [visibleSlide, setVisibleSlide] = useState(firstSlide);
+    const [firstImageReady, setFirstImageReady] = useState(false);
+    const [choosing, setChoosing] = useState(false);
     const [imageRatios, setImageRatios] = useState<Record<string, number>>({});
     const currentIndexRef = useRef(1);
     const scrollViewRef = useRef<ScrollView | null>(null);
@@ -47,9 +41,6 @@ export default function PromoBanner({ banners: bannersOverride, onBannerPress }:
     const bannerWidth = screenWidth - (BANNER_SIDE_PADDING * 2);
     const bannerScrollInterval = bannerWidth + BANNER_GAP;
     const loopItems = banners.length > 1 ? [banners[banners.length - 1], ...banners, banners[0]] : banners;
-    useEffect(() => {
-        if (error) logger.error('Error fetching banners:', error);
-    }, [error]);
 
     useEffect(() => {
         if (reduceMotion || banners.length <= 1) {
@@ -63,6 +54,7 @@ export default function PromoBanner({ banners: bannersOverride, onBannerPress }:
 
             const nextIndex = currentIndexRef.current + 1;
             currentIndexRef.current = nextIndex;
+            setVisibleSlide(nextIndex);
             scrollViewRef.current?.scrollTo({ x: nextIndex * bannerScrollInterval, animated: true });
         }, BANNER_AUTO_SCROLL_MS);
 
@@ -70,11 +62,10 @@ export default function PromoBanner({ banners: bannersOverride, onBannerPress }:
     }, [banners.length, bannerScrollInterval, reduceMotion]);
 
     useEffect(() => {
-        currentIndexRef.current = banners.length > 1 ? 1 : 0;
+        currentIndexRef.current = firstSlide;
+        setVisibleSlide(firstSlide);
         scrollViewRef.current?.scrollTo({ x: currentIndexRef.current * bannerScrollInterval, animated: false });
-    }, [bannerScrollInterval, banners.length]);
-
-    const getBannerVendorIds = (banner: BannerItem) => [...new Set((banner.vendorIds?.length ? banner.vendorIds : [banner.vendorId || banner.id || '']).map(id => id.trim()).filter(id => Boolean(id && banner.vendorNames?.[id])))];
+    }, [bannerScrollInterval, firstSlide, banners.length]);
 
     const handleScrollBegin = () => {
         isUserInteractingRef.current = true;
@@ -89,12 +80,15 @@ export default function PromoBanner({ banners: bannersOverride, onBannerPress }:
         const index = Math.round(event.nativeEvent.contentOffset.x / bannerScrollInterval);
         const next = index === 0 ? banners.length : index >= banners.length + 1 ? 1 : index;
         currentIndexRef.current = next;
+        setVisibleSlide(next);
         if (next !== index) scrollViewRef.current?.scrollTo({ x: next * bannerScrollInterval, animated: false });
         isUserInteractingRef.current = false;
     };
 
-    const handlePress = (banner: BannerItem) => {
-        const vendorIds = getBannerVendorIds(banner);
+    const handlePress = async (banner: BannerItem) => {
+        if (choosing) return;
+        const vendorIds = [...new Set((Array.isArray(banner.vendorIds) && banner.vendorIds.length ? banner.vendorIds : [banner.vendorId || banner.id])
+            .flatMap(id => typeof id === 'string' && id.trim() ? [id.trim()] : []))];
         if (!vendorIds.length) {
             logger.warn('Promo banner is missing a linked vendorId:', banner.bannerId);
             return;
@@ -102,33 +96,20 @@ export default function PromoBanner({ banners: bannersOverride, onBannerPress }:
         void recordCmsClick('banner', banner.bannerId).catch(error => logger.warn('Unable to record banner click:', error));
         triggerSubtleHaptic();
         const open = (vendorId: string) => onBannerPress ? onBannerPress({ ...banner, vendorId }) : router.push({ pathname: '/kouponly/vendor/[id]', params: { id: vendorId } } as any);
-        if (vendorIds.length === 1) open(vendorIds[0]);
-        else {
-            const options: AlertButton[] = vendorIds.map(vendorId => ({ text: banner.vendorNames?.[vendorId] || 'Vendor', onPress: () => open(vendorId) }));
-            options.push({ text: 'Cancel', style: 'cancel' });
-            Alert.alert('Choose a vendor', 'Select where you would like to go.', options);
-        }
+        if (vendorIds.length === 1) { open(vendorIds[0]); return; }
+        setChoosing(true);
+        try {
+            const names = await fetchBannerVendorNames(vendorIds);
+            const options: AlertButton[] = vendorIds.flatMap(vendorId => names[vendorId] ? [{ text: names[vendorId], onPress: () => open(vendorId) }] : []);
+            if (options.length === 1) options[0].onPress?.();
+            else if (options.length) Alert.alert('Choose a vendor', 'Select where you would like to go.', [...options, { text: 'Cancel', style: 'cancel' }]);
+            else Alert.alert('No vendors available');
+        } catch {
+            Alert.alert('Could not load vendors', 'Tap the banner again to retry.');
+        } finally { setChoosing(false); }
     };
 
-    if (isLoading) {
-        return (
-            <View style={[styles.container, styles.loaderContainer]}>
-                <ActivityIndicator size="large" color={theme.brand} />
-            </View>
-        );
-    }
-
-    if (error && banners.length === 0) {
-        return <StateSurface kind="error" compact onRetry={() => void refetch()} />;
-    }
-
-    if (banners.length === 0) {
-        return (
-            <View style={[styles.container, styles.loaderContainer]}>
-                <StateSurface kind="empty" compact />
-            </View>
-        );
-    }
+    if (banners.length === 0) return null;
 
     return (
         <View style={styles.container}>
@@ -146,6 +127,7 @@ export default function PromoBanner({ banners: bannersOverride, onBannerPress }:
                 snapToInterval={bannerScrollInterval}
                 decelerationRate="fast"
                 scrollEventThrottle={16}
+                onScroll={event => setVisibleSlide(Math.round(event.nativeEvent.contentOffset.x / bannerScrollInterval))}
                 onScrollBeginDrag={handleScrollBegin}
                 onMomentumScrollBegin={handleScrollBegin}
                 onScrollEndDrag={handleScrollEnd}
@@ -154,7 +136,10 @@ export default function PromoBanner({ banners: bannersOverride, onBannerPress }:
             >
                 {loopItems.map((banner, index) => {
                     const imageUri = banner.images.mobile || banner.images.desktop;
-                    const imageRatio = imageUri ? imageRatios[imageUri] : undefined;
+                    const dimensions = banner.mobileDimensions;
+                    const imageRatio = dimensions && banner.images.mobile
+                        ? dimensions.width / dimensions.height
+                        : imageUri ? imageRatios[imageUri] : undefined;
 
                     return (
                         <ScalePressable
@@ -164,12 +149,13 @@ export default function PromoBanner({ banners: bannersOverride, onBannerPress }:
                                 { width: bannerWidth },
                                 pressed && styles.bannerPressed,
                             ]}
-                            onPress={() => handlePress(banner)}
+                            onPress={() => void handlePress(banner)}
                             accessibilityRole="button"
+                            accessibilityState={{ busy: choosing }}
                             accessibilityLabel={banner.altText || 'Open vendor'}
                         >
                             <View style={styles.bannerPill}>
-                                <Image
+                                {imageUri && (index === visibleSlide || (firstImageReady && Math.abs(index - visibleSlide) <= 1)) ? <Image
                                     source={{ uri: imageUri }}
                                     style={[styles.bannerImage, imageRatio ? {
                                         width: Math.min(bannerWidth, BANNER_HEIGHT * imageRatio),
@@ -183,8 +169,14 @@ export default function PromoBanner({ banners: bannersOverride, onBannerPress }:
                                     }}
                                     contentFit="contain"
                                     cachePolicy="memory-disk"
+                                    priority={index === visibleSlide ? 'high' : 'low'}
+                                    onDisplay={() => {
+                                        if (index === firstSlide) onFirstImageDisplay?.();
+                                        setFirstImageReady(true);
+                                    }}
+                                    onError={() => setFirstImageReady(true)}
                                     accessibilityLabel={banner.altText || 'Banner Image'}
-                                />
+                                /> : null}
                             </View>
                         </ScalePressable>
                     );

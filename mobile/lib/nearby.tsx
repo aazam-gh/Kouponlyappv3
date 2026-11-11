@@ -1,9 +1,8 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
-import { AppState, Platform } from 'react-native';
+import { AppState } from 'react-native';
 import * as Location from 'expo-location';
 import { fetchVendorMapLocations, type VendorMapLocation } from '@/lib/nearby-vendors';
 import { getCurrentPosition } from '@/lib/location';
-import { useCatalogue } from '@/lib/catalogue';
 import { nearestLocationsByVendor } from '@/lib/vendor-distance';
 
 type NearbyStatus = 'idle' | 'loading' | 'ready' | 'permission' | 'error';
@@ -27,12 +26,11 @@ export function NearbyProvider({ children }: { children: React.ReactNode }) {
   const [canAskAgain, setCanAskAgain] = useState(true);
   const request = useRef<Promise<void> | null>(null);
   const attempted = useRef(false);
-  const { revision } = useCatalogue();
   const hasData = useRef(false);
 
   const load = useCallback(({ askForPermission = false, force = false }: LoadOptions = {}) => {
     if (request.current) return request.current;
-    if (!force && attempted.current) return Promise.resolve();
+    if (!force && !askForPermission && attempted.current) return Promise.resolve();
     attempted.current = true;
     setError('');
     setStatus(current => current === 'ready' ? current : 'loading');
@@ -40,7 +38,7 @@ export function NearbyProvider({ children }: { children: React.ReactNode }) {
     const task = (async () => {
       try {
         let permission = await Location.getForegroundPermissionsAsync();
-        if (permission.status !== 'granted' && permission.canAskAgain && (askForPermission || permission.status === 'undetermined')) {
+        if (permission.status !== 'granted' && permission.canAskAgain && askForPermission) {
           permission = await Location.requestForegroundPermissionsAsync();
         }
         setCanAskAgain(permission.canAskAgain);
@@ -69,8 +67,6 @@ export function NearbyProvider({ children }: { children: React.ReactNode }) {
     return task;
   }, []);
 
-  useEffect(() => { if (attempted.current) void load({ force: true }); }, [revision, load]);
-
   const value = useMemo(() => ({ locations, position, status, error, canAskAgain, load }), [locations, position, status, error, canAskAgain, load]);
 
   useEffect(() => {
@@ -78,10 +74,6 @@ export function NearbyProvider({ children }: { children: React.ReactNode }) {
       if (nextState === 'active' && attempted.current) void load({ force: true });
     });
     return () => subscription.remove();
-  }, [load]);
-
-  useEffect(() => {
-    if (Platform.OS === 'android' || Platform.OS === 'ios') void load({ askForPermission: true });
   }, [load]);
 
   return <Context.Provider value={value}>{children}</Context.Provider>;

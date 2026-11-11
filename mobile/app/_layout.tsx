@@ -1,5 +1,4 @@
 import '@/src/localization/i18n';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFonts } from "expo-font";
 import {
   Outfit_400Regular,
@@ -31,7 +30,7 @@ import { queryClient } from '@/utils/queryClient';
 import { AnalyticsProvider } from '@/lib/analytics';
 import { usePostHog } from 'posthog-react-native';
 import { ReduceMotion, ReducedMotionConfig } from 'react-native-reanimated';
-import AppLaunchPosterModal from '@/components/AppLaunchPosterModal';
+import { hasCompletedFirstRun, markFirstRunComplete } from '@/lib/first-run';
 
 // The app deliberately applies the student's reduced-motion preference globally.
 LogBox.ignoreLogs(['[Reanimated] Reduced motion setting is overwritten with mode']);
@@ -47,13 +46,12 @@ function AppNavigation({ firstRunStatus }: { firstRunStatus: Exclude<FirstRunSta
   const posthog=usePostHog();
   const segments=useSegments();
   const screen=segments.filter(segment=>!segment.startsWith('(')).join('/')||'home';
-  const isHomeRoute=screen==='home'||screen==='index';
   const previousUserId=React.useRef<string|null>(null);
   const firstRunRedirected=React.useRef(false);
   React.useEffect(()=>{
     const userId=session?.user.id??null;
     if(userId&&previousUserId.current&&previousUserId.current!==userId)posthog.reset();
-    if(userId)posthog.identify(userId);
+    if(userId){posthog.identify(userId);void markFirstRunComplete();}
     else if(previousUserId.current)posthog.reset();
     previousUserId.current=userId;
   },[posthog,session?.user.id]);
@@ -97,29 +95,24 @@ function AppNavigation({ firstRunStatus }: { firstRunStatus: Exclude<FirstRunSta
     const subscription=Notifications.addNotificationResponseReceivedListener(openNotification);
     return ()=>subscription.remove();
   },[]);
-  return <><ReducedMotionConfig mode={theme.motion.reduceMotion ? ReduceMotion.Always : ReduceMotion.System}/><StatusBar style={theme.dark?"light":"dark"}/><Stack initialRouteName={firstRunStatus==='new'?'kouponly/welcome':'(tabs)'} screenOptions={{headerShown:false,contentStyle:{backgroundColor:theme.colors.paper},animation:theme.motion.reduceMotion?"fade":"default"}}/><AppLaunchPosterModal userId={session?.user.id??null} enabled={isHomeRoute}/><Toast/></>;
+  return <><ReducedMotionConfig mode={theme.motion.reduceMotion ? ReduceMotion.Always : ReduceMotion.System}/><StatusBar style={theme.dark?"light":"dark"}/><Stack initialRouteName={firstRunStatus==='new'?'kouponly/welcome':'(tabs)'} screenOptions={{headerShown:false,contentStyle:{backgroundColor:theme.colors.paper},animation:theme.motion.reduceMotion?"fade":"default"}}/><Toast/></>;
 }
 
 export default function RootLayout(){
   const [firstRunStatus,setFirstRunStatus]=React.useState<FirstRunStatus>('checking');
   const [loaded, fontError]=useFonts({
-    Outfit_400Regular,
-    Outfit_600SemiBold,
-    Outfit_700Bold,
+    'Outfit-Regular': Outfit_400Regular,
+    'Outfit-SemiBold': Outfit_600SemiBold,
+    'Outfit-Bold': Outfit_700Bold,
   });
   const onAppLayout=React.useCallback(()=>{
     if(loaded||fontError)void SplashScreen.hideAsync().catch(()=>{});
   },[loaded,fontError]);
   React.useEffect(()=>{
     let active=true;
-    void AsyncStorage.getAllKeys().then(keys=>{
-      if(!active)return;
-      const hasExistingAppState=keys.some(key=>
-        key==='kouponly.guest.state.v3'||key==='kouponly.prototype.state.v1'||key==='kouponly.prototype.state.v2'||key==='kouponly.prototype.state.v3'||
-        (key.startsWith('kouponly.user.')&&key.endsWith('.state.v3'))
-      );
-      setFirstRunStatus(hasExistingAppState?'existing':'new');
-    }).catch(()=>{if(active)setFirstRunStatus('existing')});
+    void hasCompletedFirstRun().then(existing=>{
+      if(active)setFirstRunStatus(existing?'existing':'new');
+    });
     return()=>{active=false};
   },[]);
   if((!loaded&&!fontError)||firstRunStatus==='checking')return <View style={{flex:1,backgroundColor:"#FFFFFF",alignItems:"center",justifyContent:"center"}}><StatusBar style="dark"/><Image source={require('../assets/images/kouponly-logo.webp')} style={{width:240,height:240}} contentFit="contain" accessibilityLabel="Kouponly logo"/></View>;

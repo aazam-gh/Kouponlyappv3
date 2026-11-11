@@ -1,4 +1,3 @@
-import { normalizeHomeSectionOrder } from './home-layout';
 import * as Crypto from 'expo-crypto';
 import type { KouponlyState, RedemptionMode } from '@/lib/store';
 import type { CloudCatalogue, PendingMutation, StorageAsset } from '@/lib/cloud.types';
@@ -83,42 +82,50 @@ export async function applyMutation(mutation: PendingMutation): Promise<void> {
   if (error) fail(error, 'Sync');
 }
 
-export async function fetchCloudCatalogue(): Promise<CloudCatalogue> {
+async function readMarketplace(vendorId?: string) {
   const client = getSupabase();
-  const [vendors, offers, locations, categories, subcategories, assignments, categoryAssignments, bannerDocument, layoutDocument] = await Promise.all([
-    rows(client.from('kouponly_vendors').select('*').eq('status', 'Active').order('sort_order'), 'Vendor catalogue load'),
-    rows(client.from('kouponly_offers').select('*').order('sort_order'), 'Vendor offer load'),
-    rows(client.from('kouponly_vendor_locations').select('*').order('sort_order'), 'Vendor locations load'),
+  const vendorsQuery = client.from('kouponly_vendors').select('*').eq('status', 'Active').order('sort_order');
+  const offersQuery = client.from('kouponly_offers').select('*').order('sort_order');
+  const locationsQuery = client.from('kouponly_vendor_locations').select('*').order('sort_order');
+  const assignmentsQuery = client.from('kouponly_vendor_subcategories').select('*');
+  const categoryAssignmentsQuery = client.from('kouponly_vendor_categories').select('*');
+  if (vendorId) {
+    vendorsQuery.eq('id', vendorId);
+    offersQuery.eq('vendor_id', vendorId);
+    locationsQuery.eq('vendor_id', vendorId);
+    assignmentsQuery.eq('vendor_id', vendorId);
+    categoryAssignmentsQuery.eq('vendor_id', vendorId);
+  }
+  const [vendors, offers, locations, categories, subcategories, assignments, categoryAssignments] = await Promise.all([
+    rows(vendorsQuery, 'Vendor catalogue load'),
+    rows(offersQuery, 'Vendor offer load'),
+    rows(locationsQuery, 'Vendor locations load'),
     rows(client.from('kouponly_categories').select('*').eq('active', true).order('sort_order'), 'Categories load'),
     rows(client.from('kouponly_subcategories').select('*').order('sort_order'), 'Subcategories load'),
-    rows(client.from('kouponly_vendor_subcategories').select('*'), 'Vendor subcategories load'),
-    rows(client.from('kouponly_vendor_categories').select('*'), 'Vendor categories load'),
-    single<Row>(client.from('kouponly_cms_documents').select('payload').eq('id', 'banner').maybeSingle(), 'Hero banners load'),
-    single<Row>(client.from('kouponly_cms_documents').select('payload').eq('id', 'homeLayout').maybeSingle(), 'Home layout load'),
+    rows(assignmentsQuery, 'Vendor subcategories load'),
+    rows(categoryAssignmentsQuery, 'Vendor categories load'),
   ]);
+  const projected = projectVendorCatalogue(vendors as MarketplaceVendorRow[], offers as MarketplaceOfferRow[], locations, { categories, subcategories, assignments, categoryAssignments });
+  return { projected, vendors, offers, categories };
+}
+
+export async function fetchVendorDeal(vendorId: string) {
+  const { projected } = await readMarketplace(vendorId);
+  return projected.deals[0] ?? null;
+}
+
+export async function fetchCloudCatalogue(): Promise<CloudCatalogue> {
+  const { projected, vendors, offers, categories } = await readMarketplace();
   const now = Date.now();
   const nextValidityChangeAt = offers.flatMap(offer => [offer.starts_at, offer.ends_at])
     .map(value => typeof value === 'string' ? Date.parse(value) : NaN)
     .filter(value => Number.isFinite(value) && value > now)
     .reduce<number | undefined>((next, value) => next === undefined || value < next ? value : next, undefined);
-  const projected = projectVendorCatalogue(vendors as MarketplaceVendorRow[], offers as MarketplaceOfferRow[], locations, { categories, subcategories, assignments, categoryAssignments });
   const featured = new Set(vendors.filter(vendor => vendor.featured).map(vendor => vendor.id));
-  const banners = Array.isArray(bannerDocument?.payload?.banners)
-    ? bannerDocument.payload.banners as Row[]
-    : [];
-  const bannerSlides = banners.flatMap(banner => {
-    if (!banner.isActive || !banner.vendorId || !banner.images?.mobile) return [];
-    const deal = projected.deals.find(item => item.vendorId === String(banner.vendorId));
-    return deal ? [{
-      brand: deal.name, kicker: deal.category, title: deal.offer, copy: deal.description,
-      cta: 'View offers', image: String(banner.images.mobile), logo: deal.logo, dealId: deal.id,
-    }] : [];
-  });
   return {
     ...projected,
     nextValidityChangeAt,
-    homeSectionOrder: normalizeHomeSectionOrder(layoutDocument?.payload?.enabledSections ?? layoutDocument?.payload?.sectionOrder),
-    heroSlides: bannerSlides.length ? bannerSlides : projected.deals.filter(deal => featured.has(deal.vendorId)).map(deal => ({
+    heroSlides: projected.deals.filter(deal => featured.has(deal.vendorId)).map(deal => ({
       brand: deal.name, kicker: deal.category, title: deal.offer, copy: deal.description,
       cta: 'View offers', image: deal.image, logo: deal.logo, dealId: deal.id,
     })),
@@ -250,11 +257,11 @@ export function subscribeToUser(userId: string, onChange: () => void) {
 }
 
 const catalogueTables = ['couponly_categories','couponly_subcategories','couponly_vendor_subcategories','couponly_vendor_categories','couponly_vendors','couponly_offers','couponly_vendor_locations','couponly_cms_documents'] as const;
-export function subscribeToCatalogue(onChange: () => void) {
+export function subscribeToCatalogue(onChange: (table: typeof catalogueTables[number]) => void) {
   if (!supabaseConfigured) return { unsubscribe: () => {} };
   const client = getSupabase();
   let channel = client.channel('kouponly-public-catalogue');
-  for (const table of catalogueTables) channel = channel.on('postgres_changes', { event: '*', schema: 'public', table }, onChange);
+  for (const table of catalogueTables) channel = channel.on('postgres_changes', { event: '*', schema: 'public', table }, () => onChange(table));
   channel.subscribe();
   return { unsubscribe: () => { void client.removeChannel(channel); } };
 }

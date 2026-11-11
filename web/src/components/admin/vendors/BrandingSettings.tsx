@@ -67,7 +67,7 @@ export function BrandingSettings({
             const downloadURL = await uploadImage(
                 `vendors/${vendorId}/branding/${fileName}`,
                 file,
-                { maxWidth: isProfile ? 512 : 1920, quality: 0.8 }
+                { maxWidth: isProfile ? 256 : 960, quality: 0.8, versioned: true }
             )
 
             setFormData({ ...formData, [type]: downloadURL })

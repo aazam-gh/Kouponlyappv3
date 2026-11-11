@@ -4,7 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { useEffect, useMemo } from 'react';
-import { ActivityIndicator, ScrollView, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, FlatList, StyleSheet, View } from 'react-native';
 import { StateSurface } from '../StateSurface';
 import { triggerSubtleHaptic } from '../../utils/haptics';
 import { logger } from '../../utils/logger';
@@ -34,7 +34,6 @@ function BrandRow({
     const { theme } = useAppTheme();
     const renderBrand = (brand: BrandItem) => (
         <ScalePressable
-            key={brand.id}
             style={styles.brandItem}
             onPress={() => onPressBrand(brand)}
             hitSlop={8}
@@ -56,7 +55,13 @@ function BrandRow({
 
     return (
         <View style={styles.rowViewport}>
-            <ScrollView
+            <FlatList
+                data={items}
+                keyExtractor={brand => brand.id}
+                renderItem={({ item }) => renderBrand(item)}
+                initialNumToRender={6}
+                windowSize={3}
+                ItemSeparatorComponent={() => <View style={{ width: BRAND_TILE_GAP }} />}
                 horizontal
                 style={styles.rowScroll}
                 showsHorizontalScrollIndicator={false}
@@ -68,24 +73,21 @@ function BrandRow({
                 keyboardShouldPersistTaps="always"
                 scrollEventThrottle={16}
                 contentContainerStyle={styles.scrollContent}
-            >
-                <View style={styles.rowSegment}>
-                    {items.map(renderBrand)}
-                </View>
-            </ScrollView>
+            />
         </View>
     );
 }
 
-export default function BrandGrid() {
+export default function BrandGrid({ previews }: { previews?: HomeBrandItem[] }) {
     const { theme } = useAppTheme();
     const { isRTL } = useAppLocale();
     const {
-        data: brands = [],
+        data: fetchedBrands = [],
         error,
         isLoading,
         refetch,
-    } = useQuery(homeQueryOptions.brands());
+    } = useQuery({ ...homeQueryOptions.brands(), enabled: previews === undefined });
+    const brands = previews ?? fetchedBrands;
     const router = useRouter();
     const displayedBrands = useMemo(() => (isRTL ? [...brands].reverse() : brands), [brands, isRTL]);
 
@@ -124,7 +126,7 @@ export default function BrandGrid() {
         };
     }, [displayedBrands]);
 
-    if (isLoading) {
+    if (!previews && isLoading) {
         return (
             <View style={styles.loaderContainer}>
                 <ActivityIndicator size="small" color={theme.brand} />
@@ -132,7 +134,7 @@ export default function BrandGrid() {
         );
     }
 
-    if (error && displayedBrands.length === 0) {
+    if (!previews && error && displayedBrands.length === 0) {
         return <StateSurface kind="error" compact onRetry={() => void refetch()} />;
     }
 
@@ -171,12 +173,7 @@ const styles = StyleSheet.create({
         flex: 1,
     },
     scrollContent: {
-        flexDirection: 'row',
         alignItems: 'center',
-    },
-    rowSegment: {
-        flexDirection: 'row',
-        gap: BRAND_TILE_GAP,
         paddingLeft: BRAND_ROW_SIDE_PADDING - 4,
         paddingRight: BRAND_ROW_SIDE_PADDING,
     },

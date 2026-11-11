@@ -26,6 +26,14 @@ export function getSupabase() {
   return supabase;
 }
 
+let publicClient: ReturnType<typeof createClient> | undefined;
+export function getPublicSupabase() {
+  if (!url || !key) return getSupabase();
+  return publicClient ??= createClient(url, key, {
+    auth: { storageKey: 'kouponly-public-auth', persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
+  });
+}
+
 let appStateSubscription: ReturnType<typeof AppState.addEventListener> | undefined;
 if (supabase && Platform.OS !== 'web') {
   appStateSubscription = AppState.addEventListener('change', (state) => {

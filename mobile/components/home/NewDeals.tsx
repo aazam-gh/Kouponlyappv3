@@ -39,16 +39,16 @@ export default function NewDeals({ onVendorPress }: NewDealsProps) {
         : void Linking.openSettings();
     const heading = <HomeSectionHeading prefix={t('offers_near_you_prefix')} highlight={t('offers_near_you_highlight')} onSeeMore={() => router.push({ pathname: '/vendors', params: { section: 'nearby' } } as any)} />;
 
-    if (status === 'idle' || status === 'loading') {
+    if (status === 'loading') {
         return <View style={styles.container}>{heading}<StateSurface kind="loading" compact /></View>;
     }
 
-    if (status === 'permission') {
+    if (status === 'idle' || status === 'permission') {
         return <View style={styles.container}>
             {heading}
             <StateSurface kind="empty" compact title={t('offers_near_location_title')} message={t('offers_near_location_message')} />
             <ScalePressable accessibilityRole="button" onPress={action} style={[styles.action, { backgroundColor: theme.actionSolid }]}>
-                <Text style={[styles.actionText, { color: theme.onActionSolid }]}>{canAskAgain ? t('retry') : t('onboarding_v2_open_settings')}</Text>
+                <Text style={[styles.actionText, { color: theme.onActionSolid }]}>{canAskAgain ? t('offers_near_allow_location') : t('onboarding_v2_open_settings')}</Text>
             </ScalePressable>
         </View>;
     }

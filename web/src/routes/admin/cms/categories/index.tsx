@@ -65,7 +65,7 @@ function CategoriesOverview() {
             const downloadURL = await uploadImage(
                 `categories/${Date.now()}_${file.name}`,
                 file,
-                { maxWidth: 1024, quality: 0.8 }
+                { maxWidth: 256, quality: 0.8, versioned: true }
             )
 
             const newCatData = {

@@ -218,7 +218,7 @@ function ManageCategory() {
             const downloadURL = await uploadImage(
                 `categories/covers/${Date.now()}_${file.name}`,
                 file,
-                { maxWidth: 512, quality: 0.8 }
+                { maxWidth: 256, quality: 0.8, versioned: true }
             )
 
             handleUpdateCategory({ imageUrl: downloadURL })
@@ -284,7 +284,7 @@ function ManageCategory() {
             const downloadURL = await uploadImage(
                 `categories/subcategories/${Date.now()}_${file.name}`,
                 file,
-                { maxWidth: 512, quality: 0.8 }
+                { maxWidth: 256, quality: 0.8, versioned: true }
             )
 
             const updatedSubs = category.subcategories.map((sub, i) =>

@@ -85,5 +85,11 @@
     <string>Automatic</string>
     <key>UIViewControllerBasedStatusBarAppearance</key>
     <false/>
+    <key>UIAppFonts</key>
+    <array>
+      <string>Outfit_400Regular.ttf</string>
+      <string>Outfit_600SemiBold.ttf</string>
+      <string>Outfit_700Bold.ttf</string>
+    </array>
   </dict>
 </plist>

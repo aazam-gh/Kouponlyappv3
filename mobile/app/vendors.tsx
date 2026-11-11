@@ -21,12 +21,15 @@ import NearbyOfferListCard from '@/components/opportunities/NearbyOfferListCard'
 export default function VendorsScreen() {
   const { section = 'top' } = useLocalSearchParams<{ section?: string }>();
   const { theme } = useAppTheme();
-  const { status, error: catalogueError, revision, refresh } = useCatalogue();
+  const { status, error: catalogueError, revision, refresh } = useCatalogue(section !== 'nearby');
   const nearby = useNearby();
   const { distanceByVendor } = useNearbyDistances();
   const { benefits } = useBenefits();
   const [filter, setFilter] = React.useState('top');
   const [sortMode, setSortMode] = React.useState<VendorSortMode>('alphabetical');
+  React.useEffect(() => {
+    if (section === 'nearby') void nearby.load();
+  }, [nearby.load, section]);
   const brands = useQuery({ ...homeQueryOptions.brands(), enabled: section === 'brands' });
   const trending = useQuery({ ...homeQueryOptions.offers(), enabled: section === 'trending' });
   const items = React.useMemo(() => {
@@ -51,7 +54,7 @@ export default function VendorsScreen() {
     }
     return sortVendors(items, sortMode, available);
   }, [items, benefits, distanceByVendor, filter, sortMode]);
-  const loading = query ? query.isLoading : status === 'loading';
+  const loading = section === 'nearby' ? nearby.status === 'loading' : query ? query.isLoading : status === 'loading';
   const error = query?.error || (section === 'nearby' ? nearby.error : catalogueError || null);
   const retry = () => query ? void query.refetch() : section === 'nearby' ? void nearby.load({ askForPermission: true, force: true }) : void refresh();
   const title = ({ nearby: 'Offers Near You', new: 'New Deals', trending: 'Trending Offers', brands: 'Top Brands', top: 'Top Brands' } as Record<string, string>)[section] || 'Vendors';
@@ -62,8 +65,10 @@ export default function VendorsScreen() {
       contentContainerStyle={{ padding: 20, paddingBottom: 100, gap: 16 }}
       keyboardShouldPersistTaps="handled"
       refreshing={loading} onRefresh={retry}
-      ListHeaderComponent={<FilterTabs selectedFilter={filter} onFilterChange={setFilter} sortMode={sortMode} onSortModeChange={setSortMode} horizontalPadding={0} />}
-      ListEmptyComponent={<StateSurface kind="empty" title={section === 'nearby' && !nearby.position ? 'Enable location on Home to see nearby offers' : 'No vendors yet'} />}
+      ListHeaderComponent={<FilterTabs selectedFilter={filter} onFilterChange={next => { setFilter(next); if (next === 'nearest') void nearby.load({ askForPermission: true, force: true }); }} sortMode={sortMode} onSortModeChange={setSortMode} horizontalPadding={0} />}
+      ListEmptyComponent={section === 'nearby' && !nearby.position
+        ? <StateSurface kind="error" message="Allow location access to see nearby offers." onRetry={retry} />
+        : <StateSurface kind="empty" title="No vendors yet" />}
       renderItem={({ item }) => {
         const openVendor = () => router.push({ pathname: '/kouponly/vendor/[id]', params: { id: String(item.vendorId || item.id) } } as any);
         return <View>

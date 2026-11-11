@@ -11,7 +11,7 @@ import { Button } from '@/components/ui/button'
 import { toast } from 'sonner'
 import type { BannerItem } from '@/types/banners'
 import { getVendorList, type VendorOption } from '@/lib/vendorList'
-import { uploadImage } from '@/lib/upload'
+import { uploadImageWithDimensions } from '@/lib/upload'
 
 export const Route = createFileRoute('/admin/cms/banners/add')({
     component: AddBannerPage,
@@ -46,17 +46,18 @@ function AddBannerPage() {
 
         setUploading(type)
         try {
-            const downloadURL = await uploadImage(
+            const uploaded = await uploadImageWithDimensions(
                 `banners/${type}/${Date.now()}_${file.name}`,
                 file,
-                { maxWidth: 1920, quality: 0.8 }
+                { maxWidth: 1000, quality: 0.78, versioned: true }
             )
 
             setBanner(prev => ({
                 ...prev,
+                mobileDimensions: { width: uploaded.width, height: uploaded.height },
                 images: {
                     ...prev.images,
-                    [type]: downloadURL
+                    [type]: uploaded.url
                 }
             }))
             toast.success(`${type} image uploaded`)

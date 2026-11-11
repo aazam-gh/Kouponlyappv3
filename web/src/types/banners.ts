@@ -7,6 +7,7 @@ export interface BannerItem {
     vendorId: string
     vendorIds?: string[]
     images: BannerImage
+    mobileDimensions?: { width: number; height: number }
     altText: string
     isActive: boolean
 }

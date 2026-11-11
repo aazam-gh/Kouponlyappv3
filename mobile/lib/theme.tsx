@@ -126,13 +126,13 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       ...(Text as any).defaultProps,
       allowFontScaling: true,
       maxFontSizeMultiplier: 2.4,
-      style: [{ color: value.colors.ink, fontFamily: "Outfit_400Regular" }],
+      style: [{ color: value.colors.ink, fontFamily: "Outfit-Regular" }],
     };
     (TextInput as any).defaultProps = {
       ...(TextInput as any).defaultProps,
       allowFontScaling: true,
       maxFontSizeMultiplier: 2.4,
-      style: [{ color: value.colors.ink, fontFamily: "Outfit_400Regular" }],
+      style: [{ color: value.colors.ink, fontFamily: "Outfit-Regular" }],
     };
   }, [value.colors]);
 
@@ -169,16 +169,16 @@ export const C: ThemeColors = new Proxy({ ...light }, {
 }) as ThemeColors;
 
 // Ensure legacy screen copy follows appearance even before every Text node adopts AppText.
-(Text as any).defaultProps = { ...(Text as any).defaultProps, allowFontScaling: true, maxFontSizeMultiplier: 2.4, style: [{ color: C.ink, fontFamily: "Outfit_400Regular" }, (Text as any).defaultProps?.style] };
-(TextInput as any).defaultProps = { ...(TextInput as any).defaultProps, allowFontScaling: true, maxFontSizeMultiplier: 2.4, style: [{ color: C.ink, fontFamily: "Outfit_400Regular" }, (TextInput as any).defaultProps?.style] };
+(Text as any).defaultProps = { ...(Text as any).defaultProps, allowFontScaling: true, maxFontSizeMultiplier: 2.4, style: [{ color: C.ink, fontFamily: "Outfit-Regular" }, (Text as any).defaultProps?.style] };
+(TextInput as any).defaultProps = { ...(TextInput as any).defaultProps, allowFontScaling: true, maxFontSizeMultiplier: 2.4, style: [{ color: C.ink, fontFamily: "Outfit-Regular" }, (TextInput as any).defaultProps?.style] };
 (Pressable as any).defaultProps = { ...(Pressable as any).defaultProps, accessibilityRole: "button", hitSlop: 4 };
 
 export const F = {
-  heading: "Outfit_700Bold",
-  headingSemi: "Outfit_600SemiBold",
-  body: "Outfit_400Regular",
-  bodySemi: "Outfit_600SemiBold",
-  bodyBold: "Outfit_700Bold",
+  heading: "Outfit-Bold",
+  headingSemi: "Outfit-SemiBold",
+  body: "Outfit-Regular",
+  bodySemi: "Outfit-SemiBold",
+  bodyBold: "Outfit-Bold",
 } as const;
 
 export type TypographyVariant = "largeTitle" | "title" | "headline" | "body" | "callout" | "caption" | "eyebrow";

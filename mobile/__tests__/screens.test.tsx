@@ -24,8 +24,22 @@ import { getPendingVerification, savePendingVerification } from '../lib/verifica
 jest.mock('posthog-react-native', () => ({usePostHog: () => ({capture: jest.fn()})}));
 
 jest.mock('../lib/backend',()=>({...jest.requireActual('../lib/backend'),fetchCloudCatalogue:jest.fn(async()=>({...jest.requireActual('../test/catalogue-fixture').fixture(),heroSlides:[],rewards:[],source:'cloud',updatedAt:0})),subscribeToCatalogue:()=>({unsubscribe:jest.fn()})}));
+let mockHomeOrder: string[] | undefined;
+jest.mock('../lib/supabase', () => ({
+  ...jest.requireActual('../lib/supabase'),
+  getPublicSupabase: () => ({ from: (table: string) => ({ select: () => ({
+    eq: () => ({ order: () => ({ abortSignal: async () => ({
+      data: require('../test/catalogue-fixture').fixture().categories.map((row: { id: string; name: string; icon: string }) => ({ id: row.id, name: row.name, icon: row.icon })),
+      error: null,
+    }) }) }),
+    in: () => ({ abortSignal: async () => ({
+      data: table === 'kouponly_cms_documents' ? [{ id: 'homeLayout', payload: { enabledSections: mockHomeOrder } }] : [],
+      error: null,
+    }) }),
+  }) }) }),
+}));
 jest.mock('expo-location',()=>({getForegroundPermissionsAsync:jest.fn(async()=>({status:'denied',canAskAgain:false}))}));
-beforeEach(loadFixture);
+beforeEach(() => { mockHomeOrder = undefined; loadFixture(); });
 const frame = { x: 0, y: 0, width: 393, height: 852 };
 const wrapper = (node: React.ReactNode) => render(<SafeAreaProvider initialMetrics={{ frame, insets: { top: 59, left: 0, right: 0, bottom: 34 } }}><AppThemeProvider><LocaleProvider><TabBarVisibilityProvider><QueryClientProvider client={queryClient}><CatalogueProvider><NearbyProvider><StoreProvider>{node}</StoreProvider></NearbyProvider></CatalogueProvider></QueryClientProvider></TabBarVisibilityProvider></LocaleProvider></AppThemeProvider></SafeAreaProvider>);
 afterEach(async () => { cleanup(); queryClient.clear(); clearFixture(); await AsyncStorage.clear(); });
@@ -33,12 +47,14 @@ afterEach(async () => { cleanup(); queryClient.clear(); clearFixture(); await As
 describe('mobile showcase states', () => {
   it('renders only the Home sections selected by the CMS', async () => {
     const backend = require('../lib/backend');
-    backend.fetchCloudCatalogue.mockResolvedValueOnce({ ...require('../test/catalogue-fixture').fixture(), heroSlides: [], rewards: [], source: 'cloud', updatedAt: 0, homeSectionOrder: ['categories'] });
+    backend.fetchCloudCatalogue.mockClear();
+    mockHomeOrder = ['categories'];
     const view = await wrapper(<HomeScreen />);
     await waitFor(() => {
       expect(view.getByTestId('category-scroll-crunch')).toBeTruthy();
     });
     expect(view.queryByText('Top Brands')).toBeNull();
+    expect(backend.fetchCloudCatalogue).not.toHaveBeenCalled();
   });
 
   it('submits the home search query on Enter', async () => {

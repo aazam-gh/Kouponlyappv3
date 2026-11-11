@@ -7,11 +7,15 @@ import { recordCmsClick } from '@/lib/cms-clicks';
 
 let mockReduceMotion = false;
 const mockBanners = Array.from({ length: 5 }, (_, index) => ({
-  id: String(index), vendorId: String(index), vendorIds: [`vendor-${index}`, 'vendor-2'], vendorNames: { [`vendor-${index}`]: `Vendor ${index}`, 'vendor-2': 'Vendor 2' }, bannerId: String(index),
+  id: String(index), vendorId: String(index), vendorIds: [`vendor-${index}`, 'vendor-2'], altText: '', bannerId: String(index),
   images: { mobile: 'banner.jpg' }, imageUrl: 'banner.jpg', isActive: true,
 }));
 jest.mock('@tanstack/react-query', () => ({ useQuery: () => ({ data: mockBanners }) }));
-jest.mock('../utils/homeQueries', () => ({ homeQueryOptions: { featuredBanner: () => ({}), promoBanners: () => ({}) } }));
+const mockVendorNames = jest.fn(async (_ids: string[]) => ({ 'vendor-4': 'Vendor 4', 'vendor-2': 'Vendor 2' }));
+jest.mock('../utils/homeQueries', () => ({
+  homeQueryOptions: { featuredBanner: () => ({}) },
+  fetchBannerVendorNames: (ids: string[]) => mockVendorNames(ids),
+}));
 jest.mock('../components/home/FeaturedBanner', () => () => null);
 jest.mock('../components/ScalePressable', () => require('react-native').Pressable);
 jest.mock('@/lib/cms-clicks', () => ({ recordCmsClick: jest.fn().mockResolvedValue(undefined) }));
@@ -21,7 +25,9 @@ jest.mock('../context/AppThemeContext', () => ({ useAppTheme: () => ({ theme: {}
 beforeEach(() => { mockReduceMotion = false; jest.useFakeTimers(); });
 afterEach(() => { cleanup(); jest.restoreAllMocks(); jest.useRealTimers(); });
 
-for (const Component of [HomeBannerCarousel, PromoBanner]) {
+const PartnerCarousel = () => <PromoBanner banners={mockBanners} />;
+
+for (const Component of [HomeBannerCarousel, PartnerCarousel]) {
   describe(Component.name, () => {
     it('lets momentum cross several banners and autoplays from the landing banner', async () => {
       const scrollTo = jest.spyOn(ScrollView.prototype, 'scrollTo').mockImplementation(() => {});
@@ -65,7 +71,7 @@ for (const Component of [HomeBannerCarousel, PromoBanner]) {
 }
 
 it('contains promotional banner images without cropping', async () => {
-  const view = await render(<PromoBanner />);
+  const view = await render(<PartnerCarousel />);
   expect(view.getAllByLabelText('Banner Image').every(image => (
     image.props.contentFit === 'contain'
     && image.parent?.props.style.borderRadius === 30
@@ -77,7 +83,7 @@ it('contains promotional banner images without cropping', async () => {
 });
 
 it('rounds the visible image bounds without cropping wide or tall artwork', async () => {
-  const view = await render(<PromoBanner />);
+  const view = await render(<PartnerCarousel />);
   const carousel = view.getByTestId('home-promo-carousel');
   const bannerWidth = carousel.props.snapToInterval - carousel.props.contentContainerStyle.gap;
   for (const [width, height] of [[1600, 1000], [600, 1200]]) {
@@ -93,13 +99,23 @@ it('rounds the visible image bounds without cropping wide or tall artwork', asyn
 it('records a partner banner tap before offering its named vendor destinations', async () => {
   const alert = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
   const onBannerPress = jest.fn();
-  const view = await render(<PromoBanner onBannerPress={onBannerPress} />);
+  const view = await render(<PromoBanner banners={mockBanners} onBannerPress={onBannerPress} />);
+  expect(mockVendorNames).not.toHaveBeenCalled();
   await act(async () => { fireEvent.press(view.getAllByRole('button')[0]); });
   await waitFor(() => expect(alert).toHaveBeenCalled());
   expect(recordCmsClick).toHaveBeenCalledWith('banner', '4');
+  expect(mockVendorNames).toHaveBeenCalledWith(['vendor-4', 'vendor-2']);
   expect(alert).toHaveBeenCalledWith('Choose a vendor', 'Select where you would like to go.', expect.arrayContaining([
     expect.objectContaining({ text: 'Vendor 4', onPress: expect.any(Function) }),
     expect.objectContaining({ text: 'Vendor 2', onPress: expect.any(Function) }),
   ]));
   alert.mockRestore();
+});
+
+it('loads the first partner image alone and loads its neighbors after display', async () => {
+  const view = await render(<PartnerCarousel />);
+  const first = view.getByLabelText('Banner Image');
+  expect(first.props.priority).toBe('high');
+  await fireEvent(first, 'display');
+  expect(view.getAllByLabelText('Banner Image')).toHaveLength(3);
 });
