@@ -126,7 +126,7 @@ export default function FilterTabs({ selectedFilter, onFilterChange, filters, so
                         <Text accessibilityRole="header" style={[styles.sortTitle, { color: theme.text }]}>Sort</Text>
                         {vendorSortOptions.map(option => {
                             const active = sortMode === option.id;
-                            return <ScalePressable key={option.id} accessibilityRole="button" accessibilityState={{ selected: active }} onPress={() => { onSortModeChange(option.id); setSortOpen(false); }} style={[styles.sortOption, active && { backgroundColor: theme.cardMuted }]}>
+                            return <ScalePressable key={option.id} accessibilityRole="button" accessibilityState={{ selected: active }} onPress={() => { onSortModeChange(option.id); onFilterChange('all'); setSortOpen(false); }} style={[styles.sortOption, active && { backgroundColor: theme.cardMuted }]}>
                                 <Ionicons name={option.icon} size={20} color={active ? theme.brand : theme.icon} />
                                 <Text style={[styles.sortOptionText, { color: theme.text }]}>{option.label}</Text>
                                 {active ? <Ionicons name="checkmark" size={19} color={theme.brand} /> : null}

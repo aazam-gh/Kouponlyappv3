@@ -248,7 +248,6 @@ function ManageCategory() {
     const handleDeleteSubCategory = async (index: number) => {
         if (!category || !confirm('Delete this sub-category?')) return
         const updatedSubs = (category.subcategories || []).filter((_, i) => i !== index)
-        setLocalCategory(prev => prev ? { ...prev, subcategories: updatedSubs } : null)
         await updateCategoryMutation.mutateAsync({ subcategories: updatedSubs })
         toast.success('Sub-category deleted and saved')
     }
