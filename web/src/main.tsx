@@ -32,16 +32,9 @@ declare module '@tanstack/react-router' {
 
 function InnerApp() {
   const auth = useAuth()
-
-  // If the provider is initially loading, do not render the router
-  if (auth.isInitialLoading) {
-    return (
-      <div className="flex h-screen w-full items-center justify-center p-4">
-        <div className="size-10 rounded-full border-4 border-gray-200 border-t-foreground animate-spin" />
-      </div>
-    )
-  }
-
+  React.useEffect(() => {
+    if (!auth.isInitialLoading) void router.invalidate()
+  }, [auth.isInitialLoading, auth.isAuthenticated, auth.isAdmin])
   return <RouterProvider router={router} context={{ auth, queryClient }} />
 }
 
@@ -55,13 +48,34 @@ function App() {
   )
 }
 
+class AppErrorBoundary extends React.Component<{ children: React.ReactNode }, { error: Error | null }> {
+  state = { error: null as Error | null }
+
+  static getDerivedStateFromError(error: Error) {
+    return { error }
+  }
+
+  render() {
+    if (this.state.error) {
+      return (
+        <main role="alert" className="mx-auto grid min-h-screen max-w-xl content-center gap-3 p-6">
+          <h1 className="text-xl font-semibold">The admin panel could not load.</h1>
+          {import.meta.env.DEV && <pre className="overflow-auto whitespace-pre-wrap rounded border bg-muted p-3 text-sm">{this.state.error.stack || this.state.error.message}</pre>}
+          <button className="w-fit rounded-md border px-4 py-2" onClick={() => window.location.reload()}>Reload admin</button>
+        </main>
+      )
+    }
+    return this.props.children
+  }
+}
+
 const rootElement = document.getElementById('root')!
 
 if (!rootElement.innerHTML) {
   const root = ReactDOM.createRoot(rootElement)
   root.render(
     <React.StrictMode>
-      <App />
+      <AppErrorBoundary><App /></AppErrorBoundary>
     </React.StrictMode>,
   )
 }

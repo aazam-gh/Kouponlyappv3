@@ -51,7 +51,10 @@ export function AuthContextProvider({children}:{children:React.ReactNode}) {
   React.useEffect(()=>{if(user)identifyAnalyticsUser(user.id);},[user?.id]);
   React.useEffect(()=>{
     let active=true;
+    let receivedAuthEvent=false;
+    let initialSessionTimeout:number|undefined;
     const {data:{subscription}}=supabase.auth.onAuthStateChange((_event,session)=>{
+      receivedAuthEvent=true;
       const next=asAdminUser(session?.user||null);
       const request=++roleRequest.current;
       if(owner.current!==next?.id){queryClient.clear();setAdmin(false);}
@@ -62,7 +65,31 @@ export function AuthContextProvider({children}:{children:React.ReactNode}) {
         if(active && request===roleRequest.current){setAdmin(role.admin);setInitialLoading(false);}
       }).catch(()=>{if(active && request===roleRequest.current){setAdmin(false);setInitialLoading(false);}});});
     });
-    return ()=>{active=false;++roleRequest.current;subscription.unsubscribe();};
+    initialSessionTimeout=window.setTimeout(()=>{
+      if(active)setInitialLoading(false);
+    },10000);
+    const initializeFromStoredSession=async()=>{
+      try{
+        const {data,error}=await supabase.auth.getSession();
+        if(error)throw error;
+        if(!active || receivedAuthEvent)return;
+        receivedAuthEvent=true;
+        const session=data.session;
+        const next=asAdminUser(session?.user||null);
+        const request=++roleRequest.current;
+        if(owner.current!==next?.id){queryClient.clear();setAdmin(false);}
+        owner.current=next?.id??null;
+        setUser(next);
+        if(!next){setAdmin(false);setInitialLoading(false);return;}
+        void loadRole(session!.user).then(role=>{
+          if(active && request===roleRequest.current){setAdmin(role.admin);setInitialLoading(false);}
+        }).catch(()=>{if(active && request===roleRequest.current){setAdmin(false);setInitialLoading(false);}});
+      }catch{
+        if(active && !receivedAuthEvent){receivedAuthEvent=true;setAdmin(false);setInitialLoading(false);}
+      }
+    };
+    void initializeFromStoredSession();
+    return ()=>{active=false;if(initialSessionTimeout)window.clearTimeout(initialSessionTimeout);++roleRequest.current;subscription.unsubscribe();};
   },[queryClient]);
   const logout=React.useCallback(async()=>{
     const {error}=await supabase.auth.signOut();if(error)throw error;

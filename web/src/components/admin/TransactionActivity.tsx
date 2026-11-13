@@ -5,6 +5,7 @@ import { supabase } from '@/lib/supabase'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { Checkbox } from '@/components/ui/checkbox'
 import { toast } from 'sonner'
 
 type Correction = { updatedAmount: number; previousAmount: number; reason: string; changedBy: string; changedAt: string }
@@ -34,6 +35,7 @@ export function TransactionActivity({ vendorId, userId, overview = false }: { ve
   const [from, setFrom] = useState('')
   const [to, setTo] = useState('')
   const [corrections, setCorrections] = useState<Record<string, { amount: string; reason: string }>>({})
+  const [selected, setSelected] = useState<Record<string, TransactionRecord>>({})
   const queryClient = useQueryClient()
   const query = useQuery({
     queryKey: ['admin-transactions', vendorId, userId, search, page, from, to],
@@ -75,7 +77,29 @@ export function TransactionActivity({ vendorId, userId, overview = false }: { ve
     onSuccess: () => { toast.success('Correction recorded'); void queryClient.invalidateQueries({ queryKey: ['admin-transactions'] }) },
     onError: error => toast.error(error instanceof Error ? error.message : 'Correction failed'),
   })
+  const deleteMutation = useMutation({
+    mutationFn: async () => {
+      const rows = Object.values(selected)
+      const { data, error } = await supabase.rpc('kouponly_admin_delete_transactions', {
+        p_transaction_ids: rows.filter(row => row.source === 'transaction').map(row => row.id),
+        p_redemptions: rows.filter(row => row.source === 'redemption').map(row => ({ user_id: row.userId, redemption_id: row.id })),
+      })
+      if (error) throw error
+      return data ?? 0
+    },
+    onSuccess: count => {
+      if (count > 0) toast.success(`Deleted ${count} selected record${count === 1 ? '' : 's'}`)
+      else toast.info('The selected records are no longer available to delete')
+      setSelected({})
+      return queryClient.invalidateQueries({ queryKey: ['admin-transactions'] })
+    },
+    onError: error => toast.error(`Delete failed: ${error.message}`),
+  })
   const data = query.data
+  const canDelete = !vendorId && !userId
+  const pageRows = data?.receipts ?? []
+  const pageKeys = pageRows.map(row => `${row.source}:${row.userId}:${row.id}`)
+  const allPageSelected = pageKeys.length > 0 && pageKeys.every(key => selected[key])
   return <div className="mx-auto w-full max-w-[1440px] space-y-6 p-4 sm:p-7 lg:p-9">
     <div className="flex flex-wrap items-end justify-between gap-4">
       <div><h1 className="text-3xl font-semibold tracking-tight">{overview && vendorId ? 'Vendor transactions' : userId ? 'Transaction history' : 'Transactions'}</h1><p className="mt-1.5 text-sm text-muted-foreground">Completed transactions and coupon redemptions, with amounts paid after discounts.</p></div>
@@ -98,8 +122,20 @@ export function TransactionActivity({ vendorId, userId, overview = false }: { ve
           </form>
         </div>
       </div>
-      <div className="overflow-x-auto"><Table><TableHeader><TableRow><TableHead>Date and time</TableHead><TableHead>Student</TableHead><TableHead>Vendor / offer</TableHead><TableHead>Amount paid</TableHead><TableHead>Details</TableHead></TableRow></TableHeader><TableBody>
-        {data?.receipts.map(row => <TableRow key={`${row.userId}-${row.id}`}>
+      {canDelete && <div className="flex flex-wrap items-center justify-between gap-3 border-b px-4 py-3">
+        <label className="flex items-center gap-2 text-sm"><Checkbox aria-label="Select all transactions on this page" checked={allPageSelected} disabled={!pageRows.length || deleteMutation.isPending} onCheckedChange={checked => setSelected(current => {
+          const next = { ...current }
+          for (const row of pageRows) { const key = `${row.source}:${row.userId}:${row.id}`; if (checked) next[key] = row; else delete next[key] }
+          return next
+        })} />Select page</label>
+        <div className="flex items-center gap-3 text-sm">{Object.keys(selected).length > 0 && <><span className="text-muted-foreground">{Object.keys(selected).length} selected</span><Button variant="destructive" disabled={deleteMutation.isPending} onClick={() => {
+          if (Object.keys(selected).length > 500) { toast.error('Select up to 500 records at a time'); return }
+          if (window.confirm(`Permanently delete ${Object.keys(selected).length} selected transaction${Object.keys(selected).length === 1 ? '' : 's'}? This cannot be undone.`)) deleteMutation.mutate()
+        }}>{deleteMutation.isPending ? 'Deleting…' : 'Delete selected'}</Button><Button variant="ghost" disabled={deleteMutation.isPending} onClick={() => setSelected({})}>Clear selection</Button></>}</div>
+      </div>}
+      <div className="overflow-x-auto"><Table><TableHeader><TableRow>{canDelete && <TableHead><span className="sr-only">Select</span></TableHead>}<TableHead>Date and time</TableHead><TableHead>Student</TableHead><TableHead>Vendor / offer</TableHead><TableHead>Amount paid</TableHead><TableHead>Details</TableHead></TableRow></TableHeader><TableBody>
+        {data?.receipts.map(row => { const key = `${row.source}:${row.userId}:${row.id}`; return <TableRow key={key}>
+          {canDelete && <TableCell><Checkbox aria-label={`Select transaction for ${row.studentName || row.email}`} checked={!!selected[key]} disabled={deleteMutation.isPending} onCheckedChange={checked => setSelected(current => { const next = { ...current }; if (checked) next[key] = row; else delete next[key]; return next })} /></TableCell>}
           <TableCell className="whitespace-nowrap text-muted-foreground">{new Date(row.consumedAt).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })}</TableCell>
           <TableCell><Link className="font-medium underline-offset-4 hover:underline" to="/admin/students/$studentId/settings" params={{studentId:row.userId}} search={{page:1,pageSize:10,search:'',sort:'created_desc'}}>{row.studentName || row.email}</Link></TableCell>
           <TableCell><Link className="font-medium underline-offset-4 hover:underline" to="/admin/vendors/$vendorId/settings/invoices" params={{vendorId:row.vendorId}} search={{page:1,pageSize:10}}>{row.vendor}</Link><p className="mt-1 text-xs text-muted-foreground">{row.offer}</p></TableCell>
@@ -119,8 +155,8 @@ export function TransactionActivity({ vendorId, userId, overview = false }: { ve
               </div>
             </div>
           </details></TableCell>
-        </TableRow>)}
-        {data && !data.receipts.length && <TableRow><TableCell colSpan={5} className="py-10 text-center text-muted-foreground">No transactions found.</TableCell></TableRow>}
+        </TableRow>})}
+        {data && !data.receipts.length && <TableRow><TableCell colSpan={canDelete ? 6 : 5} className="py-10 text-center text-muted-foreground">No transactions found.</TableCell></TableRow>}
       </TableBody></Table></div>
       <div className="flex flex-wrap items-center justify-between gap-3 border-t p-4"><span className="text-sm text-muted-foreground">Page {page+1} · {data?.total ?? '…'} matching records</span><div className="flex gap-2"><Button variant="outline" disabled={page===0 || query.isFetching} onClick={() => setPage(page-1)}>Previous</Button><Button variant="outline" disabled={!data || (page+1)*25>=data.total || query.isFetching} onClick={() => setPage(page+1)}>Next</Button></div></div>
     </section>}

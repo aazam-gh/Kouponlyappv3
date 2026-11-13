@@ -4,9 +4,12 @@ export const Route = createFileRoute('/admin')({
     beforeLoad: ({ context, location }) => {
         const { auth } = context
 
-        // Wait until Supabase auth has resolved
+        // Keep the requested admin URL while the login page waits for session recovery.
         if (auth.isInitialLoading) {
-            return
+            throw redirect({
+                to: '/login',
+                search: { redirect: location.href },
+            })
         }
 
         // Not logged in at all

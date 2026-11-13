@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import { createFileRoute, useNavigate, Link } from '@tanstack/react-router'
 import {
     ArrowLeft,
@@ -12,6 +12,8 @@ import {
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { Input } from '@/components/ui/input'
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { toast } from 'sonner'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import type { Category } from '@/types/categories'
@@ -28,7 +30,9 @@ function CategoriesOverview() {
     const queryClient = useQueryClient()
     const [categories, setCategories] = useState<Category[]>([])
     const [uploading, setUploading] = useState(false)
-    const fileInputRef = useRef<HTMLInputElement>(null)
+    const [addDialogOpen, setAddDialogOpen] = useState(false)
+    const [newCategoryName, setNewCategoryName] = useState('')
+    const [newCategoryImage, setNewCategoryImage] = useState<File>()
 
     const categoriesQuery = useQuery(categoriesQueryOptions())
 
@@ -60,37 +64,33 @@ function CategoriesOverview() {
     })
 
     const addCategoryMutation = useMutation({
-        mutationFn: async (file: File) => {
+        mutationFn: async ({ name, file }: { name: string; file?: File }) => {
+            const categoryName = name.trim()
+            if (!categoryName) throw new Error('Enter a category name.')
+            const slug = categoryName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || crypto.randomUUID()
             setUploading(true)
-            const downloadURL = await uploadImage(
-                `categories/${Date.now()}_${file.name}`,
-                file,
-                { maxWidth: 256, quality: 0.8, versioned: true }
-            )
-
-            const newCatData = {
-                nameEnglish: 'New Category',
-                imageUrl: downloadURL,
-                order: categories.length + 1,
-                subcategories: []
+            const imageUrl = file ? await uploadImage(`categories/${crypto.randomUUID()}`, file, { maxWidth: 256, quality: 0.8, versioned: true }) : ''
+            const { data, error } = await supabase.from('couponly_categories').insert({ name: categoryName, slug, image_path: imageUrl || null, sort_order: Math.max(0, ...categories.map(category => category.order)) + 1, active: true }).select('id').single()
+            if (error) {
+                if (imageUrl) await deletePublicMedia(imageUrl).catch(cleanupError => console.error('Failed to remove category image after insert failure:', cleanupError))
+                if (error.code === '23505') throw new Error('A category with that name already exists. Choose a different name.')
+                throw error
             }
-
-            const name = newCatData.nameEnglish
-            const { data, error } = await supabase.from('couponly_categories').insert({ name, slug: name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, ''), image_path: downloadURL, sort_order: newCatData.order, active: true }).select('id').single()
-            if (error) throw error
-            return { id: data.id, ...newCatData } as Category
+            return { id: data.id, nameEnglish: categoryName, imageUrl, order: Math.max(0, ...categories.map(category => category.order)) + 1, subcategories: [] } as Category
         },
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ['categories'] })
+        onSuccess: async () => {
+            await queryClient.invalidateQueries({ queryKey: ['categories'] })
+            setAddDialogOpen(false)
+            setNewCategoryName('')
+            setNewCategoryImage(undefined)
             toast.success('Category added')
         },
         onError: (error) => {
             console.error('Error adding category:', error)
-            toast.error('Failed to add category')
+            toast.error(error instanceof Error ? error.message : 'Failed to add category')
         },
         onSettled: () => {
             setUploading(false)
-            if (fileInputRef.current) fileInputRef.current.value = ''
         }
     })
 
@@ -119,7 +119,7 @@ function CategoriesOverview() {
     }
 
     const handleAddCategory = () => {
-        fileInputRef.current?.click()
+        setAddDialogOpen(true)
     }
 
     const moveCategory = (index: number, direction: 'up' | 'down') => {
@@ -131,13 +131,6 @@ function CategoriesOverview() {
         newCats[index] = newCats[targetIndex]
         newCats[targetIndex] = temp
         setCategories(newCats)
-    }
-
-    const onFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0]
-        if (file) {
-            addCategoryMutation.mutate(file)
-        }
     }
 
     const handleDelete = (id: string, imageUrl: string) => {
@@ -198,8 +191,28 @@ function CategoriesOverview() {
                         <span className="hidden sm:inline">Add New Category</span>
                     </Button>
                 </div>
-                <input type="file" ref={fileInputRef} className="hidden" onChange={onFileChange} accept="image/*" />
             </div>
+
+            <Dialog open={addDialogOpen} onOpenChange={open => { if (!uploading) setAddDialogOpen(open) }}>
+                <DialogContent>
+                    <form onSubmit={event => { event.preventDefault(); addCategoryMutation.mutate({ name: newCategoryName, file: newCategoryImage }) }} className="space-y-5">
+                        <DialogHeader>
+                            <DialogTitle>Add category</DialogTitle>
+                            <DialogDescription>Choose a unique category name. A cover image is optional and can be added later.</DialogDescription>
+                        </DialogHeader>
+                        <label className="grid gap-2 text-sm font-medium">Category name
+                            <Input autoFocus required maxLength={80} value={newCategoryName} onChange={event => setNewCategoryName(event.target.value)} placeholder="e.g. Cafes" />
+                        </label>
+                        <label className="grid gap-2 text-sm font-medium">Cover image (optional)
+                            <Input type="file" accept="image/*" onChange={event => setNewCategoryImage(event.target.files?.[0])} />
+                        </label>
+                        <DialogFooter>
+                            <Button type="button" variant="outline" disabled={uploading} onClick={() => setAddDialogOpen(false)}>Cancel</Button>
+                            <Button type="submit" disabled={uploading || !newCategoryName.trim()}>{uploading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Adding…</> : 'Add category'}</Button>
+                        </DialogFooter>
+                    </form>
+                </DialogContent>
+            </Dialog>
 
             {/* Grid */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -210,7 +223,7 @@ function CategoriesOverview() {
                     >
                         {/* Image */}
                         <div className="relative w-full aspect-square overflow-hidden bg-gray-100">
-                            <img src={cat.imageUrl} className="w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-300" alt={cat.nameEnglish} />
+                            {cat.imageUrl ? <img src={cat.imageUrl} className="w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-300" alt={cat.nameEnglish} /> : <div className="grid h-full place-items-center text-gray-300"><FolderOpen className="h-12 w-12" aria-hidden="true" /></div>}
                             <div className="absolute top-3 left-3">
                                 <Badge className="bg-purple-600/90 text-white rounded-xl text-[10px] py-0.5 px-2.5 border-none shadow-sm font-bold capitalize">
                                     {cat.nameEnglish}
