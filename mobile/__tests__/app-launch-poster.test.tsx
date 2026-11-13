@@ -13,25 +13,41 @@ jest.mock('@/lib/supabase', () => ({
 }));
 jest.mock('@/components/ScalePressable', () => require('react-native').Pressable);
 
-const showPromotion = (payload: unknown) => {
+const promotion = (payload: unknown) => {
   mockMaybeSingle.mockResolvedValue({ data: { payload }, error: null });
   const client = new QueryClient({ defaultOptions: { queries: { gcTime: Infinity } } });
-  return render(<QueryClientProvider client={client}><HomeLaunchPromotion /></QueryClientProvider>);
+  return (enabled = true) => <QueryClientProvider client={client}><HomeLaunchPromotion enabled={enabled} /></QueryClientProvider>;
 };
 
 beforeEach(() => { mockMaybeSingle.mockReset(); mockRpc.mockReset().mockResolvedValue({ error: null }); jest.clearAllMocks(); });
 
-it('renders the promotion inline and opens its configured vendor even if tracking stalls', async () => {
+it('opens the configured vendor and dismisses the popup even if tracking stalls', async () => {
   mockRpc.mockReturnValue(new Promise(() => {}));
-  const screen = await showPromotion({ active: true, imageUrl: 'https://cdn.example.test/poster.webp', vendorId: 'vendor-123' });
+  const screen = await render(promotion({ active: true, imageUrl: 'https://cdn.example.test/poster.webp', vendorId: 'vendor-123' })());
   await fireEvent.press(await screen.findByLabelText('Featured promotion'));
   expect(router.push).toHaveBeenCalledWith({ pathname: '/kouponly/vendor/[id]', params: { id: 'vendor-123' } });
   expect(mockRpc).toHaveBeenCalledWith('couponly_record_cms_click', { p_document_id: 'appLaunchPoster', p_item_id: 'appLaunchPoster' });
+  expect(screen.queryByLabelText('Featured promotion')).toBeNull();
+});
+
+it('shows a dismissible modal on signed-in Home and keeps it dismissed on return', async () => {
+  const view = promotion({ active: true, imageUrl: 'https://cdn.example.test/poster.webp', vendorId: 'vendor-123' });
+  const screen = await render(view(false));
+  expect(mockMaybeSingle).not.toHaveBeenCalled();
+
+  await screen.rerender(view());
+  await fireEvent.press(await screen.findByLabelText('Close poster'));
+  expect(screen.queryByLabelText('Featured promotion')).toBeNull();
+
+  await screen.rerender(view(false));
+  await screen.rerender(view());
+  expect(screen.queryByLabelText('Featured promotion')).toBeNull();
+  expect(router.push).not.toHaveBeenCalled();
 });
 
 it('opens the configured HTTPS destination', async () => {
   const openUrl = jest.spyOn(Linking, 'openURL').mockResolvedValue(undefined as never);
-  const screen = await showPromotion({ active: true, imageUrl: 'https://cdn.example.test/poster.webp', destinationType: 'external', externalUrl: 'https://shop.example.test/deals' });
+  const screen = await render(promotion({ active: true, imageUrl: 'https://cdn.example.test/poster.webp', destinationType: 'external', externalUrl: 'https://shop.example.test/deals' })());
   await fireEvent.press(await screen.findByLabelText('Featured promotion'));
   expect(openUrl).toHaveBeenCalledWith('https://shop.example.test/deals');
   openUrl.mockRestore();
@@ -41,7 +57,7 @@ it.each([
   { active: false, imageUrl: 'https://cdn.example.test/poster.webp' },
   { active: true, imageUrl: 'javascript:alert(1)' },
 ])('hides an inactive promotion or unsupported image URL', async payload => {
-  const screen = await showPromotion({ ...payload, vendorId: 'vendor-123' });
+  const screen = await render(promotion({ ...payload, vendorId: 'vendor-123' })());
   await waitFor(() => expect(mockMaybeSingle).toHaveBeenCalledTimes(1));
   expect(screen.queryByLabelText('Featured promotion')).toBeNull();
 });

@@ -4,10 +4,12 @@ jest.mock('expo-location', () => ({
 }));
 
 import { getCurrentPosition } from '../lib/location';
+import * as Location from 'expo-location';
 
 it('rejects when iOS never returns a location fix', async () => {
   jest.useFakeTimers();
   const result = getCurrentPosition();
+  expect(Location.getCurrentPositionAsync).toHaveBeenCalledWith({ accuracy: Location.Accuracy.Balanced, mayShowUserSettingsDialog: false });
   const rejection = expect(result).rejects.toThrow('Could not determine your location. Please try again.');
   await jest.advanceTimersByTimeAsync(15_000);
   await rejection;

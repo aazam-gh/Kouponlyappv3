@@ -87,9 +87,9 @@ export default function EditProfileDetailsScreen() {
     finally { setSaving(false); }
   };
   return <>
-    <OnboardingScaffold headerTitle={t('edit_profile_title')} onBack={confirmDiscard} headerAction={{ label: t('cancel'), onPress: confirmDiscard, disabled: saving || uploading }} footer={<OnboardingPrimaryButton label={t('save')} loadingLabel={t('save')} loading={saving} disabled={!user || loading || uploading} onPress={() => void save()} />}>
+    <OnboardingScaffold compactContent headerTitle={t('edit_profile_title')} onBack={confirmDiscard} headerAction={{ label: t('cancel'), onPress: confirmDiscard, disabled: saving || uploading }} footer={<OnboardingPrimaryButton label={t('save')} loadingLabel={t('save')} loading={saving} disabled={!user || loading || uploading} onPress={() => void save()} />}>
       {loading ? <ActivityIndicator size="large" color={theme.brand} style={styles.loader} /> : <OnboardingFlowSectionMotion delay={80} style={styles.form}>
-        <View style={[styles.avatarEditor, { backgroundColor: theme.cardMuted, borderColor: theme.border }]}>
+        <ScalePressable accessibilityRole="button" accessibilityLabel={t('choose_photo')} onPress={changeAvatar} disabled={saving || uploading || profile.avatar_edit_used} style={[styles.avatarEditor, { backgroundColor: theme.cardMuted, borderColor: theme.border, opacity: saving || uploading || profile.avatar_edit_used ? 0.7 : 1 }]}>
           <View style={styles.avatarPreview}>
             <UserAvatar firstName={firstName} lastName={lastName} email={profile.email} photoURL={avatarUrl} seed={user?.id} size={68} />
             {!profile.avatar_edit_used ? <ScalePressable accessibilityLabel={t('choose_photo')} onPress={changeAvatar} disabled={saving || uploading} style={[styles.cameraAction, { backgroundColor: theme.actionSolid, borderColor: theme.cardMuted, opacity: saving || uploading ? 0.5 : 1 }]}>
@@ -102,7 +102,7 @@ export default function EditProfileDetailsScreen() {
               {uploading ? <ActivityIndicator color={theme.onActionSolid} /> : <Text style={[styles.photoActionText, { color: theme.onActionSolid }]}>{t('choose_photo')}</Text>}
             </ScalePressable> : null}
           </View>
-        </View>
+        </ScalePressable>
         <Text style={[styles.lockHint, { color: theme.mutedText }]}>{t('edit_once_hint')}</Text>
         <OnboardingField label={t('first_name')} value={firstName} onChangeText={(value) => { setFirstName(value); setFieldErrors((current) => ({ ...current, firstName: undefined })); }} placeholder={t('first_name_placeholder')} autoComplete="given-name" textContentType="givenName" editable={!saving && !profile.first_name_edit_used} error={fieldErrors.firstName} textAlign={isRTL ? 'right' : 'left'} />
         {profile.first_name_edit_used ? <Text style={[styles.lockHint, { color: theme.mutedText }]}>{t('edit_used')}</Text> : null}
@@ -112,7 +112,7 @@ export default function EditProfileDetailsScreen() {
           <Text style={[styles.fieldLabel, { color: theme.text }, isRTL && styles.textRTL]}>{t('date_of_birth')}</Text>
           <ScalePressable accessibilityRole="button" accessibilityLabel={t('date_of_birth')} onPress={openDatePicker} disabled={saving || profile.date_of_birth_edit_used} activeOpacity={0.82} style={[styles.dateInput, { backgroundColor: theme.cardMuted, borderColor: theme.border, opacity: saving || profile.date_of_birth_edit_used ? 0.58 : 1 }]}>
             <Text style={[styles.dateValue, { color: dob ? theme.text : theme.inputPlaceholder, textAlign: isRTL ? 'right' : 'left' }]}>{formatDate(dob) || 'DD/MM/YYYY'}</Text>
-            <Text style={[styles.dateAction, { color: theme.brandText }]}>{profile.date_of_birth_edit_used ? t('edit_used') : t('edit')}</Text>
+            {!profile.date_of_birth_edit_used ? <Text style={[styles.dateAction, { color: theme.brandText }]}>{t('edit')}</Text> : null}
           </ScalePressable>
         </View>
         <OnboardingField label={t('phone_number')} value={mobile} onChangeText={setMobile} placeholder={t('phone_number_placeholder')} autoComplete="tel" textContentType="telephoneNumber" keyboardType="phone-pad" editable={!saving && !profile.mobile_edit_used} textAlign={isRTL ? 'right' : 'left'} />

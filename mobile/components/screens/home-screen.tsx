@@ -24,7 +24,6 @@ import { queryClient } from '@/utils/queryClient';
 import { triggerSubtleHaptic } from '@/utils/haptics';
 import { DEFAULT_HOME_SECTION_ORDER, type HomeSectionId } from '@/lib/home-layout';
 import { useHomeContent } from '@/utils/useHomeContent';
-import HomeLaunchPromotion from '@/components/home/HomeLaunchPromotion';
 
 const VENDOR_PAGE_SIZE = 10;
 
@@ -125,7 +124,6 @@ export default function HomeScreen() {
       <Animated.ScrollView ref={listRef} style={{ backgroundColor: theme.background }} keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag" showsVerticalScrollIndicator={false} decelerationRate="fast" contentContainerStyle={[s.content, { paddingBottom: 64 + insets.bottom + 16 }]} refreshControl={refreshControl} {...tabBarScrollVisibility} onScroll={scrollHandler} scrollEventThrottle={16} onLayout={event => viewportHeight.set(event.nativeEvent.layout.height)}>
         <VerificationStatusBanner />
         {visibleSections.map(id => <React.Fragment key={id}>{sections[id]}</React.Fragment>)}
-        {showLaterSections && user ? <HomeLaunchPromotion /> : null}
       </Animated.ScrollView>
       {refreshing ? <View accessibilityRole="progressbar" accessibilityLabel={t('loading')} pointerEvents="none" style={s.refreshing}>
         <ActivityIndicator size="large" color={theme.brand} />

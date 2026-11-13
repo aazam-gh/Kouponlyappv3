@@ -20,6 +20,7 @@ import { NearbyProvider } from '../lib/nearby';
 import { RedemptionSheet } from '../components/RedemptionSheet';
 import * as couponlyBackend from '../lib/couponlyBackend';
 import { getPendingVerification, savePendingVerification } from '../lib/verification-pending';
+import * as Location from 'expo-location';
 
 jest.mock('posthog-react-native', () => ({usePostHog: () => ({capture: jest.fn()})}));
 
@@ -38,13 +39,34 @@ jest.mock('../lib/supabase', () => ({
     }) }),
   }) }) }),
 }));
-jest.mock('expo-location',()=>({getForegroundPermissionsAsync:jest.fn(async()=>({status:'denied',canAskAgain:false}))}));
+jest.mock('expo-location', () => ({
+  Accuracy: { Balanced: 3 },
+  getForegroundPermissionsAsync: jest.fn(async () => ({ status: 'denied', canAskAgain: false })),
+  requestForegroundPermissionsAsync: jest.fn(),
+  hasServicesEnabledAsync: jest.fn(async () => true),
+  getCurrentPositionAsync: jest.fn(async () => ({ coords: { latitude: 25.3, longitude: 51.5 } })),
+}));
+jest.mock('../lib/nearby-vendors', () => ({
+  fetchVendorMapLocations: jest.fn(async () => [{
+    ...require('../test/catalogue-fixture').fixture().deals[0],
+    name: 'Nearby Test Kitchen', vendorId: 'vendor-1', locationId: 'branch-1', latitude: 25.31, longitude: 51.51,
+  }]),
+}));
 beforeEach(() => { mockHomeOrder = undefined; loadFixture(); });
 const frame = { x: 0, y: 0, width: 393, height: 852 };
 const wrapper = (node: React.ReactNode) => render(<SafeAreaProvider initialMetrics={{ frame, insets: { top: 59, left: 0, right: 0, bottom: 34 } }}><AppThemeProvider><LocaleProvider><TabBarVisibilityProvider><QueryClientProvider client={queryClient}><CatalogueProvider><NearbyProvider><StoreProvider>{node}</StoreProvider></NearbyProvider></CatalogueProvider></QueryClientProvider></TabBarVisibilityProvider></LocaleProvider></AppThemeProvider></SafeAreaProvider>);
 afterEach(async () => { cleanup(); queryClient.clear(); clearFixture(); await AsyncStorage.clear(); });
 
 describe('mobile showcase states', () => {
+  it('loads nearby offers on Home with an existing location grant', async () => {
+    mockHomeOrder = ['nearby-vendors'];
+    (Location.getForegroundPermissionsAsync as jest.Mock).mockResolvedValueOnce({ status: 'granted', canAskAgain: true });
+    const view = await wrapper(<HomeScreen />);
+    expect(await view.findByText('Nearby Test Kitchen')).toBeTruthy();
+    expect(view.queryByText('Location access needed')).toBeNull();
+    expect(Location.requestForegroundPermissionsAsync).not.toHaveBeenCalled();
+  });
+
   it('renders only the Home sections selected by the CMS', async () => {
     const backend = require('../lib/backend');
     backend.fetchCloudCatalogue.mockClear();

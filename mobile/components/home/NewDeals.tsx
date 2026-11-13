@@ -1,5 +1,5 @@
 import ScalePressable from '@/components/ScalePressable';
-import { useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
 import { useRouter } from 'expo-router';
 import { Linking, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
@@ -26,6 +26,8 @@ export default function NewDeals({ onVendorPress }: NewDealsProps) {
     const { distanceByVendor } = useNearbyDistances();
     const { width } = useWindowDimensions();
 
+    useEffect(() => { void load(); }, [load]);
+
     const nearestVendors = useMemo(() => {
         if (!position) return [];
         return [...distanceByVendor.values()]
@@ -39,11 +41,11 @@ export default function NewDeals({ onVendorPress }: NewDealsProps) {
         : void Linking.openSettings();
     const heading = <HomeSectionHeading prefix={t('offers_near_you_prefix')} highlight={t('offers_near_you_highlight')} onSeeMore={() => router.push({ pathname: '/vendors', params: { section: 'nearby' } } as any)} />;
 
-    if (status === 'loading') {
+    if (status === 'idle' || status === 'loading') {
         return <View style={styles.container}>{heading}<StateSurface kind="loading" compact /></View>;
     }
 
-    if (status === 'idle' || status === 'permission') {
+    if (status === 'permission') {
         return <View style={styles.container}>
             {heading}
             <StateSurface kind="empty" compact title={t('offers_near_location_title')} message={t('offers_near_location_message')} />

@@ -14,6 +14,7 @@ import { Image } from "expo-image";
 import * as SplashScreen from "expo-splash-screen";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { Toast } from "@/components/ui";
+import HomeLaunchPromotion from '@/components/home/HomeLaunchPromotion';
 import { StoreProvider } from "@/lib/store";
 import { ThemeProvider, useAppTheme } from "@/lib/theme";
 import { AuthProvider } from "@/lib/auth";
@@ -46,6 +47,7 @@ function AppNavigation({ firstRunStatus }: { firstRunStatus: Exclude<FirstRunSta
   const posthog=usePostHog();
   const segments=useSegments();
   const screen=segments.filter(segment=>!segment.startsWith('(')).join('/')||'home';
+  const isHomeRoute=segments[0]==='(tabs)'&&(screen==='home'||screen==='index');
   const previousUserId=React.useRef<string|null>(null);
   const firstRunRedirected=React.useRef(false);
   React.useEffect(()=>{
@@ -95,7 +97,7 @@ function AppNavigation({ firstRunStatus }: { firstRunStatus: Exclude<FirstRunSta
     const subscription=Notifications.addNotificationResponseReceivedListener(openNotification);
     return ()=>subscription.remove();
   },[]);
-  return <><ReducedMotionConfig mode={theme.motion.reduceMotion ? ReduceMotion.Always : ReduceMotion.System}/><StatusBar style={theme.dark?"light":"dark"}/><Stack initialRouteName={firstRunStatus==='new'?'kouponly/welcome':'(tabs)'} screenOptions={{headerShown:false,contentStyle:{backgroundColor:theme.colors.paper},animation:theme.motion.reduceMotion?"fade":"default"}}/><Toast/></>;
+  return <><ReducedMotionConfig mode={theme.motion.reduceMotion ? ReduceMotion.Always : ReduceMotion.System}/><StatusBar style={theme.dark?"light":"dark"}/><Stack initialRouteName={firstRunStatus==='new'?'kouponly/welcome':'(tabs)'} screenOptions={{headerShown:false,contentStyle:{backgroundColor:theme.colors.paper},animation:theme.motion.reduceMotion?"fade":"default"}}/><HomeLaunchPromotion enabled={!!user&&isHomeRoute}/><Toast/></>;
 }
 
 export default function RootLayout(){

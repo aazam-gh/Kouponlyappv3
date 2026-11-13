@@ -93,18 +93,17 @@ export default function KouponlyMapScreen() {
     focusInitialized.current = true;
     void (async () => {
       let initialRegion = region;
-      let permission = await Location.getForegroundPermissionsAsync();
-      if (permission.status !== 'granted' && permission.canAskAgain) permission = await Location.requestForegroundPermissionsAsync();
-      if (permission.status === 'granted') {
-        try {
+      try {
+        const permission = await Location.getForegroundPermissionsAsync();
+        if (permission.status === 'granted') {
           const position = await getCurrentPosition();
           initialRegion = { latitude: position.coords.latitude, longitude: position.coords.longitude, latitudeDelta: 0.03, longitudeDelta: 0.03 };
           setRegion(initialRegion);
           setUserLocation({ latitude: position.coords.latitude, longitude: position.coords.longitude });
           if (mapReady.current) mapRef.current?.animateToRegion(initialRegion, reduceMotion ? 0 : 300);
           else pendingInitialRegion.current = initialRegion;
-        } catch { /* Keep Rajagiri as the initial region when location is unavailable. */ }
-      }
+        }
+      } catch { /* Keep Rajagiri as the initial region when location is unavailable. */ }
       if (active) void fetchMap(initialRegion);
     })();
     return () => { active = false; };

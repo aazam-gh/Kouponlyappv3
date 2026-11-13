@@ -12,6 +12,7 @@ import MeScreen from "../app/(tabs)/me";
 import DealScreen from "../app/deal/[id]";
 import VendorRoute from "../app/kouponly/vendor/[id]";
 import HistoryScreen from '../app/kouponly/history';
+import * as Location from 'expo-location';
 
 jest.mock('../lib/benefits', () => ({ useBenefits: () => ({benefits: null, isAdmin: false}), isCouponOfferUsed: () => false }));
 
@@ -37,7 +38,7 @@ jest.mock('../lib/profile', () => ({ useProfile: () => ({ profile: { full_name: 
 
 jest.mock('expo-crypto',()=>({randomUUID:jest.fn(()=>'12345678-1234-1234-1234-123456789012')}));
 jest.mock('react-native-maps',()=>({__esModule:true,default:require('react-native').View,Marker:require('react-native').View,Callout:require('react-native').View}));
-jest.mock('expo-location',()=>({Accuracy:{Balanced:1},getForegroundPermissionsAsync:jest.fn(async()=>({status:'granted',canAskAgain:true})),hasServicesEnabledAsync:jest.fn(async()=>true),getCurrentPositionAsync:jest.fn(async()=>({coords:{latitude:10,longitude:76}}))}));
+jest.mock('expo-location',()=>({Accuracy:{Balanced:1},getForegroundPermissionsAsync:jest.fn(async()=>({status:'granted',canAskAgain:true})),requestForegroundPermissionsAsync:jest.fn(async()=>({status:'granted',canAskAgain:true})),hasServicesEnabledAsync:jest.fn(async()=>true),getCurrentPositionAsync:jest.fn(async()=>({coords:{latitude:10,longitude:76}}))}));
 jest.mock('../lib/nearby-vendors',()=>({fetchNearbyFoodOffers:jest.fn(async()=>[]),fetchVendorMapLocations:jest.fn(async()=>[
   {...require('../test/catalogue-fixture').fixture().deals[0],vendorId:'vendor-1',locationId:'branch-1',branchName:'Waterfront',latitude:25.2854,longitude:51.531},
   {...require('../test/catalogue-fixture').fixture().deals[0],vendorId:'vendor-1',locationId:'branch-2',branchName:'Marina',place:'Marina road',latitude:25.2855,longitude:51.5311},
@@ -76,6 +77,16 @@ describe("reachable route coverage", () => {
     expect(router.push).toHaveBeenCalledWith({ pathname: '/kouponly/onboarding', params: { flow: 'login' } });
     await fireEvent.press(view.getByText("Create Account"));
     expect(router.push).toHaveBeenCalledWith('/kouponly/welcome');
+  });
+
+  it('shows the partner map without prompting and requests access on recenter', async () => {
+    (Location.getForegroundPermissionsAsync as jest.Mock).mockResolvedValueOnce({ status: 'undetermined', canAskAgain: true });
+    const view = await wrap(<MapScreen />);
+    expect(await view.findByLabelText('2 nearby places')).toBeTruthy();
+    expect(Location.requestForegroundPermissionsAsync).not.toHaveBeenCalled();
+    (Location.getForegroundPermissionsAsync as jest.Mock).mockResolvedValueOnce({ status: 'undetermined', canAskAgain: true });
+    await fireEvent.press(view.getByLabelText('Recenter map'));
+    expect(Location.requestForegroundPermissionsAsync).toHaveBeenCalledTimes(1);
   });
 
   it("shows Kouponly partner map locations and directions", async () => {

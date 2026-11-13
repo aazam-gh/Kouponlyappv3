@@ -33,9 +33,10 @@ type ScaffoldProps = {
   progress?: { current: number; total: number };
   footer?: ReactNode;
   transitionKey?: string;
+  compactContent?: boolean;
 };
 
-export function OnboardingScaffold({ children, title, headerTitle, subtitle, onBack, onClose, headerAction, progress, footer, transitionKey }: ScaffoldProps) {
+export function OnboardingScaffold({ children, title, headerTitle, subtitle, onBack, onClose, headerAction, progress, footer, transitionKey, compactContent }: ScaffoldProps) {
   const { theme, isDark } = useAppTheme();
   const { isRTL } = useAppLocale();
   const { t } = useTranslation();
@@ -73,7 +74,7 @@ export function OnboardingScaffold({ children, title, headerTitle, subtitle, onB
           <ScrollView
             style={styles.scroll}
             contentInsetAdjustmentBehavior="automatic"
-            contentContainerStyle={styles.content}
+            contentContainerStyle={[styles.content, compactContent && styles.compactContent]}
             keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={false}
           >
@@ -194,6 +195,7 @@ const styles = StyleSheet.create({
   headerActionText: { ...Typography.getTextVariantStyle('bodyStrong'), fontSize: 15 },
   progressWrap: { paddingHorizontal: 24, paddingBottom: 8, gap: 7 }, progressLabel: { ...Typography.getTextVariantStyle('bodyStrong'), fontSize: 12 }, progressTrack: { height: 5, borderRadius: 3, overflow: 'hidden' }, progressFill: { height: '100%', borderRadius: 3 },
   content: { flexGrow: 1, paddingHorizontal: 24, paddingTop: 24, paddingBottom: 40 },
+  compactContent: { paddingTop: 8 },
   title: { fontSize: 30, lineHeight: 38 },
   subtitle: { ...Typography.getTextVariantStyle('body'), fontSize: 16, lineHeight: 24, paddingTop: 10 },
   textRTL: { textAlign: 'right', writingDirection: 'rtl' }, body: { paddingTop: 28, gap: 16 },
