@@ -1,27 +1,32 @@
-import posthog from 'posthog-js';
-
 const apiKey = import.meta.env.VITE_POSTHOG_KEY;
 const host = import.meta.env.VITE_POSTHOG_HOST;
+let posthog: typeof import('posthog-js').default | undefined;
+let loading: Promise<void> | undefined;
 
-if (apiKey && host && typeof window !== 'undefined' && !posthog.__loaded) {
-  posthog.init(apiKey, {
-    api_host: host,
-    autocapture: false,
-    capture_pageview: false,
-    disable_session_recording: true,
+function loadAnalytics() {
+  if (!apiKey || !host || typeof window === 'undefined') return;
+  loading ??= import('posthog-js').then(({ default: client }) => {
+    posthog = client;
+    if (!client.__loaded) client.init(apiKey, {
+      api_host: host,
+      autocapture: false,
+      capture_pageview: false,
+      disable_session_recording: true,
+    });
   });
+  return loading;
 }
 
 export function identifyAnalyticsUser(userId: string) {
-  if (apiKey && host) posthog.identify(userId);
+  void loadAnalytics()?.then(() => posthog?.identify(userId));
 }
 
 export function resetAnalyticsUser() {
-  if (apiKey && host) posthog.reset();
+  void loadAnalytics()?.then(() => posthog?.reset());
 }
 
 export function capturePageView(pathname: string) {
-  if (apiKey && host) posthog.capture('$pageview', {
+  void loadAnalytics()?.then(() => posthog?.capture('$pageview', {
     $current_url: `${window.location.origin}${pathname}`,
-  });
+  }));
 }
