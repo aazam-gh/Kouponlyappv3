@@ -37,6 +37,6 @@ version 1 JSON before setting that URL as `EXPO_PUBLIC_HOME_FEED_URL` in the
 mobile build environment. The app can fall back to its direct Supabase reads.
 
 The feed reads saved CMS content on cache misses. A published change can take
-up to 60 seconds to appear at an edge location. Apply
-`20261111130000_home_preview_cards.sql` before releasing the mobile build to
-enable the bounded New Deals, Trending Offers and Top Brands previews.
+up to 60 seconds to appear at an edge location. Apply the Home preview migrations
+before releasing the mobile build. New Deals and Trending Offers are capped at 12
+items each, and Top Brands returns all eligible selections in CMS order.

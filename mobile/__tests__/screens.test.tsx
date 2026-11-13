@@ -8,6 +8,7 @@ import { cleanup, fireEvent, render, waitFor } from '@testing-library/react-nati
 import { act } from '@testing-library/react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { AuthProvider } from '../lib/auth';
 import { StoreProvider } from '../lib/store';
 import VendorSearchScreen from '../app/kouponly/search';
 import HomeScreen from '../app/(tabs)/index';
@@ -54,7 +55,7 @@ jest.mock('../lib/nearby-vendors', () => ({
 }));
 beforeEach(() => { mockHomeOrder = undefined; loadFixture(); });
 const frame = { x: 0, y: 0, width: 393, height: 852 };
-const wrapper = (node: React.ReactNode) => render(<SafeAreaProvider initialMetrics={{ frame, insets: { top: 59, left: 0, right: 0, bottom: 34 } }}><AppThemeProvider><LocaleProvider><TabBarVisibilityProvider><QueryClientProvider client={queryClient}><CatalogueProvider><NearbyProvider><StoreProvider>{node}</StoreProvider></NearbyProvider></CatalogueProvider></QueryClientProvider></TabBarVisibilityProvider></LocaleProvider></AppThemeProvider></SafeAreaProvider>);
+const wrapper = (node: React.ReactNode) => render(<SafeAreaProvider initialMetrics={{ frame, insets: { top: 59, left: 0, right: 0, bottom: 34 } }}><AppThemeProvider><LocaleProvider><TabBarVisibilityProvider><QueryClientProvider client={queryClient}><CatalogueProvider><NearbyProvider><AuthProvider><StoreProvider>{node}</StoreProvider></AuthProvider></NearbyProvider></CatalogueProvider></QueryClientProvider></TabBarVisibilityProvider></LocaleProvider></AppThemeProvider></SafeAreaProvider>);
 afterEach(async () => { cleanup(); queryClient.clear(); clearFixture(); await AsyncStorage.clear(); });
 
 describe('mobile showcase states', () => {

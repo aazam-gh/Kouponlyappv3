@@ -11,7 +11,7 @@ import SearchBar from './SearchBar';
 import { HOME_HORIZONTAL_GUTTER } from './layout';
 
 type Props = {
-    userName: string;
+    userName?: string;
     searchQuery: string;
     onSearchChange: (text: string) => void;
     onSearchSubmit: () => void;
@@ -43,7 +43,7 @@ export default function GreetingHeader({ userName, searchQuery, onSearchChange, 
             <SearchBar
                 compact
                 testID={testID}
-                placeholder={t('home_search_placeholder', { name: userName })}
+                placeholder={userName ? t('home_search_placeholder', { name: userName }) : t('search_placeholder')}
                 value={searchQuery}
                 onChangeText={onSearchChange}
                 onSubmit={onSearchSubmit}

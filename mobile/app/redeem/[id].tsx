@@ -20,11 +20,12 @@ import { OnboardingField } from '@/components/onboarding/OnboardingUI';
 import { offerAmounts } from '@/utils/offer-amounts';
 import { parseBillAmount } from '@/utils/bill-amount';
 import { syncCouponlyPushToken } from '@/lib/couponlyPush';
+import { StateSurface } from '@/components/StateSurface';
 
 export default function RedeemScreen() {
   const posthog = usePostHog();
   const { id, offerIndex, branch } = useLocalSearchParams<{ id: string; offerIndex?: string; branch?: string }>();
-  const router = useRouter(); const { theme } = useAppTheme(); const styles = makeStyles(theme); const insets = useSafeAreaInsets(); const { user } = useAuth();
+  const router = useRouter(); const { theme } = useAppTheme(); const styles = makeStyles(theme); const insets = useSafeAreaInsets(); const { user, loading: authLoading } = useAuth();
   const { status: catalogueStatus } = useCatalogue(); const { benefits, refresh, loading, error: benefitsFailure } = useBenefits(); const { retrySync } = useStore();
   const vendorDeal = dealById(id);
   const deal = vendorDeal ? dealAtBranch(vendorDeal, branch) : undefined;
@@ -86,7 +87,7 @@ export default function RedeemScreen() {
           <Text selectable accessibilityLabel="Redeemed at" style={styles.centerCopy}>{new Date(receipt.consumedAt).toLocaleString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Kolkata' })} IST</Text>
         </View>
         <Action label="Done" onPress={goBack} />
-      </> : !user ? <><Text style={styles.body}>Sign in to redeem a free coupon.</Text><Action label="Sign in" onPress={() => router.push({ pathname: '/kouponly/onboarding', params: { flow: 'login' } } as any)} /></>
+      </> : authLoading ? <StateSurface kind="loading" /> : !user ? <><Text style={styles.body}>Sign in to redeem a free coupon.</Text><Action label="Sign in" onPress={() => router.push({ pathname: '/kouponly/onboarding', params: { flow: 'login' } } as any)} /></>
       : !deal || !offer ? <Text style={styles.body}>{catalogueStatus === 'loading' ? 'Loading offer…' : 'This offer is unavailable.'}</Text>
       : <>
         <Vendor name={deal.name} logo={deal.logo} />

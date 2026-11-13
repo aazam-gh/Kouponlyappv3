@@ -28,7 +28,7 @@ import { useHomeContent } from '@/utils/useHomeContent';
 const VENDOR_PAGE_SIZE = 10;
 
 export default function HomeScreen() {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const { categories, editorial } = useHomeContent();
   const homeSectionOrder = editorial.data?.order ?? DEFAULT_HOME_SECTION_ORDER;
   const nearby = useNearby();
@@ -84,7 +84,7 @@ export default function HomeScreen() {
   const top = Platform.OS === 'android' ? NativeStatusBar.currentHeight ?? 24 : insets.top;
   const userName = user?.user_metadata?.full_name
     ? String(user.user_metadata.full_name).split(' ')[0]
-    : t('guest_home_name');
+    : authLoading ? undefined : t('guest_home_name');
   const refreshHome = React.useCallback(() => Promise.all([
     useFullCatalogue || revision > 0 ? refreshCatalogue() : Promise.resolve(),
     queryClient.refetchQueries({

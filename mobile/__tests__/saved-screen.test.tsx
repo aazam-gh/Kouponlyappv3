@@ -6,11 +6,12 @@ const mockToggleOffer = jest.fn((id: string) => { mockSavedState.savedOffers = m
 const mockDeleteIn = jest.fn(async () => ({ error: null }));
 let mockHydrated = true;
 let mockItems: any[] = [];
-let mockOwner = 'alice';
+let mockOwner: string | null = 'alice';
+let mockAuthLoading = false;
 const mockSavedState = { saved: [1] as number[], savedOffers: [] as string[] };
 const mockRefetch = jest.fn();
 jest.mock('expo-router', () => ({ router: { push: jest.fn() }, useFocusEffect: (fn: any) => require('react').useEffect(fn, [fn]) }));
-jest.mock('../lib/auth', () => ({ useAuth: () => ({ user: { id: mockOwner } }) }));
+jest.mock('../lib/auth', () => ({ useAuth: () => ({ user: mockOwner ? { id: mockOwner } : null, loading: mockAuthLoading }) }));
 jest.mock('../lib/store', () => ({ useStore: () => ({ hydrated: mockHydrated, state: mockSavedState, cloudStatus: 'synced', toggleSaved: mockToggle, toggleSavedOffer: mockToggleOffer, notify: jest.fn(), retrySync: jest.fn() }) }));
 jest.mock('../lib/supabase', () => ({ getSupabase: () => ({ from: () => ({ delete: () => ({ eq: () => ({ in: mockDeleteIn }) }) }) }) }));
 jest.mock('../lib/catalogue', () => ({ useCatalogue: () => ({ status: 'cloud', error: '', refresh: jest.fn() }) }));
@@ -21,7 +22,18 @@ jest.mock('react-native-safe-area-context', () => ({ SafeAreaView: require('reac
 jest.mock('../components/navigation/AppHeader', () => (props: any) => require('react').createElement(require('react-native').Text, null, props.title));
 jest.mock('../components/RemoteImage', () => ({ RemoteImage: require('react-native').View }));
 jest.mock('../components/StateSurface', () => ({ StateSurface: () => null }));
-beforeEach(() => { mockOwner = 'alice'; mockHydrated = true; mockItems = []; mockSavedState.saved = [1]; mockSavedState.savedOffers = []; jest.clearAllMocks(); });
+beforeEach(() => { mockOwner = 'alice'; mockAuthLoading = false; mockHydrated = true; mockItems = []; mockSavedState.saved = [1]; mockSavedState.savedOffers = []; jest.clearAllMocks(); });
+test('waits for session restore before showing the guest sign-in prompt', async () => {
+  mockOwner = null;
+  mockAuthLoading = true;
+  const view = await render(<SavedScreen />);
+  expect(view.queryByText(/Sign in to sync saved vendors/)).toBeNull();
+  expect(view.queryByText('Saved Cafe')).toBeNull();
+
+  mockAuthLoading = false;
+  await view.rerender(<SavedScreen />);
+  expect(view.getByText(/Sign in to sync saved vendors/)).toBeTruthy();
+});
 test('shows saved offers, saved vendors, and historical names when a vendor leaves the catalogue', async () => {
   const view = await render(<SavedScreen />);
   expect(view.queryByText('Saved offers')).toBeNull();

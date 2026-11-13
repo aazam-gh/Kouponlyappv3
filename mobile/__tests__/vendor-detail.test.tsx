@@ -26,7 +26,7 @@ jest.mock('../lib/catalogue', () => ({ useCatalogue: () => ({ status: 'cloud' })
 jest.mock('../lib/auth', () => ({ useAuth: () => ({ user: null }) }));
 jest.mock('../lib/benefits', () => ({ useBenefits: () => ({ benefits: mockBenefits }), isCouponOfferUsed: jest.requireActual('../lib/benefits').isCouponOfferUsed }));
 jest.mock('../lib/store', () => ({ useStore: () => ({
-  state: { saved: [], savedOffers: [] }, notify: mockNotify, toggleSaved: jest.fn(), toggleSavedOffer: mockToggleSavedOffer,
+  hydrated: true, state: { saved: [], savedOffers: [] }, notify: mockNotify, toggleSaved: jest.fn(), toggleSavedOffer: mockToggleSavedOffer,
 }) }));
 jest.mock('posthog-react-native', () => ({ usePostHog: () => ({ capture: jest.fn() }) }));
 jest.mock('../lib/data', () => ({ dealById: () => mockDeal }));

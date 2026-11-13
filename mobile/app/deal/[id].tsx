@@ -5,7 +5,7 @@ import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import * as Device from 'expo-device';
 import React, { useMemo, useState } from 'react';
-import { Alert, AppState, Image, Linking, Share, Modal, Platform, Pressable, ScrollView, StatusBar as NativeStatusBar, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import { ActivityIndicator, Alert, AppState, Image, Linking, Share, Modal, Platform, Pressable, ScrollView, StatusBar as NativeStatusBar, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import { AccessiblePressable, Empty, Screen, safeGoBack } from '@/components/ui';
@@ -63,8 +63,8 @@ export default function DealDetail({ dealId, loadedDeal }: { dealId?: string; lo
   const branchId = chosenBranch || params.branch || nearestBranch || vendorDeal?.locations?.[0]?.id;
   const deal = vendorDeal ? dealAtBranch(vendorDeal, branchId) : undefined;
   React.useEffect(() => { setChosenBranch(undefined); }, [id]);
-  const { state, notify, toggleSavedOffer } = useStore();
-  const { benefits } = useBenefits();
+  const { state, hydrated, notify, toggleSavedOffer } = useStore();
+  const { benefits, loading: benefitsLoading } = useBenefits();
   const [expandedOfferId, setExpandedOfferId] = useState<string | null>(null);
   const [closingOfferId, setClosingOfferId] = useState<string | null>(null);
   const [offerDetailsHeights, setOfferDetailsHeights] = useState<Record<string, number>>({});
@@ -203,8 +203,8 @@ export default function DealDetail({ dealId, loadedDeal }: { dealId?: string; lo
               {count && benefits?.subscription && !exhausted ? <><Text style={s.offerDetailsText}>Available again {new Date(benefits.subscription.endsAt).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })} IST. {benefits.rewardedReferrals < benefits.referralLimit ? 'Invite friends to earn an earlier coupon refresh.' : 'Your referral refresh limit has been reached.'}</Text><AccessiblePressable accessibilityRole="button" onPress={() => router.push('/invite-code')}><Text style={s.offerDetailsTitle}>Invite friends</Text></AccessiblePressable></> : null}
             </View>
             <View style={[s.offerActionsRow, isRTL && s.rowReverse]}>
-              <AccessiblePressable accessibilityRole="button" accessibilityLabel={`${state.savedOffers.includes(offer.id) ? 'Remove' : 'Save'} ${offer.title}`} accessibilityState={{ selected: state.savedOffers.includes(offer.id) }} onPress={() => toggleSavedOffer(offer.id)} style={s.saveOffer}><Ionicons name={state.savedOffers.includes(offer.id) ? 'bookmark' : 'bookmark-outline'} size={18} color={C.ink}/><Text style={s.saveOfferText}>{state.savedOffers.includes(offer.id) ? 'Saved' : 'Save'}</Text></AccessiblePressable>
-              <AccessiblePressable testID={`redeem-offer-${offer.index}`} disabled={count>0 || exhausted} onPress={()=>router.push({pathname:'/redeem/[id]',params:{id:String(deal.id),vendorId:deal.vendorId,offerIndex:String(offer.index),branch:branch?.id}} as any)} style={[s.redeem,(count>0 || exhausted)&&s.disabled]}><Ionicons name="flash" size={18} color="#FFFFFF"/><Text style={s.redeemText}>{exhausted?'Fully redeemed':count?'Used up':'Redeem offer'}</Text></AccessiblePressable>
+              <AccessiblePressable accessibilityRole="button" disabled={!hydrated} accessibilityLabel={!hydrated ? "Loading saved offers" : `${state.savedOffers.includes(offer.id) ? 'Remove' : 'Save'} ${offer.title}`} accessibilityState={{ selected: state.savedOffers.includes(offer.id) }} onPress={() => toggleSavedOffer(offer.id)} style={s.saveOffer}>{!hydrated ? <ActivityIndicator color={C.ink} /> : <><Ionicons name={state.savedOffers.includes(offer.id) ? 'bookmark' : 'bookmark-outline'} size={18} color={C.ink}/><Text style={s.saveOfferText}>{state.savedOffers.includes(offer.id) ? 'Saved' : 'Save'}</Text></>}</AccessiblePressable>
+              <AccessiblePressable testID={`redeem-offer-${offer.index}`} disabled={benefitsLoading && !benefits || count>0 || exhausted} onPress={()=>router.push({pathname:'/redeem/[id]',params:{id:String(deal.id),vendorId:deal.vendorId,offerIndex:String(offer.index),branch:branch?.id}} as any)} style={[s.redeem,((benefitsLoading && !benefits) || count>0 || exhausted)&&s.disabled]}><Ionicons name="flash" size={18} color="#FFFFFF"/><Text style={s.redeemText}>{exhausted?'Fully redeemed':count?'Used up':'Redeem offer'}</Text></AccessiblePressable>
             </View>
           </Animated.View>;
         })}</View>

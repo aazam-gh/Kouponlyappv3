@@ -2,6 +2,7 @@ import React from 'react';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Keyboard, TextInput, View } from 'react-native';
 import { AppHeader, AppText, PrimaryButton, Screen } from '@/components/ui';
+import { StateSurface } from '@/components/StateSurface';
 import { useAppTheme } from '@/lib/theme';
 import { useAuth } from '@/lib/auth';
 import { makeMutationId } from '@/lib/backend';
@@ -11,7 +12,7 @@ export default function StudentRequestScreen() {
   const params = useLocalSearchParams<{ kind?: string; email?: string; name?: string }>();
   const kind = params.kind === 'restaurant' ? 'restaurant' : 'school';
   const suggestedEmail = typeof params.email === 'string' ? params.email : '';
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const { colors: C } = useAppTheme();
   const [draft, setDraft] = React.useState<StudentRequest>({ kind, location: '', name: typeof params.name === 'string' ? params.name : '', domain: suggestedEmail.split('@')[1] || '', email: user?.email || suggestedEmail, contact: '', phone: '' });
   const [busy, setBusy] = React.useState(false);
@@ -24,11 +25,11 @@ export default function StudentRequestScreen() {
   React.useEffect(() => {
     if (draftOwner.current === user?.id) return;
     draftOwner.current = user?.id;
-    setDraft({ kind, location: '', name: typeof params.name === 'string' ? params.name : '', domain: '', email: user?.email || '', contact: '', phone: '' });
+    setDraft({ kind, location: '', name: typeof params.name === 'string' ? params.name : '', domain: suggestedEmail.split('@')[1] || '', email: user?.email || suggestedEmail, contact: '', phone: '' });
     setError(''); setDone(false); attempt.current = { fingerprint: '', id: '' };
   }, [user?.id, kind]);
   const submit = async () => {
-    if (inFlight.current) return;
+    if (authLoading || inFlight.current) return;
     if (kind === 'restaurant' && !user) { router.push({ pathname: '/kouponly/onboarding', params: { flow: 'login' } } as any); return; }
     const fingerprint = JSON.stringify(draft);
     if (attempt.current.fingerprint !== fingerprint) attempt.current = { fingerprint, id: makeMutationId() };
@@ -44,7 +45,7 @@ export default function StudentRequestScreen() {
   </View>;
   return <Screen testID="student-request-screen">
     <AppHeader title={kind === 'school' ? 'Suggest a school' : 'Request a restaurant'} back />
-    <View style={{ gap: 20, paddingTop: 16 }}>
+    {authLoading ? <StateSurface kind="loading" /> : <View style={{ gap: 20, paddingTop: 16 }}>
       {done ? <><AppText variant="title">Request submitted</AppText><AppText color="muted">Thanks! The Kouponly team will review your suggestion. {kind === 'school' ? 'Your school’s eligibility will be confirmed separately.' : 'We’ll use these details to contact the restaurant.'}</AppText><PrimaryButton label="Done" onPress={() => router.back()} /></> : <>
         <AppText color="muted">{kind === 'school' ? 'Can’t find your institute? Tell us its name and student email domain.' : 'Tell us where you’d like to use Kouponly. Manager details are optional.'}</AppText>
         {field('name', kind === 'school' ? 'Institute name (required)' : 'Restaurant name (required)')}
@@ -55,6 +56,6 @@ export default function StudentRequestScreen() {
         {error ? <AppText accessibilityRole="alert" color="danger">{error}</AppText> : null}
         <PrimaryButton label={kind === 'restaurant' && !user ? 'Sign in to submit' : 'Submit request'} loading={busy} onPress={() => void submit()} />
       </>}
-    </View>
+    </View>}
   </Screen>;
 }

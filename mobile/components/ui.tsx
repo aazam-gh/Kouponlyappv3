@@ -5,7 +5,7 @@ import * as Haptics from "expo-haptics";
 import { router } from "expo-router";
 import { ArrowLeft, ChevronRight, Heart, MapPin, Star } from "lucide-react-native";
 import React, { useEffect, useMemo } from "react";
-import { AccessibilityInfo, Image, Platform, ScrollView, StyleProp, StyleSheet, Text, TextProps, TextStyle, View, ViewStyle, useWindowDimensions } from "react-native";
+import { AccessibilityInfo, ActivityIndicator, Image, Platform, ScrollView, StyleProp, StyleSheet, Text, TextProps, TextStyle, View, ViewStyle, useWindowDimensions } from "react-native";
 import ScalePressable, { type ScalePressableProps } from './ScalePressable';
 import Animated from 'react-native-reanimated';
 import { CONTENT_ENTER, CONTENT_EXIT } from '@/utils/motion';
@@ -68,7 +68,7 @@ export function SectionTitle({eyebrow,title,action,onAction}:{eyebrow:string;tit
 }
 
 export function DealCard({deal,compact=false,playful=false,minimal=false}:{deal:Deal;compact?:boolean;playful?:boolean;minimal?:boolean}) {
-  const {state,toggleSaved,notify}=useStore(); const theme=useAppTheme(); const {colors:C}=theme; const saving=formatKouponlyCurrencyText(deal.saving); const styles=useMemo(()=>makeStyles(C),[theme.mode,theme.highContrast]); const saved=state.saved.includes(deal.id); const {distanceByVendor}=useNearbyDistances(); const distance=distanceByVendor.get(String(deal.vendorId||deal.id))?.label;
+  const {state,hydrated,toggleSaved,notify}=useStore(); const theme=useAppTheme(); const {colors:C}=theme; const saving=formatKouponlyCurrencyText(deal.saving); const styles=useMemo(()=>makeStyles(C),[theme.mode,theme.highContrast]); const saved=state.saved.includes(deal.id); const {distanceByVendor}=useNearbyDistances(); const distance=distanceByVendor.get(String(deal.vendorId||deal.id))?.label;
   return <View style={[styles.dealCard,compact&&styles.dealCompact,playful&&styles.dealPlayful]}>
     <AccessiblePressable testID={`deal-${deal.id}`} accessibilityLabel={[deal.name,...(minimal||playful?[]:[deal.offer]),...(playful?[]:[saving]),distance].filter(Boolean).join('. ')} accessibilityHint="Opens partner details" onPress={()=>router.push(`/deal/${deal.id}`)} style={[styles.dealLink,compact&&styles.dealLinkCompact]}>
       <View style={playful?styles.playfulPhoto:undefined}>
@@ -86,7 +86,7 @@ export function DealCard({deal,compact=false,playful=false,minimal=false}:{deal:
         </>}
       </View>
     </AccessiblePressable>
-    <AccessiblePressable accessibilityLabel={saved?`Remove ${deal.name} from saved`:`Save ${deal.name}`} accessibilityState={{selected:saved}} haptic="selection" onPress={()=>{toggleSaved(deal.id);notify(saved?"Removed from saved":"Saved for later")}} style={styles.heart}><AppIcon sf={saved?"heart.fill":"heart"} fallback={<Heart size={19} color={C.ink} fill={saved?C.lime:"transparent"}/>}/></AccessiblePressable>
+    <AccessiblePressable disabled={!hydrated} accessibilityLabel={!hydrated ? "Loading saved offers" : saved?`Remove ${deal.name} from saved`:`Save ${deal.name}`} accessibilityState={{selected:saved}} haptic="selection" onPress={()=>{toggleSaved(deal.id);notify(saved?"Removed from saved":"Saved for later")}} style={styles.heart}>{!hydrated ? <ActivityIndicator color={C.ink} /> : <AppIcon sf={saved?"heart.fill":"heart"} fallback={<Heart size={19} color={C.ink} fill={saved?C.lime:"transparent"}/>}/>}</AccessiblePressable>
   </View>;
 }
 

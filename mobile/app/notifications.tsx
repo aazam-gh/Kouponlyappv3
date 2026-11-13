@@ -31,6 +31,10 @@ export default function NotificationsRoute() {
   const { t } = useTranslation();
   const { isRTL } = useAppLocale();
   const [rows, setRows] = React.useState<NotificationRow[]>([]);
+  const [loadedOwner, setLoadedOwner] = React.useState<string | null>();
+  const rowsOwner = React.useRef<string | null>(null);
+  const owner = React.useRef(user?.id);
+  owner.current = user?.id;
   const [loading, setLoading] = React.useState(true);
   const [refreshing, setRefreshing] = React.useState(false);
   const [message, setMessage] = React.useState('');
@@ -38,8 +42,12 @@ export default function NotificationsRoute() {
   const [clearingAll, setClearingAll] = React.useState(false);
 
   const load = React.useCallback(async () => {
+    if (authLoading) return;
     if (!user) {
       setRows([]);
+      rowsOwner.current = null;
+      setMessage('');
+      setLoadedOwner(null);
       setLoading(false);
       setRefreshing(false);
       return;
@@ -52,15 +60,23 @@ export default function NotificationsRoute() {
         .order('created_at', { ascending: false })
         .limit(100);
       if (error) throw error;
+      if (owner.current !== user.id) return;
+      rowsOwner.current = user.id;
       setRows((data ?? []) as NotificationRow[]);
       setMessage('');
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : t('state_error_message'));
+      if (owner.current === user.id) {
+        if (rowsOwner.current !== user.id) setRows([]);
+        setMessage(error instanceof Error ? error.message : t('state_error_message'));
+      }
     } finally {
-      setLoading(false);
-      setRefreshing(false);
+      if (owner.current === user.id) {
+        setLoadedOwner(user.id);
+        setLoading(false);
+        setRefreshing(false);
+      }
     }
-  }, [user?.id, t]);
+  }, [authLoading, user?.id, t]);
 
   useFocusEffect(React.useCallback(() => { void load(); }, [load]));
   React.useEffect(() => {
@@ -126,14 +142,15 @@ export default function NotificationsRoute() {
     );
   };
 
+  const pending = authLoading || loading || loadedOwner !== (user?.id ?? null);
   return (
     <SafeAreaView style={[styles.root, { backgroundColor: C.paper }]} edges={['top']}>
-      <AppHeader title={t('notifications_title')} onBackPress={() => router.back()} trailing={rows.length > 0 ? (
+      <AppHeader title={t('notifications_title')} onBackPress={() => router.back()} trailing={!pending && rows.length > 0 ? (
         <ScalePressable accessibilityRole="button" accessibilityLabel={t('clear')} disabled={clearingAll} onPress={() => void clearAllNotifications()}>
           <Text style={[styles.clearAll, { color: C.lime }]}>{t('clear')}</Text>
         </ScalePressable>
       ) : null} />
-      {authLoading || loading ? <StateSurface kind="loading" /> : message && rows.length === 0 ? (
+      {pending ? <StateSurface kind="loading" /> : message && rows.length === 0 ? (
         <StateSurface kind="error" message={message} onRetry={() => void load()} />
       ) : (
         <FlatList

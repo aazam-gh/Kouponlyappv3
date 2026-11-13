@@ -15,7 +15,7 @@ jest.mock('../lib/nearby',()=>({useNearbyDistances:()=>({distanceByVendor:new Ma
 jest.mock('../lib/catalogue',()=>({useCatalogue:()=>({status:'cloud'})}));
 jest.mock('../lib/auth',()=>({useAuth:()=>({user:null})}));
 jest.mock('../lib/benefits',()=>({useBenefits:()=>({benefits:null}),isCouponOfferUsed:()=>false}));
-jest.mock('../lib/store',()=>({useStore:()=>({state:mockStoreState,notify:jest.fn(),toggleSaved:jest.fn(),toggleSavedOffer:mockToggleSavedOffer})}));
+jest.mock('../lib/store',()=>({useStore:()=>({hydrated:true,state:mockStoreState,notify:jest.fn(),toggleSaved:jest.fn(),toggleSavedOffer:mockToggleSavedOffer})}));
 jest.mock('posthog-react-native',()=>({usePostHog:()=>({capture:jest.fn()})}));
 jest.mock('../lib/data',()=>({dealById:()=>({id:1,name:'Vendor',image:'first.jpg',galleryImages:['first.jpg','second.jpg'],offers:[{id:'offer',index:0,title:'Offer',description:'Description'}],distanceKm:0})}));
 const wrap=()=>render(<SafeAreaProvider initialMetrics={{frame:{x:0,y:0,width:393,height:852},insets:{top:59,bottom:34,left:0,right:0}}}><AppThemeProvider><LocaleProvider><DealDetail /></LocaleProvider></AppThemeProvider></SafeAreaProvider>);

@@ -148,12 +148,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const uid = currentUser?.id;
     if (!uid || uid!==sessionOwner.current) return;
     const request=++accessRequest.current;
-    setStudentStatus('checking');
+    setStudentStatus(status => status === 'student' || status === 'admin' ? status : 'checking');
     try {
       const status=await accountAccess(uid);
       if(uid===sessionOwner.current&&request===accessRequest.current){setAccessOwner(uid);setStudentStatus(status);}
     } catch (error) {
-      if(uid===sessionOwner.current&&request===accessRequest.current)setStudentStatus('error');
+      if(uid===sessionOwner.current&&request===accessRequest.current){setAccessOwner(uid);setStudentStatus('error');}
       throw error;
     }
   }, []);
@@ -168,12 +168,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const request=++accessRequest.current;
     const uid = session?.user.id;
-    if (!uid) { setStudentStatus('none'); return; }
+    if (!uid) { setAccessOwner(undefined); setStudentStatus('none'); return; }
     let active = true;
     setStudentStatus('checking');
     void accountAccess(uid)
       .then(status => { if (active&&request===accessRequest.current){setAccessOwner(uid);setStudentStatus(status);} })
-      .catch(() => { if (active&&request===accessRequest.current)setStudentStatus('error'); });
+      .catch(() => { if (active&&request===accessRequest.current){setAccessOwner(uid);setStudentStatus('error');} });
     return () => { active = false; };
   }, [session?.user.id]);
 
@@ -248,7 +248,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const value = useMemo<AuthValue>(() => ({
     session,
     user: studentUser,
-    loading: loading || studentStatus === 'checking',
+    loading: loading || Boolean(session && (accessOwner !== session.user.id || studentStatus === 'checking')),
     isGuest: !studentUser,
     recoveryMode,
     signIn,
@@ -261,7 +261,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     signOut,
     deleteAccount,
     clearRecovery: () => setRecoveryMode(false),
-  }), [session, studentUser, loading, studentStatus, recoveryMode, signIn, signUp, sendReset, updatePassword, updateEmail, refreshSession, refreshStudentAccess, signOut, deleteAccount]);
+  }), [session, studentUser, loading, accessOwner, studentStatus, recoveryMode, signIn, signUp, sendReset, updatePassword, updateEmail, refreshSession, refreshStudentAccess, signOut, deleteAccount]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

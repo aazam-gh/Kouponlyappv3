@@ -21,7 +21,7 @@ type Card = { key: string; title: string; subtitle: string; image?: string; vend
 
 export default function SavedScreen() {
   const { theme } = useAppTheme();
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const { state, hydrated, cloudStatus, toggleSaved, toggleSavedOffer, notify, retrySync } = useStore();
   const catalogue = useCatalogue();
   const insets = useSafeAreaInsets();
@@ -90,7 +90,7 @@ export default function SavedScreen() {
   ];
   const refreshing = saved.isFetching || catalogue.status === 'loading';
   return <SafeAreaView testID="saved-tab-screen" edges={['top']} style={{ flex: 1, backgroundColor: theme.background }}>
-    <SectionList sections={hydrated ? sections : []} keyExtractor={item => item.key} stickySectionHeadersEnabled={false}
+    {authLoading ? <StateSurface kind="loading" /> : <SectionList sections={hydrated ? sections : []} keyExtractor={item => item.key} stickySectionHeadersEnabled={false}
       contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: insets.bottom + 110 }}
       refreshing={refreshing} onRefresh={() => { void catalogue.refresh(); if (user) void saved.refetch(); void retrySync(); }}
       ListHeaderComponent={<>
@@ -107,7 +107,7 @@ export default function SavedScreen() {
         </ScalePressable>
         {item.remove ? <ScalePressable accessibilityRole="button" accessibilityLabel={`Remove ${item.title} from saved`} onPress={item.remove} style={styles.remove}><Ionicons name="bookmark" size={22} color={theme.brand} /></ScalePressable> : null}
       </View>}
-    />
+    />}
   </SafeAreaView>;
 }
 const styles = StyleSheet.create({ section: { paddingTop: 24, paddingBottom: 12, gap: 8 }, heading: { fontSize: 23, fontFamily: 'Outfit-Bold' }, notice: { padding: 16, borderRadius: 18 }, card: { flexDirection: 'row', borderRadius: 20, borderWidth: 1, marginBottom: 12, overflow: 'hidden', alignItems: 'center' }, main: { flex: 1, padding: 12, flexDirection: 'row', gap: 12, alignItems: 'center' }, image: { width: 64, height: 64, borderRadius: 14 }, title: { fontSize: 17, fontFamily: 'Outfit-SemiBold' }, subtitle: { fontSize: 13, marginTop: 4, fontFamily: 'Outfit-Regular' }, remove: { width: 48, minHeight: 64, alignItems: 'center', justifyContent: 'center' } });

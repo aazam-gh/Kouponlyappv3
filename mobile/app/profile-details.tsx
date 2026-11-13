@@ -21,21 +21,23 @@ function InfoRow({ label, value, isRTL }: { label: string; value: string; isRTL:
 }
 
 export default function ProfileDetailsScreen() {
-  const { user, deleteAccount } = useAuth();
+  const { user, loading: authLoading, deleteAccount } = useAuth();
   const { profile, avatarUrl, refresh } = useProfile();
   const { theme } = useAppTheme();
   const { isRTL } = useAppLocale();
   const { t } = useTranslation();
   const { updated } = useLocalSearchParams<{ updated?: string }>();
   const [deleting, setDeleting] = React.useState(false);
-  const [loading, setLoading] = React.useState(true);
+  const [loadedRefresh, setLoadedRefresh] = React.useState<typeof refresh>();
+  const loading = authLoading || loadedRefresh !== refresh;
   React.useEffect(() => {
+    if (authLoading) return;
     let active = true;
     void refresh().catch(() => {
       if (active) Alert.alert(t('error'), t('profile_load_failed'));
-    }).finally(() => { if (active) setLoading(false); });
+    }).finally(() => { if (active) setLoadedRefresh(() => refresh); });
     return () => { active = false; };
-  }, [refresh, t]);
+  }, [authLoading, refresh, t]);
   const names = profile.full_name.trim().split(/\s+/);
   const firstName = profile.first_name ?? names[0] ?? '';
   const lastName = profile.last_name ?? names.slice(1).join(' ');
@@ -52,14 +54,15 @@ export default function ProfileDetailsScreen() {
       }).finally(() => setDeleting(false));
     } },
   ]);
-  return <OnboardingScaffold headerTitle={t('profile_details_title')} onBack={() => router.back()} headerAction={{ label: t('edit'), onPress: () => router.push('/edit-profile-details' as any), disabled: loading || deleting }}>
+  return <OnboardingScaffold headerTitle={t('profile_details_title')} onBack={() => router.back()} headerAction={{ label: t('edit'), onPress: () => router.push('/edit-profile-details' as any), disabled: !user || loading || deleting }}>
+    {loading ? <ActivityIndicator accessibilityLabel={t('state_loading_title')} size="large" color={theme.brand} style={styles.loader} /> : <>
     <OnboardingFlowSectionMotion delay={65} style={[styles.identityCard, isRTL && styles.identityCardRTL]}>
       <View style={[styles.avatarRing, { backgroundColor: theme.brandSoft, borderColor: theme.border }]}>
         <UserAvatar firstName={firstName} lastName={lastName} email={profile.email || user?.email} photoURL={avatarUrl} seed={user?.id} size={112} style={styles.avatarMain} />
       </View>
     </OnboardingFlowSectionMotion>
     {updated === '1' ? <InlineNotice tone="success">{t('profile_update_success')}</InlineNotice> : null}
-    {loading ? <ActivityIndicator size="large" color={theme.brand} style={styles.loader} /> : <OnboardingFlowSectionMotion delay={110} style={styles.content}>
+    <OnboardingFlowSectionMotion delay={110} style={styles.content}>
       <ResponsiveText variant="bodyStrong" style={[styles.sectionTitle, { color: theme.text }, isRTL && styles.textRTL]}>{t('personal_information')}</ResponsiveText>
       <View style={styles.infoList}>
         <InfoRow label={t('first_name')} value={firstName || t('first_name_placeholder')} isRTL={isRTL} />
@@ -70,11 +73,11 @@ export default function ProfileDetailsScreen() {
       <ResponsiveText variant="bodyStrong" style={[styles.sectionTitle, { color: theme.text }, isRTL && styles.textRTL]}>{t('account_information')}</ResponsiveText>
       <InfoRow label={t('email_address')} value={profile.email || user?.email || t('email_address_placeholder')} isRTL={isRTL} />
       <View style={[styles.dangerZone, { borderTopColor: theme.border }]}>
-        <ScalePressable accessibilityRole="button" accessibilityState={{ disabled: deleting }} disabled={deleting} onPress={confirmDelete} activeOpacity={0.75} style={[styles.deleteButton, { borderColor: theme.danger, opacity: deleting ? 0.45 : 1 }]}>
+        <ScalePressable accessibilityRole="button" disabled={!user || deleting} onPress={confirmDelete} activeOpacity={0.75} style={[styles.deleteButton, { borderColor: theme.danger, opacity: !user || deleting ? 0.45 : 1 }]}>
           {deleting ? <ActivityIndicator color={theme.danger} /> : <Text style={[styles.deleteButtonText, { color: theme.danger }]}>{t('delete_account')}</Text>}
         </ScalePressable>
       </View>
-    </OnboardingFlowSectionMotion>}
+    </OnboardingFlowSectionMotion></>}
   </OnboardingScaffold>;
 }
 

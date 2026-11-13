@@ -1,6 +1,7 @@
 import React from 'react';
 import { act, fireEvent, render, waitFor } from '@testing-library/react-native';
 import { Pressable, Text } from 'react-native';
+import { AppThemeProvider } from '../context/AppThemeContext';
 
 const mockUser = { id: 'student-session', email: 'student@example.edu', user_metadata: {} };
 const mockSession = { user: mockUser, access_token: 'test', refresh_token: 'test', expires_at: 0, token_type: 'bearer' };
@@ -13,7 +14,7 @@ const mockUpdateUser=jest.fn(async()=>({error:null}));
 let mockAuthListener:(event:string,session:any)=>void;
 jest.mock('../lib/couponlyPush',()=>({unregisterCouponlyPushTokenForCurrentUser:async()=>{throw Error('offline push registration');}}));
 const mockSupabase = {
-  rpc: (name: string) => name === 'kouponly_student_email_allowed' || name === 'kouponly_school_email' ? Promise.resolve({data:mockEmailAllowed,error:null}) : mockAdmin(),
+  rpc: (name: string) => name === 'kouponly_my_savings' ? Promise.resolve({data:0,error:null}) : name === 'kouponly_student_email_allowed' || name === 'kouponly_school_email' ? Promise.resolve({data:mockEmailAllowed,error:null}) : mockAdmin(),
   auth: {
     signOut:mockLogout,
     updateUser:mockUpdateUser,
@@ -31,6 +32,7 @@ jest.doMock('../lib/supabase', () => ({
 }));
 
 const { AuthProvider, useAuth } = require('../lib/auth') as typeof import('../lib/auth');
+const ProfileScreen = require('../components/screens/profile-screen').default;
 
 function Probe() {
   const { user, loading, refreshStudentAccess, signOut, updateEmail } = useAuth();
@@ -43,6 +45,26 @@ function Probe() {
   </>;
 }
 
+it('keeps the guest profile hidden while restoring a student session', async () => {
+  let finishCheck!: (result: { data: { id: string }; error: null }) => void;
+  mockMaybeSingle.mockReturnValueOnce(new Promise(resolve => { finishCheck = resolve; }));
+
+  const view = await render(<AppThemeProvider><AuthProvider><ProfileScreen /></AuthProvider></AppThemeProvider>);
+  expect(view.getByLabelText('Loading')).toBeTruthy();
+  expect(view.queryByText('LOG IN')).toBeNull();
+
+  await waitFor(() => expect(mockMaybeSingle).toHaveBeenCalled());
+  expect(view.getByLabelText('Loading')).toBeTruthy();
+  expect(view.queryByText('LOG IN')).toBeNull();
+
+  await act(async () => finishCheck({ data: { id: mockUser.id }, error: null }));
+  expect(view.getByText('Redemption History')).toBeTruthy();
+  expect(view.queryByLabelText('Loading')).toBeNull();
+
+  await act(async () => mockAuthListener('SIGNED_OUT', null));
+  expect(view.getByText('LOG IN')).toBeTruthy();
+});
+
 it('keeps authenticated accounts without a student row out of student-only flows until signup completes', async () => {
   mockMaybeSingle.mockResolvedValueOnce({ data: null, error: null }).mockResolvedValueOnce({ data: { id: mockUser.id }, error: null });
   const view = await render(<AuthProvider><Probe /></AuthProvider>);
@@ -53,6 +75,22 @@ it('keeps authenticated accounts without a student row out of student-only flows
   await fireEvent.press(view.getByText('Refresh student'));
   await waitFor(() => expect(view.getByText('student')).toBeTruthy());
   expect(view.getByText(mockUser.id)).toBeTruthy();
+});
+
+it('keeps the verified user visible during a background check and applies a denial once it returns', async () => {
+  mockMaybeSingle.mockResolvedValueOnce({ data: { id: mockUser.id }, error: null });
+  const view = await render(<AuthProvider><Probe /></AuthProvider>);
+  expect(await view.findByText('student')).toBeTruthy();
+
+  let finishCheck!: (result: { data: null; error: null }) => void;
+  mockAdmin.mockResolvedValueOnce({ data: false, error: null });
+  mockMaybeSingle.mockReturnValueOnce(new Promise(resolve => { finishCheck = resolve; }));
+  await fireEvent.press(view.getByText('Refresh student'));
+  expect(view.getByText('student')).toBeTruthy();
+  expect(view.queryByText('checking')).toBeNull();
+
+  await act(async () => finishCheck({ data: null, error: null }));
+  expect(view.getByText('guest')).toBeTruthy();
 });
 
 it('allows the verified existing administrator without creating a student profile', async () => {

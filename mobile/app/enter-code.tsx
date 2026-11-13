@@ -1,4 +1,5 @@
 import ScalePressable from '@/components/ScalePressable';
+import { StateSurface } from '@/components/StateSurface';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
 import { KeyboardAvoidingView, Platform, ScrollView, Text, TextInput, View } from 'react-native';
@@ -12,13 +13,13 @@ import { useStore } from '../lib/store';
 
 export default function EnterCodeScreen() {
   const router = useRouter(); const { theme } = useAppTheme(); const insets = useSafeAreaInsets();
-  const { user } = useAuth(); const { claim } = useBenefits(); const { retrySync } = useStore();
+  const { user, loading: authLoading } = useAuth(); const { claim } = useBenefits(); const { retrySync } = useStore();
   const [code, setCode] = useState(''); const [busy, setBusy] = useState(false); const [error, setError] = useState(''); const [success, setSuccess] = useState('');
   const request = useRef({ code: '', id: '' }); const inFlight = useRef(false);
   const owner = useRef(user?.id); owner.current = user?.id;
   useEffect(() => { setCode(''); setSuccess(''); setError(''); setBusy(false); inFlight.current = false; request.current = { code: '', id: '' }; }, [user?.id]);
   const submit = async () => {
-    if (inFlight.current || !code.trim()) return;
+    if (authLoading || inFlight.current || !code.trim()) return;
     if (!user) { router.push({ pathname: '/kouponly/onboarding', params: { flow: 'login' } } as any); return; }
     const normalized = code.trim().toUpperCase();
     if (request.current.code !== normalized) request.current = { code: normalized, id: makeMutationId() };
@@ -34,7 +35,7 @@ export default function EnterCodeScreen() {
   return <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1, backgroundColor: theme.background }}>
     <ScrollView keyboardShouldPersistTaps="handled" contentInsetAdjustmentBehavior="automatic" contentContainerStyle={{ paddingTop: Platform.OS === 'android' ? insets.top : 0, paddingBottom: insets.bottom + 24 }}>
       <AppHeader title="Enter a code" onBackPress={() => router.canGoBack() ? router.back() : router.replace('/kouponly/profile' as any)} />
-      <View style={{ padding: 24, gap: 16 }}>
+      {authLoading ? <StateSurface kind="loading" /> : <View style={{ padding: 24, gap: 16 }}>
         <Text style={{ color: theme.mutedText, lineHeight: 23 }}>Enter a friend’s five-character invite code. This refreshes their coupons for this month, up to three times total. Each account can use one friend’s code.</Text>
         <TextInput accessibilityLabel="Friend’s invite code" value={code} editable={!busy} onChangeText={text => { setCode(text.toUpperCase()); setError(''); setSuccess(''); }} placeholder="Friend’s invite code" placeholderTextColor={theme.subtleText} autoCapitalize="characters" autoCorrect={false} maxLength={5} returnKeyType="done" onSubmitEditing={() => void submit()} style={{ minHeight: 56, borderWidth: 1, borderColor: theme.border, borderRadius: 16, padding: 16, color: theme.text, fontFamily: 'Outfit-Regular' }} />
         {error ? <Text selectable accessibilityRole="alert" style={{ color: theme.danger }}>{error}</Text> : null}
@@ -43,7 +44,7 @@ export default function EnterCodeScreen() {
           <Text style={{ color: theme.buttonText, ...Typography.getTextVariantStyle('bodyStrong') }}>{busy ? 'Applying code…' : user ? 'Apply code' : 'Sign in to apply code'}</Text>
         </ScalePressable>
         {success ? <ScalePressable accessibilityRole="button" onPress={() => router.canGoBack() ? router.back() : router.replace('/kouponly/profile' as any)} style={{ minHeight: 44, alignItems: 'center', justifyContent: 'center' }}><Text style={{ color: theme.text }}>Done</Text></ScalePressable> : null}
-      </View>
+      </View>}
     </ScrollView>
   </KeyboardAvoidingView>;
 }

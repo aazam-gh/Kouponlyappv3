@@ -21,7 +21,7 @@ const parseDate = (value: unknown) => typeof value === 'string' && /^\d{4}-\d{2}
 const formatDate = (value: Date | null) => value ? new Intl.DateTimeFormat(undefined, { day: '2-digit', month: '2-digit', year: 'numeric' }).format(value) : '';
 
 export default function EditProfileDetailsScreen() {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const { reduceMotion } = useMotionPreferences();
   const { profile, saveProfile, refresh, avatarUrl, chooseAvatar, uploading } = useProfile();
   const { theme } = useAppTheme();
@@ -35,16 +35,19 @@ export default function EditProfileDetailsScreen() {
   const [dateDraft, setDateDraft] = React.useState<Date>(dob || DEFAULT_DATE);
   const [showDatePicker, setShowDatePicker] = React.useState(false);
   const [saving, setSaving] = React.useState(false);
-  const [loading, setLoading] = React.useState(true);
+  const [loadedRefresh, setLoadedRefresh] = React.useState<typeof refresh>();
+  const loading = authLoading || loadedRefresh !== refresh;
   const [initialDraft, setInitialDraft] = React.useState<{ firstName: string; lastName: string; dob: Date | null; mobile: string } | null>(null);
   const [fieldErrors, setFieldErrors] = React.useState<{ firstName?: string; lastName?: string }>({});
   React.useEffect(() => {
+    if (authLoading) return;
     let active = true;
+    setInitialDraft(null);
     void refresh().catch(() => {
       if (active) Alert.alert(t('error'), t('profile_load_failed'));
-    }).finally(() => { if (active) setLoading(false); });
+    }).finally(() => { if (active) setLoadedRefresh(() => refresh); });
     return () => { active = false; };
-  }, [refresh, t]);
+  }, [authLoading, refresh, t]);
   React.useEffect(() => {
     if (loading || initialDraft) return;
     const currentNames = profile.full_name.trim().split(/\s+/);
@@ -87,8 +90,8 @@ export default function EditProfileDetailsScreen() {
     finally { setSaving(false); }
   };
   return <>
-    <OnboardingScaffold compactContent headerTitle={t('edit_profile_title')} onBack={confirmDiscard} headerAction={{ label: t('cancel'), onPress: confirmDiscard, disabled: saving || uploading }} footer={<OnboardingPrimaryButton label={t('save')} loadingLabel={t('save')} loading={saving} disabled={!user || loading || uploading} onPress={() => void save()} />}>
-      {loading ? <ActivityIndicator size="large" color={theme.brand} style={styles.loader} /> : <OnboardingFlowSectionMotion delay={80} style={styles.form}>
+    <OnboardingScaffold compactContent headerTitle={t('edit_profile_title')} onBack={confirmDiscard} headerAction={{ label: t('cancel'), onPress: confirmDiscard, disabled: saving || uploading }} footer={<OnboardingPrimaryButton label={t('save')} loadingLabel={t('save')} loading={saving} disabled={!user || loading || !initialDraft || uploading} onPress={() => void save()} />}>
+      {loading || !initialDraft ? <ActivityIndicator accessibilityLabel={t('state_loading_title')} size="large" color={theme.brand} style={styles.loader} /> : <OnboardingFlowSectionMotion delay={80} style={styles.form}>
         <ScalePressable accessibilityRole="button" accessibilityLabel={t('choose_photo')} onPress={changeAvatar} disabled={saving || uploading || profile.avatar_edit_used} style={[styles.avatarEditor, { backgroundColor: theme.cardMuted, borderColor: theme.border, opacity: saving || uploading || profile.avatar_edit_used ? 0.7 : 1 }]}>
           <View style={styles.avatarPreview}>
             <UserAvatar firstName={firstName} lastName={lastName} email={profile.email} photoURL={avatarUrl} seed={user?.id} size={68} />

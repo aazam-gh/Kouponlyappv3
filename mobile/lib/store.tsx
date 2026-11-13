@@ -81,10 +81,11 @@ type StoreValue = {
 const StoreContext = createContext<StoreValue | null>(null);
 
 export function StoreProvider({children}:{children:React.ReactNode}) {
-  const {user}=useAuth();
+  const {user, loading: authLoading}=useAuth();
   const [state,dispatch] = useReducer(reducer,initialState);
   const [hydratedAccount,setHydratedAccount] = useState<string>();
-  const hydrated=hydratedAccount===(user?.id??"guest");
+  const awaitingAccount = authLoading && !user;
+  const hydrated=!awaitingAccount && hydratedAccount===(user?.id??"guest");
   const [toast,setToast] = useState("");
   const [cloudStatus,setCloudStatus]=useState<SyncStatus>("guest");const activeUser=useRef<string|null>(null);const queueRef=useRef<PendingMutation[]>([]);
   const userKey=(id:string)=>`kouponly.user.${id}.state.v3`;const queueKey=(id:string)=>`kouponly.user.${id}.pending.v1`;
@@ -111,9 +112,9 @@ export function StoreProvider({children}:{children:React.ReactNode}) {
   },[persistQueue]);
   const enqueue=useCallback((kind:PendingMutation['kind'],entityId:string,operation:PendingMutation['operation'],payload:Record<string,unknown>={})=>{const id=activeUser.current;if(!id)return;queueRef.current.push({id:makeMutationId(),userId:id,kind,entityId,operation,payload,createdAt:Date.now(),attempts:0});void persistQueue(id).then(flushQueue).catch(()=>{if(activeUser.current===id)setCloudStatus("offline")})},[persistQueue,flushQueue]);
   const refreshCloud=useCallback(async()=>{const id=activeUser.current;if(!id)return;try{await flushQueue();if(id!==activeUser.current||queueRef.current.length)return;const cloud=await fetchCloudState();if(id!==activeUser.current||queueRef.current.length)return;if(cloud){const next=replaceWithCloudState(cloud);dispatch({type:"hydrate",state:next});await AsyncStorage.setItem(userKey(id),JSON.stringify(next));}setCloudStatus("synced");await flushQueue();}catch{if(id===activeUser.current)setCloudStatus("offline")}},[flushQueue]);
-  useEffect(()=>{let active=true;(async()=>{setHydratedAccount(undefined);const id=user?.id??null;activeUser.current=id;queueRef.current=[];dispatch({type:"hydrate",state:initialState});try{if(!id){const current=await AsyncStorage.getItem(KEY);const old=current?null:await AsyncStorage.getItem(OLD_CURRENT_KEY);const previous=current||old?null:await AsyncStorage.getItem(PREVIOUS_KEY);const legacy=current||old||previous?null:await AsyncStorage.getItem(LEGACY_KEY);if(!active)return;dispatch({type:"hydrate",state:(current||old||previous||legacy)?migrateState(JSON.parse((current??old??previous??legacy)!)):initialState});queueRef.current=[];setCloudStatus("guest");}
+  useEffect(()=>{if(awaitingAccount)return;let active=true;(async()=>{setHydratedAccount(undefined);const id=user?.id??null;activeUser.current=id;queueRef.current=[];dispatch({type:"hydrate",state:initialState});try{if(!id){const current=await AsyncStorage.getItem(KEY);const old=current?null:await AsyncStorage.getItem(OLD_CURRENT_KEY);const previous=current||old?null:await AsyncStorage.getItem(PREVIOUS_KEY);const legacy=current||old||previous?null:await AsyncStorage.getItem(LEGACY_KEY);if(!active)return;dispatch({type:"hydrate",state:(current||old||previous||legacy)?migrateState(JSON.parse((current??old??previous??legacy)!)):initialState});queueRef.current=[];setCloudStatus("guest");}
     else{setCloudStatus("loading-cloud");const [cached,pending]=await Promise.all([AsyncStorage.getItem(userKey(id)),AsyncStorage.getItem(queueKey(id))]);if(!active)return;if(cached)dispatch({type:"hydrate",state:migrateState(JSON.parse(cached))});queueRef.current=pending?JSON.parse(pending):[];await refreshCloud();}}
-    catch{if(active&&id)setCloudStatus("offline");}finally{if(active)setHydratedAccount(id??"guest")}})();return()=>{active=false}},[user?.id,refreshCloud]);
+    catch{if(active&&id)setCloudStatus("offline");}finally{if(active)setHydratedAccount(id??"guest")}})();return()=>{active=false}},[awaitingAccount,user?.id,refreshCloud]);
   useEffect(()=>{if(!hydrated||activeUser.current!==(user?.id??null))return;const key=user?.id?userKey(user.id):KEY;AsyncStorage.setItem(key,JSON.stringify(state)).catch(()=>{})},[state,hydrated,user?.id]);
   useEffect(()=>{
     if(!user)return;

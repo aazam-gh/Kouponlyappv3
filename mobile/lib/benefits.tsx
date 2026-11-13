@@ -59,12 +59,13 @@ export async function redeemSubscriptionCoupon(offerId: string, roundId: string,
 type Value = { benefits: AccountBenefits | null; loading: boolean; error: string; isAdmin: boolean; refresh: () => Promise<void>; claim: (code: string, mutationId: string) => Promise<ClaimResult> };
 const Context = createContext<Value | null>(null);
 export function BenefitsProvider({ children }: { children: React.ReactNode }) {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const sequence = useRef(0);
   const owner = useRef(user?.id);
   owner.current = user?.id;
   const [snapshot, setSnapshot] = useState<{ userId: string; value: AccountBenefits } | null>(null);
   const [adminOwner, setAdminOwner] = useState<string | null>(null);
+  const [loadedOwner, setLoadedOwner] = useState<string>();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const refresh = useCallback(async () => {
@@ -76,10 +77,10 @@ export function BenefitsProvider({ children }: { children: React.ReactNode }) {
       const value = await benefitsRpc<AccountBenefits>('kouponly_account_benefits');
       if (owner.current === id && sequence.current === seq) setSnapshot({ userId: id, value });
     } catch (e) { if (owner.current === id && sequence.current === seq) { const message = e instanceof Error ? e.message : 'Unable to load account benefits.'; if (message === benefitsError('EMAIL_DOMAIN_NOT_ALLOWED') || message === 'Verified email required' || message === 'Verified @rajagiri.edu.in email required' || message === 'Account access unavailable') setSnapshot(null); setError(message); throw e; } }
-    finally { if (owner.current === id && sequence.current === seq) setLoading(false); }
+    finally { if (owner.current === id && sequence.current === seq) { setLoadedOwner(id); setLoading(false); } }
   }, [user?.id]);
   useEffect(() => {
-    setSnapshot(null); setAdminOwner(null); setError(''); setLoading(Boolean(user));
+    setSnapshot(null); setAdminOwner(null); setLoadedOwner(undefined); setError(''); setLoading(Boolean(user));
     if (!user) return;
     const id = user.id;
     void refresh().catch(() => {});
@@ -100,7 +101,8 @@ export function BenefitsProvider({ children }: { children: React.ReactNode }) {
     void refresh().catch(() => {});
     return result;
   }, [user?.id, refresh]);
-  return <Context.Provider value={{ benefits: snapshot && snapshot.userId === user?.id ? snapshot.value : null, isAdmin: !!user && adminOwner === user.id, loading, error, refresh, claim }}>{children}</Context.Provider>;
+  const pending = Boolean(authLoading || (user && (loading || loadedOwner !== user.id)));
+  return <Context.Provider value={{ benefits: snapshot && snapshot.userId === user?.id ? snapshot.value : null, isAdmin: !!user && adminOwner === user.id, loading: pending, error, refresh, claim }}>{children}</Context.Provider>;
 }
 export function useBenefits() { const value = useContext(Context); if (!value) throw new Error('useBenefits must be inside BenefitsProvider'); return value; }
 export { makeMutationId };

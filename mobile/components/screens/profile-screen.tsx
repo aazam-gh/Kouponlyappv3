@@ -5,11 +5,12 @@ import { useIsFocused, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Alert, Platform, ScrollView, StatusBar as NativeStatusBar, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, Platform, ScrollView, StatusBar as NativeStatusBar, StyleSheet, Text, View } from 'react-native';
 
 import { Typography } from '../../constants/Typography';
 import AppText from '../../components/AppText';
 import ResponsiveText from '../../components/ResponsiveText';
+import { StateSurface } from '../../components/StateSurface';
 import UserAvatar from '../../components/UserAvatar';
 import { useAppTheme } from '../../context/AppThemeContext';
 import { useAuth } from '../../lib/auth';
@@ -25,29 +26,31 @@ export default function ProfileScreen() {
   const { t } = useTranslation();
   const { isDark, theme } = useAppTheme();
   const { isRTL } = useAppLocale();
-  const { user, signOut } = useAuth();
+  const { user, loading: authLoading, signOut } = useAuth();
   const isGuest = !user;
   const endGuestSession = signOut;
   const { profile, avatarUrl } = useProfile();
-  const [savings, setSavings] = useState(0);
+  const [savings, setSavings] = useState<{ owner: string; amount: number | null }>();
   const userData = user ? {
     firstName: profile.full_name.split(' ')[0],
     lastName: profile.full_name.split(' ').slice(1).join(' '),
     email: profile.email || user.email,
     photoURL: avatarUrl,
     role: 'student',
-    savings,
   } : null;
   useEffect(() => {
     let active = true;
     if (user) void getSupabase().rpc('kouponly_my_savings')
-      .then(({ data, error }) => { if (active && !error) setSavings(Number(data) || 0); });
+      .then(({ data, error }) => {
+        if (active) setSavings(current => error && current?.owner === user.id
+          ? current : { owner: user.id, amount: error ? null : Number(data) || 0 });
+      });
     return () => { active = false; };
   }, [user?.id, isFocused]);
   const tabBarScrollVisibility = useTabBarScrollVisibility();
-  const savedAmount = userData?.savings ?? 0;
-  const savingsAmount = Number.isInteger(savedAmount) ? savedAmount.toFixed(0) : savedAmount.toFixed(2);
-  const formattedSavingsAmount = `₹${savingsAmount}`;
+  const currentSavings = savings?.owner === user?.id ? savings : undefined;
+  const savedAmount = currentSavings?.amount;
+  const formattedSavingsAmount = savedAmount == null ? '—' : `₹${savedAmount.toFixed(Number.isInteger(savedAmount) ? 0 : 2)}`;
   const androidTopInset = Platform.OS === 'android' ? NativeStatusBar.currentHeight ?? 24 : 0;
   const handleLogout = () => {
     Alert.alert(
@@ -73,6 +76,16 @@ export default function ProfileScreen() {
       ]
     );
   };
+  if (authLoading) {
+    return (
+      <View style={[styles.container, { backgroundColor: theme.background }]}>
+        <ProfileSprites />
+        {isFocused ? <StatusBar style={isDark ? 'light' : 'dark'} animated /> : null}
+        <StateSurface kind="loading" />
+      </View>
+    );
+  }
+
   if (isGuest) {
     return (
       <View style={[styles.container, { backgroundColor: theme.background }]}>
@@ -179,14 +192,14 @@ export default function ProfileScreen() {
               />
             </ScalePressable>
             <View style={[styles.savingsDetails, { borderColor: BorderPalette.border }, isRTL && styles.savingsDetailsRTL]}>
-              <View style={[styles.savingsInline, isRTL && styles.savingsInlineRTL]}>
+              {!currentSavings ? <ActivityIndicator accessibilityLabel={t('state_loading_title')} color={theme.brand} /> : <View style={[styles.savingsInline, isRTL && styles.savingsInlineRTL]}>
                 <ResponsiveText style={[styles.savingsValueText, { color: theme.brandText }]} minimumFontScale={0.7}>
                   {formattedSavingsAmount}
                 </ResponsiveText>
                 <ResponsiveText style={[styles.savingsValueText, { color: theme.text }]} minimumFontScale={0.7}>
                   {t('savings_saved_label')}
                 </ResponsiveText>
-              </View>
+              </View>}
             </View>
           </View>
         </View>
