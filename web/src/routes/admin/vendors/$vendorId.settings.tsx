@@ -38,11 +38,11 @@ function VendorSettingsLayout() {
             </div>
 
             <div className="w-full border-b">
-                <div className="flex w-full overflow-x-auto bg-muted/50 p-1 rounded-xl gap-1">
+                <div className="grid w-full grid-cols-2 lg:grid-cols-5 bg-muted/50 p-1 rounded-xl gap-1">
                     <Link
                         to="/admin/vendors/$vendorId/settings/branding"
                         params={{ vendorId }}
-                        className={`min-w-36 flex-1 flex items-center justify-center h-10 rounded-md text-sm font-medium transition-all ${location.pathname.endsWith('branding')
+                        className={`min-w-0 flex items-center justify-center h-10 rounded-md text-sm font-medium transition-all ${location.pathname.endsWith('branding')
                             ? 'bg-white text-black shadow-sm'
                             : 'text-muted-foreground hover:text-black hover:bg-white/50'
                             }`}
@@ -52,7 +52,7 @@ function VendorSettingsLayout() {
                     <Link
                         to="/admin/vendors/$vendorId/settings/offers"
                         params={{ vendorId }}
-                        className={`min-w-36 flex-1 flex items-center justify-center h-10 rounded-md text-sm font-medium transition-all ${location.pathname.endsWith('offers')
+                        className={`min-w-0 flex items-center justify-center h-10 rounded-md text-sm font-medium transition-all ${location.pathname.endsWith('offers')
                             ? 'bg-white text-black shadow-sm'
                             : 'text-muted-foreground hover:text-black hover:bg-white/50'
                             }`}
@@ -62,7 +62,7 @@ function VendorSettingsLayout() {
                     <Link
                         to="/admin/vendors/$vendorId/settings/location"
                         params={{ vendorId }}
-                        className={`min-w-36 flex-1 flex items-center justify-center h-10 rounded-md text-sm font-medium transition-all ${location.pathname.endsWith('location')
+                        className={`min-w-0 flex items-center justify-center h-10 rounded-md text-sm font-medium transition-all ${location.pathname.endsWith('location')
                             ? 'bg-white text-black shadow-sm'
                             : 'text-muted-foreground hover:text-black hover:bg-white/50'
                             }`}
@@ -72,12 +72,19 @@ function VendorSettingsLayout() {
                     <Link
                         to="/admin/vendors/$vendorId/settings/invoices"
                         params={{ vendorId }}
-                        className={`min-w-36 flex-1 flex items-center justify-center h-10 rounded-md text-sm font-medium transition-all ${location.pathname.endsWith('invoices')
+                        className={`min-w-0 flex items-center justify-center h-10 rounded-md text-sm font-medium transition-all ${location.pathname.endsWith('invoices')
                             ? 'bg-white text-black shadow-sm'
                             : 'text-muted-foreground hover:text-black hover:bg-white/50'
                             }`}
                     >
                         Transactions
+                    </Link>
+                    <Link
+                        to="/admin/vendors/$vendorId/settings/account-manager"
+                        params={{ vendorId }}
+                        className="flex min-h-10 min-w-0 items-center justify-center rounded-md px-2 text-center text-sm font-medium text-muted-foreground hover:bg-white/50 [&.active]:bg-white [&.active]:text-black [&.active]:shadow-sm"
+                    >
+                        Account manager
                     </Link>
                 </div>
             </div>

@@ -348,7 +348,7 @@ export function OffersSettings({ vendorId }: OffersSettingsProps) {
                             All offers use this vendor’s logo. Set each offer’s green badge text here, or <Link to="/admin/vendors/$vendorId/settings/branding" params={{ vendorId: vendorId! }} className="font-medium text-primary underline underline-offset-4">edit the vendor-wide card label</Link>.
                         </div>
                         {/* Discount Settings */}
-                        <div className="grid grid-cols-2 gap-4 p-5 bg-slate-50 rounded-2xl border border-slate-100">
+                        <div className="grid gap-4 p-3 sm:grid-cols-2 sm:p-5 bg-slate-50 rounded-2xl border border-slate-100">
                             <div className="space-y-2">
                                 <Label>Discount Type</Label>
                                 <Select

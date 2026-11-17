@@ -321,9 +321,9 @@ function ManageCategory() {
     if (!category) return null
 
     return (
-        <div className="p-8 space-y-10 max-w-6xl mx-auto font-sans bg-white min-h-screen">
+        <div className="p-4 sm:p-8 space-y-10 max-w-6xl mx-auto font-sans bg-white min-h-screen">
             {/* Header */}
-            <div className="flex items-center justify-between">
+            <div className="flex flex-wrap items-center justify-between gap-2">
                 <div className="flex items-center gap-4">
                     <Button
                         variant="ghost"
@@ -400,7 +400,7 @@ function ManageCategory() {
 
             {/* Sub-Categories */}
             <div className="space-y-8 pt-6 border-t">
-                <div className="flex items-center justify-between">
+                <div className="flex flex-wrap items-center justify-between gap-2">
                     <div className="flex items-center gap-2">
                         <h2 className="text-lg font-bold text-gray-900">Sub-Categories</h2>
                         <span className="text-xs font-bold px-2.5 py-0.5 bg-purple-100 text-purple-600 rounded-xl">

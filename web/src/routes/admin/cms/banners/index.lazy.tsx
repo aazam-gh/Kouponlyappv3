@@ -307,7 +307,7 @@ function BannersManagement() {
                                 </div>
                                 <CmsClickSummary documentId="banner" itemId={banner.bannerId} />
 
-                                <div className="flex items-center justify-between pt-3 border-t border-gray-200/60">
+                                <div className="flex flex-wrap items-center justify-between gap-2 pt-3 border-t border-gray-200/60">
                                     <div className="flex items-center gap-3">
                                         <button
                                             role="switch"

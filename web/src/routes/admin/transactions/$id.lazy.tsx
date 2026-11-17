@@ -17,7 +17,7 @@ function TransactionDetailsRoute() {
     }).format(value)
 
     return (
-        <div className="p-8 space-y-6 w-full max-w-[1200px] mx-auto">
+        <div className="p-4 sm:p-8 space-y-6 w-full max-w-[1200px] mx-auto">
             <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
                 <Link to="/admin/transactions" search={{ page: 1, pageSize: 10 }}>
                     <Button variant="ghost" size="icon" className="h-10 w-10">

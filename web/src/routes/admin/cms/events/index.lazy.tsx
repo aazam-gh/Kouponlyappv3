@@ -237,8 +237,8 @@ function EventsManagement() {
     }
 
     return (
-        <div className="p-8 space-y-8 max-w-6xl mx-auto font-sans bg-white min-h-screen">
-            <div className="flex items-center justify-between">
+        <div className="p-4 sm:p-8 space-y-8 max-w-6xl mx-auto font-sans bg-white min-h-screen">
+            <div className="flex flex-wrap items-center justify-between gap-2">
                 <div className="flex items-center gap-4">
                     <Button
                         variant="ghost"
@@ -277,7 +277,7 @@ function EventsManagement() {
                 </div>
             </div>
 
-            <div className="flex items-center justify-between border-b border-gray-100 pb-4">
+            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-gray-100 pb-4">
                 <div>
                     <h2 className="text-lg font-bold text-gray-900">Mobile Event Feed</h2>
                     <p className="text-sm text-gray-500">Saved to events and mirrored to cms/events for mobile fallback.</p>
@@ -376,7 +376,7 @@ function EventsManagement() {
                             </div>
                         </div>
 
-                        <div className="flex items-center justify-between gap-4 pt-5 mt-5 border-t border-gray-200/70">
+                        <div className="flex flex-wrap items-center justify-between gap-4 pt-5 mt-5 border-t border-gray-200/70">
                             <button
                                 onClick={() => updateEvent(event.id, { isActive: !event.isActive })}
                                 className="flex items-center gap-3"

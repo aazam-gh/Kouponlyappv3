@@ -8,7 +8,9 @@ import {
 import { Input } from "@/components/ui/input"
 import { useAuth } from "@/auth"
 import { useNavigate, useRouter, useSearch } from "@tanstack/react-router"
+import { ArrowRight } from "lucide-react"
 import * as React from "react"
+import kouponlyLogo from "../../../mobile/assets/images/kouponly-logo.png"
 
 export function LoginForm({
   className,
@@ -46,41 +48,30 @@ export function LoginForm({
 
   return (
     <form className={cn("flex flex-col gap-6", className)} {...props} onSubmit={handleLogin}>
-      <FieldGroup>
-        <div className="flex flex-col items-center gap-1 text-center">
-          <h1 className="text-2xl font-bold">Login to your account</h1>
-          <p className="text-muted-foreground text-sm text-balance">
-            Enter your email or username below to log in to your account
-          </p>
-        </div>
-        {error && (
-          <div className="bg-destructive/10 text-destructive text-sm p-3 rounded-md text-center">
-            {error}
-          </div>
-        )}
-        <Field>
+      <div className="space-y-2">
+        <img src={kouponlyLogo} alt="Kouponly" className="mx-auto mb-6 h-12 w-auto object-contain" />
+        <h1 className="text-center text-3xl font-bold tracking-tight text-[#0A0F0C] sm:text-4xl">Sign in</h1>
+        <p className="text-center text-sm text-[#5F6861]">Use your Kouponly email or username.</p>
+      </div>
+      {error && (
+        <p role="alert" className="rounded-xl bg-destructive/10 p-3 text-sm text-destructive">
+          {error}
+        </p>
+      )}
+      <FieldGroup className="gap-5">
+        <Field className="gap-2">
           <FieldLabel htmlFor="identifier">Email or username</FieldLabel>
-          <Input id="identifier" name="identifier" type="text" placeholder="Email or username" required disabled={isLoading} autoComplete="username" />
+          <Input id="identifier" name="identifier" type="text" required disabled={isLoading} autoComplete="username" autoCapitalize="none" spellCheck={false} className="h-12 rounded-xl bg-[#E8FAF0] px-3.5 text-base md:text-base" />
         </Field>
-        <Field>
-          <div className="flex items-center">
-            <FieldLabel htmlFor="password">Password</FieldLabel>
-            <a
-              href="#"
-              className="ml-auto text-sm underline-offset-4 hover:underline"
-            >
-              Forgot your password?
-            </a>
-          </div>
-          <Input id="password" name="password" type="password" required disabled={isLoading} autoComplete="current-password" />
+        <Field className="gap-2">
+          <FieldLabel htmlFor="password">Password</FieldLabel>
+          <Input id="password" name="password" type="password" required disabled={isLoading} autoComplete="current-password" className="h-12 rounded-xl bg-[#E8FAF0] px-3.5 text-base md:text-base" />
         </Field>
-        <Field>
-          <Button type="submit" disabled={isLoading} className="w-full bg-[#18B852] text-[#0A0A0A] hover:bg-[#128A43]">
-            {isLoading ? "Signing in..." : "Login"}
-          </Button>
-        </Field>
-
       </FieldGroup>
+      <Button type="submit" disabled={isLoading} className="h-12 w-full justify-between rounded-xl bg-[#18B952] px-4 text-base font-semibold text-[#0A0F0C] hover:brightness-95">
+        {isLoading ? "Signing in…" : "Sign in"}
+        <ArrowRight aria-hidden="true" className="size-4" />
+      </Button>
     </form>
   )
 }

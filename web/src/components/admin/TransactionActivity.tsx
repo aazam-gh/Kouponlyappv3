@@ -128,7 +128,7 @@ export function TransactionActivity({ vendorId, userId, overview = false }: { ve
           for (const row of pageRows) { const key = `${row.source}:${row.userId}:${row.id}`; if (checked) next[key] = row; else delete next[key] }
           return next
         })} />Select page</label>
-        <div className="flex items-center gap-3 text-sm">{Object.keys(selected).length > 0 && <><span className="text-muted-foreground">{Object.keys(selected).length} selected</span><Button variant="destructive" disabled={deleteMutation.isPending} onClick={() => {
+        <div className="flex flex-wrap items-center gap-3 text-sm">{Object.keys(selected).length > 0 && <><span className="text-muted-foreground">{Object.keys(selected).length} selected</span><Button variant="destructive" disabled={deleteMutation.isPending} onClick={() => {
           if (Object.keys(selected).length > 500) { toast.error('Select up to 500 records at a time'); return }
           if (window.confirm(`Permanently delete ${Object.keys(selected).length} selected transaction${Object.keys(selected).length === 1 ? '' : 's'}? This cannot be undone.`)) deleteMutation.mutate()
         }}>{deleteMutation.isPending ? 'Deleting…' : 'Delete selected'}</Button><Button variant="ghost" disabled={deleteMutation.isPending} onClick={() => setSelected({})}>Clear selection</Button></>}</div>

@@ -119,7 +119,7 @@ function NotificationsPage() {
     }
 
     return (
-        <div className="p-8 space-y-8 w-full max-w-[1600px] mx-auto">
+        <div className="p-4 sm:p-8 space-y-8 w-full max-w-[1600px] mx-auto">
             <div className="flex items-center gap-3">
                 <Bell className="h-8 w-8 text-primary" />
                 <h1 className="text-3xl font-bold tracking-tight">Notifications</h1>

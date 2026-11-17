@@ -97,8 +97,8 @@ function AddUniversityPage() {
     }
 
     return (
-        <div className="p-8 space-y-8 max-w-4xl mx-auto font-sans bg-white min-h-screen">
-            <div className="flex items-center justify-between">
+        <div className="p-4 sm:p-8 space-y-8 max-w-4xl mx-auto font-sans bg-white min-h-screen">
+            <div className="flex flex-wrap items-center justify-between gap-2">
                 <div className="flex items-center gap-4">
                     <Button
                         variant="ghost"

@@ -1,6 +1,6 @@
 ﻿import { createFileRoute, redirect } from '@tanstack/react-router'
 import { useQuery } from '@tanstack/react-query'
-import { vendorStatsQueryOptions, vendorChartDataQueryOptions, type ChartRange } from '@/queries'
+import { vendorMembershipQueryOptions, vendorStatsQueryOptions, vendorChartDataQueryOptions, type ChartRange } from '@/queries'
 import { useState } from 'react'
 import { Area, AreaChart, CartesianGrid, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
 import { useAuth } from '@/auth'
@@ -15,24 +15,25 @@ export const Route = createFileRoute('/(vendor-panel)/_vendor/dashboard')({
 
 function VendorDashboard() {
   const { user } = useAuth()
-  const vendorId = user?.uid || ''
+  const membership = useQuery(vendorMembershipQueryOptions(user?.id || ''))
+  const vendorId = membership.data || ''
   const [range, setRange] = useState<ChartRange>('7d')
   const [from, setFrom] = useState('')
   const [to, setTo] = useState('')
 
-  const statsQuery = useQuery(vendorStatsQueryOptions(vendorId))
-  const chartQuery = useQuery(vendorChartDataQueryOptions(vendorId, range, from, to))
+  const statsQuery = useQuery({ ...vendorStatsQueryOptions(vendorId), enabled: !!vendorId })
+  const chartQuery = useQuery({ ...vendorChartDataQueryOptions(vendorId, range, from, to), enabled: !!vendorId })
   const { data: stats, isLoading: statsLoading } = statsQuery
   const { data: chartData, isLoading: chartLoading } = chartQuery
 
-  if (statsLoading || chartLoading) {
+  if (membership.isLoading || statsLoading || chartLoading) {
     return <div className="flex justify-center items-center h-64"><Loader2 className="animate-spin" /></div>
   }
 
-  if (statsQuery.isError || chartQuery.isError) {
+  if (membership.isError || statsQuery.isError || chartQuery.isError) {
     return (
       <div role="alert" className="m-6 rounded-xl border border-red-200 bg-red-50 p-5 text-sm text-red-800">
-        <p className="m-0 font-semibold">Dashboard data could not be loaded.</p>
+        <p className="m-0 font-semibold">{membership.error?.message || 'Dashboard data could not be loaded.'}</p>
         <button className="mt-3 underline" onClick={() => void Promise.all([statsQuery.refetch(), chartQuery.refetch()])}>Try again</button>
       </div>
     )

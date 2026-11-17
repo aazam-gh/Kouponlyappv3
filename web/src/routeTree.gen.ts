@@ -55,6 +55,7 @@ import { Route as AdminVendorsVendorIdSettingsOffersRouteImport } from './routes
 import { Route as AdminVendorsVendorIdSettingsLocationRouteImport } from './routes/admin/vendors/$vendorId.settings.location'
 import { Route as AdminVendorsVendorIdSettingsInvoicesRouteImport } from './routes/admin/vendors/$vendorId.settings.invoices'
 import { Route as AdminVendorsVendorIdSettingsBrandingRouteImport } from './routes/admin/vendors/$vendorId.settings.branding'
+import { Route as AdminVendorsVendorIdSettingsAccountManagerRouteImport } from './routes/admin/vendors/$vendorId.settings.account-manager'
 
 const AdminRoute = AdminRouteImport.update({
   id: '/admin',
@@ -335,6 +336,12 @@ const AdminVendorsVendorIdSettingsBrandingRoute =
     path: '/branding',
     getParentRoute: () => AdminVendorsVendorIdSettingsRoute,
   } as any)
+const AdminVendorsVendorIdSettingsAccountManagerRoute =
+  AdminVendorsVendorIdSettingsAccountManagerRouteImport.update({
+    id: '/account-manager',
+    path: '/account-manager',
+    getParentRoute: () => AdminVendorsVendorIdSettingsRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -377,6 +384,7 @@ export interface FileRoutesByFullPath {
   '/admin/cms/home-layout/': typeof AdminCmsHomeLayoutIndexRoute
   '/admin/cms/trending-offer-banners/': typeof AdminCmsTrendingOfferBannersIndexRoute
   '/admin/cms/universities/': typeof AdminCmsUniversitiesIndexRoute
+  '/admin/vendors/$vendorId/settings/account-manager': typeof AdminVendorsVendorIdSettingsAccountManagerRoute
   '/admin/vendors/$vendorId/settings/branding': typeof AdminVendorsVendorIdSettingsBrandingRoute
   '/admin/vendors/$vendorId/settings/invoices': typeof AdminVendorsVendorIdSettingsInvoicesRoute
   '/admin/vendors/$vendorId/settings/location': typeof AdminVendorsVendorIdSettingsLocationRoute
@@ -421,6 +429,7 @@ export interface FileRoutesByTo {
   '/admin/cms/home-layout': typeof AdminCmsHomeLayoutIndexRoute
   '/admin/cms/trending-offer-banners': typeof AdminCmsTrendingOfferBannersIndexRoute
   '/admin/cms/universities': typeof AdminCmsUniversitiesIndexRoute
+  '/admin/vendors/$vendorId/settings/account-manager': typeof AdminVendorsVendorIdSettingsAccountManagerRoute
   '/admin/vendors/$vendorId/settings/branding': typeof AdminVendorsVendorIdSettingsBrandingRoute
   '/admin/vendors/$vendorId/settings/invoices': typeof AdminVendorsVendorIdSettingsInvoicesRoute
   '/admin/vendors/$vendorId/settings/location': typeof AdminVendorsVendorIdSettingsLocationRoute
@@ -470,6 +479,7 @@ export interface FileRoutesById {
   '/admin/cms/home-layout/': typeof AdminCmsHomeLayoutIndexRoute
   '/admin/cms/trending-offer-banners/': typeof AdminCmsTrendingOfferBannersIndexRoute
   '/admin/cms/universities/': typeof AdminCmsUniversitiesIndexRoute
+  '/admin/vendors/$vendorId/settings/account-manager': typeof AdminVendorsVendorIdSettingsAccountManagerRoute
   '/admin/vendors/$vendorId/settings/branding': typeof AdminVendorsVendorIdSettingsBrandingRoute
   '/admin/vendors/$vendorId/settings/invoices': typeof AdminVendorsVendorIdSettingsInvoicesRoute
   '/admin/vendors/$vendorId/settings/location': typeof AdminVendorsVendorIdSettingsLocationRoute
@@ -519,6 +529,7 @@ export interface FileRouteTypes {
     | '/admin/cms/home-layout/'
     | '/admin/cms/trending-offer-banners/'
     | '/admin/cms/universities/'
+    | '/admin/vendors/$vendorId/settings/account-manager'
     | '/admin/vendors/$vendorId/settings/branding'
     | '/admin/vendors/$vendorId/settings/invoices'
     | '/admin/vendors/$vendorId/settings/location'
@@ -563,6 +574,7 @@ export interface FileRouteTypes {
     | '/admin/cms/home-layout'
     | '/admin/cms/trending-offer-banners'
     | '/admin/cms/universities'
+    | '/admin/vendors/$vendorId/settings/account-manager'
     | '/admin/vendors/$vendorId/settings/branding'
     | '/admin/vendors/$vendorId/settings/invoices'
     | '/admin/vendors/$vendorId/settings/location'
@@ -611,6 +623,7 @@ export interface FileRouteTypes {
     | '/admin/cms/home-layout/'
     | '/admin/cms/trending-offer-banners/'
     | '/admin/cms/universities/'
+    | '/admin/vendors/$vendorId/settings/account-manager'
     | '/admin/vendors/$vendorId/settings/branding'
     | '/admin/vendors/$vendorId/settings/invoices'
     | '/admin/vendors/$vendorId/settings/location'
@@ -950,10 +963,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminVendorsVendorIdSettingsBrandingRouteImport
       parentRoute: typeof AdminVendorsVendorIdSettingsRoute
     }
+    '/admin/vendors/$vendorId/settings/account-manager': {
+      id: '/admin/vendors/$vendorId/settings/account-manager'
+      path: '/account-manager'
+      fullPath: '/admin/vendors/$vendorId/settings/account-manager'
+      preLoaderRoute: typeof AdminVendorsVendorIdSettingsAccountManagerRouteImport
+      parentRoute: typeof AdminVendorsVendorIdSettingsRoute
+    }
   }
 }
 
 interface AdminVendorsVendorIdSettingsRouteChildren {
+  AdminVendorsVendorIdSettingsAccountManagerRoute: typeof AdminVendorsVendorIdSettingsAccountManagerRoute
   AdminVendorsVendorIdSettingsBrandingRoute: typeof AdminVendorsVendorIdSettingsBrandingRoute
   AdminVendorsVendorIdSettingsInvoicesRoute: typeof AdminVendorsVendorIdSettingsInvoicesRoute
   AdminVendorsVendorIdSettingsLocationRoute: typeof AdminVendorsVendorIdSettingsLocationRoute
@@ -963,6 +984,8 @@ interface AdminVendorsVendorIdSettingsRouteChildren {
 
 const AdminVendorsVendorIdSettingsRouteChildren: AdminVendorsVendorIdSettingsRouteChildren =
   {
+    AdminVendorsVendorIdSettingsAccountManagerRoute:
+      AdminVendorsVendorIdSettingsAccountManagerRoute,
     AdminVendorsVendorIdSettingsBrandingRoute:
       AdminVendorsVendorIdSettingsBrandingRoute,
     AdminVendorsVendorIdSettingsInvoicesRoute:

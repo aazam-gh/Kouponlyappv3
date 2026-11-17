@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useQuery } from '@tanstack/react-query'
-import { vendorTransactionsQueryOptions } from '@/queries'
+import { vendorMembershipQueryOptions, vendorTransactionsQueryOptions } from '@/queries'
 import { useAuth } from '@/auth'
 import { Loader2 } from 'lucide-react'
 import { useState } from 'react'
@@ -11,23 +11,24 @@ export const Route = createFileRoute('/(vendor-panel)/_vendor/transaction-histor
 
 function VendorTransactionHistory() {
   const { user } = useAuth()
-  const vendorId = user?.uid || ''
+  const membership = useQuery(vendorMembershipQueryOptions(user?.id || ''))
+  const vendorId = membership.data || ''
   const navigate = useNavigate()
   const [from, setFrom] = useState('')
   const [to, setTo] = useState('')
 
-  const { data: transactions, isLoading, error } = useQuery(vendorTransactionsQueryOptions(vendorId, from, to))
+  const { data: transactions, isLoading, error } = useQuery({ ...vendorTransactionsQueryOptions(vendorId, from, to), enabled: !!vendorId })
 
-  if (isLoading) {
+  if (membership.isLoading || isLoading) {
     return <div className="flex justify-center items-center h-64"><Loader2 className="animate-spin" /></div>
   }
 
-  if (error) {
-    return <div className="flex justify-center items-center h-64 text-destructive">Failed to load transactions: {error.message}</div>
+  if (membership.error || error) {
+    return <div role="alert" className="flex justify-center items-center h-64 text-destructive">Failed to load transactions: {(membership.error || error)?.message}</div>
   }
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="min-w-0 space-y-6 p-4 sm:p-6">
       <div className="flex flex-wrap items-end justify-between gap-3"><h1 className="text-2xl font-bold">Transaction History</h1><div className="flex flex-wrap gap-2"><label className="grid gap-1 text-xs text-muted-foreground">From<input type="date" aria-label="Vendor transactions start date" value={from} max={to || undefined} onChange={e => setFrom(e.target.value)} className="rounded-md border px-2 py-1" /></label><label className="grid gap-1 text-xs text-muted-foreground">To<input type="date" aria-label="Vendor transactions end date" value={to} min={from || undefined} onChange={e => setTo(e.target.value)} className="rounded-md border px-2 py-1" /></label>{(from || to) && <button className="self-end text-sm underline" onClick={() => {setFrom('');setTo('')}}>Clear dates</button>}</div></div>
 
       <div className="bg-white rounded-xl shadow-sm border overflow-hidden">
@@ -49,15 +50,15 @@ function VendorTransactionHistory() {
               {transactions?.map((tx) => (
                 <tr
                   key={tx.id}
-                  className="hover:bg-muted/50 cursor-pointer transition-colors"
-                  onClick={() => navigate({ to: '/transaction-history/$transactionId', params: { transactionId: tx.id } })}
+                  className={tx.source === 'transaction' ? 'hover:bg-muted/50 cursor-pointer transition-colors' : 'hover:bg-muted/50'}
+                  onClick={tx.source === 'transaction' ? () => navigate({ to: '/transaction-history/$transactionId', params: { transactionId: tx.id } }) : undefined}
                 >
                   <td className="px-6 py-4 text-muted-foreground">
                     {new Date(tx.createdAt).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }) || 'N/A'}
                   </td>
                   <td className="px-6 py-4">{tx.studentName || 'Student'}</td>
                   <td className="px-6 py-4">{tx.studentPhone || '—'}</td>
-                  <td className="px-6 py-4">{tx.offerTitle}</td>
+                  <td className="px-6 py-4">{tx.offerTitle}{tx.source === 'redemption' && <span className="ml-2 rounded bg-muted px-2 py-0.5 text-xs">Coupon redemption</span>}</td>
                   <td className="px-6 py-4">₹{Number(tx.totalAmount).toLocaleString('en-IN')}</td>
                   <td className="px-6 py-4 text-muted-foreground">
                     ₹{Number(tx.discountAmount).toLocaleString('en-IN')}

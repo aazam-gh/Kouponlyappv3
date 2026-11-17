@@ -174,9 +174,9 @@ function UniversitiesManagement() {
     }
 
     return (
-        <div className="p-8 space-y-8 max-w-6xl mx-auto font-sans bg-white min-h-screen">
+        <div className="p-4 sm:p-8 space-y-8 max-w-6xl mx-auto font-sans bg-white min-h-screen">
             {/* Header */}
-            <div className="flex items-center justify-between">
+            <div className="flex flex-wrap items-center justify-between gap-2">
                 <div className="flex items-center gap-4">
                     <Button
                         variant="ghost"
@@ -214,7 +214,7 @@ function UniversitiesManagement() {
             </div>
 
             {/* Section Header */}
-            <div className="flex items-center justify-between border-b border-gray-100 pb-4">
+            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-gray-100 pb-4">
                 <div className="flex items-center gap-2">
                     <h2 className="text-lg font-bold text-gray-900">Configure Universities</h2>
                     <span className="text-xs font-bold px-2.5 py-0.5 bg-amber-100 text-amber-600 rounded-xl">

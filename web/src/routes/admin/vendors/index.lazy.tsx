@@ -182,7 +182,7 @@ function RouteComponent() {
 
             <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
                 <div className="flex items-center gap-2 w-full sm:max-w-lg">
-                    <div className="relative flex-1">
+                    <div className="relative min-w-0 flex-1">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                         <Input
                             aria-label="Search vendors"
@@ -205,7 +205,7 @@ function RouteComponent() {
                     </Button>
                     {searchQuery && <Button variant="ghost" onClick={() => { setSearchInput(''); updateFilters({ search: '' }) }}>Clear</Button>}
                 </div>
-                <div className="flex items-center gap-2 w-full sm:w-auto">
+                <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
                     <Button type="button" variant="outline" onClick={() => void exportCsv()} disabled={exporting}>{exporting ? 'Preparing…' : 'Export CSV'}</Button>
                     <Dialog open={open} onOpenChange={setOpen}>
                         <DialogTrigger asChild>

@@ -36,7 +36,7 @@ function SchoolDomains() {
   return <main className="mx-auto w-full max-w-4xl space-y-6 p-4 sm:p-8">
     <div><h1 className="text-2xl font-semibold">Allowed email domains</h1><p className="mt-1 text-sm text-muted-foreground">Only enabled domains can sign up, access student accounts, and redeem offers. Add an exact domain such as rajagiri.edu.in to allow addresses ending in @rajagiri.edu.in. Existing admin accounts retain panel access.</p></div>
     <form className="flex flex-wrap gap-2" onSubmit={e => { e.preventDefault(); const normalized = domain.trim().toLowerCase().replace(/^(?:\*?@)/, ''); if (!/^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]*[a-z0-9])?)+$/.test(normalized)) { toast.error('Enter a valid domain, such as college.edu.in'); return } add.mutate(normalized) }}>
-      <Input aria-label="Allowed email domain" placeholder="college.edu.in" value={domain} onChange={e => setDomain(e.target.value)} className="min-w-64 flex-1" />
+      <Input aria-label="Allowed email domain" placeholder="college.edu.in" value={domain} onChange={e => setDomain(e.target.value)} className="min-w-0 flex-1 basis-48" />
       <Button disabled={add.isPending}>Add domain</Button>
     </form>
     <div className="flex flex-wrap items-center justify-between gap-3"><p className="text-sm text-muted-foreground">{query.data?.filter(item => item.active).length ?? 0} enabled / {query.data?.length ?? 0} configured domains</p><Input aria-label="Search approved domains" placeholder="Search domains" value={search} onChange={e => setSearch(e.target.value)} className="sm:max-w-xs" /></div>

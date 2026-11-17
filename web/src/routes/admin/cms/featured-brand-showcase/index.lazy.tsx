@@ -262,7 +262,7 @@ function FeaturedBrandShowcaseManagement() {
 
             <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1.15fr)_minmax(360px,0.85fr)] gap-6">
                 <section className="bg-[#F8F9F9] rounded-2xl p-6 border border-gray-100 shadow-sm space-y-5">
-                    <div className="flex items-center justify-between border-b border-gray-200/70 pb-4">
+                    <div className="flex flex-wrap items-center justify-between gap-2 border-b border-gray-200/70 pb-4">
                         <div>
                             <h2 className="text-lg font-bold text-gray-900">Showcase Images</h2>
                             <p className="text-sm text-gray-500">Upload one hero image and three supporting tiles.</p>

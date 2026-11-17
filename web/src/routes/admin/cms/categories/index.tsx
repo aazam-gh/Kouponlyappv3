@@ -147,9 +147,9 @@ function CategoriesOverview() {
     }
 
     return (
-        <div className="p-8 space-y-8 max-w-6xl mx-auto font-sans">
+        <div className="p-4 sm:p-8 space-y-8 max-w-6xl mx-auto font-sans">
             {/* Header */}
-            <div className="flex items-center justify-between">
+            <div className="flex flex-wrap items-center justify-between gap-2">
                 <div className="flex items-center gap-4">
                     <Button
                         variant="ghost"

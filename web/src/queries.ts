@@ -122,7 +122,7 @@ export interface DailyChartPoint {
 export type ChartRange = '7d' | '30d' | '90d'
 const localDateKey = (date: Date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
 export interface VendorPortalTransaction {
-    id: string; createdAt: string; type: string; totalAmount: number; discountAmount: number
+    id: string; source: 'transaction' | 'redemption'; createdAt: string; type: string; totalAmount: number; discountAmount: number
     finalAmount: number; status: string; offerTitle: string; studentName: string; studentPhone: string | null
 }
 
@@ -138,6 +138,19 @@ export const vendorQueryOptions = (vendorId: string) => queryOptions({
     staleTime: STALE_TIME.EXTENDED,
 })
 
+export const vendorMembershipQueryOptions = (userId: string) => queryOptions({
+    queryKey: ['vendor-membership', userId],
+    queryFn: async () => {
+        if (!userId) return ''
+        const { data, error } = await supabase.from('couponly_vendor_memberships').select('vendor_id').eq('user_id', userId).in('role', ['owner', 'manager']).limit(2)
+        if (error) throw error
+        if (!data?.length) throw new Error('This account is not linked to a vendor.')
+        if (data.length > 1) throw new Error('This account is linked to more than one vendor. Ask an administrator to set its primary vendor.')
+        return String(data[0].vendor_id)
+    },
+    staleTime: STALE_TIME.EXTENDED,
+})
+
 export const vendorTransactionsQueryOptions = (vendorId: string, from = '', to = '', offset = 0) => queryOptions({
     queryKey: ['vendor-transactions', vendorId, from, to, offset],
     queryFn: async () => {
@@ -146,7 +159,7 @@ export const vendorTransactionsQueryOptions = (vendorId: string, from = '', to =
             p_vendor_id: vendorId, p_from: from || null, p_to: to || null, p_offset: offset, p_limit: 100,
         })
         if (error) throw error
-        return (data ?? []).map((row: any) => ({ id: row.transaction_id, createdAt: row.created_at, type: row.transaction_type, totalAmount: Number(row.total_amount), discountAmount: Number(row.discount_amount), finalAmount: Number(row.final_amount), status: row.status, offerTitle: row.offer_title, studentName: row.student_name, studentPhone: row.student_phone })) as VendorPortalTransaction[]
+        return (data ?? []).map((row: any) => ({ id: row.transaction_id, source: row.transaction_type === 'coupon_redemption' ? 'redemption' : 'transaction', createdAt: row.created_at, type: row.transaction_type, totalAmount: Number(row.total_amount), discountAmount: Number(row.discount_amount), finalAmount: Number(row.final_amount), status: row.status, offerTitle: row.offer_title, studentName: row.student_name, studentPhone: row.student_phone })) as VendorPortalTransaction[]
     },
     staleTime: STALE_TIME.MEDIUM,
 })

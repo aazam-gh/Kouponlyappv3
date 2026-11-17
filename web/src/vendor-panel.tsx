@@ -7,7 +7,9 @@ import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YA
 import { ArrowLeft, BarChart3, Building2, CalendarDays, CircleDollarSign, Clock3, KeyRound, LayoutDashboard, LogOut, Mail, ReceiptText, ShieldCheck, Tag, UserRound } from 'lucide-react'
 import type { User } from '@supabase/supabase-js'
 import { VendorCredentials, VendorCredentialLink } from '@/components/vendor-credentials'
+import { VendorAccountManager } from '@/components/vendor-account-manager'
 import { vendorCredentials } from '@/lib/vendor-credentials'
+import kouponlyLogo from '../../mobile/assets/images/kouponly-logo.png'
 
 type VendorSession = { user: User; vendorId: string }
 type VendorPanelAppProps = { queryClient: QueryClient }
@@ -82,14 +84,14 @@ function AuthenticatedVendorPanel({ queryClient }: VendorPanelAppProps) {
     window.history.replaceState({}, '', '/dashboard')
   }} />
 
-  const page = path.startsWith('/transactions') ? 'transactions' : path.startsWith('/offers') ? 'offers' : path.startsWith('/profile') ? 'profile' : path.startsWith('/password') ? 'password' : 'dashboard'
+  const page = path.startsWith('/transactions') ? 'transactions' : path.startsWith('/offers') ? 'offers' : path.startsWith('/profile') ? 'profile' : path.startsWith('/contact-us') ? 'contact' : path.startsWith('/password') ? 'password' : 'dashboard'
   return <VendorShell session={session} page={page} navigate={navigate} onLogout={async () => {
     await supabase.auth.signOut()
     queryClient.clear()
     setSession(null)
     navigate('/login')
   }}>
-    {page === 'transactions' ? <TransactionsPage vendorId={session.vendorId} /> : page === 'offers' ? <OffersPage vendorId={session.vendorId} queryClient={queryClient} /> : page === 'profile' ? <ProfilePage vendorId={session.vendorId} /> : page === 'password' ? <VendorCredentials /> : <DashboardPage vendorId={session.vendorId} />}
+    {page === 'transactions' ? <TransactionsPage vendorId={session.vendorId} /> : page === 'offers' ? <OffersPage vendorId={session.vendorId} queryClient={queryClient} /> : page === 'profile' ? <ProfilePage vendorId={session.vendorId} /> : page === 'contact' ? <section className="max-w-2xl space-y-4"><h2 className="text-xl font-semibold">Contact Account Manager</h2><VendorAccountManager vendorId={session.vendorId} /></section> : page === 'password' ? <VendorCredentials /> : <DashboardPage vendorId={session.vendorId} />}
   </VendorShell>
 }
 
@@ -118,16 +120,16 @@ function LoginPage({ onSuccess }: { onSuccess: (user: User) => Promise<void> }) 
     } finally { setSubmitting(false) }
   }
   if (showForgotPassword) return <ForgotPasswordPage onBack={() => setShowForgotPassword(false)} />
-  return <main className="flex min-h-screen items-center justify-center bg-[#f5f7f5] p-4">
+  return <main className="flex min-h-screen items-center justify-center bg-[#E8FAF0] p-4">
     <section className="w-full max-w-md rounded-2xl border bg-white p-8 shadow-sm">
-      <div className="mb-7 flex items-center gap-3"><div className="rounded-xl bg-green-100 p-3 text-green-700"><Building2 /></div><div><p className="m-0 text-xs font-semibold uppercase tracking-[.16em] text-green-700">Vendor Panel</p><h1 className="m-0 mt-1 text-2xl font-bold">Sign in to your account</h1></div></div>
+      <div className="mb-7 flex flex-col items-center text-center"><img src={kouponlyLogo} alt="Kouponly" className="mb-5 h-12 w-auto object-contain" /><p className="m-0 text-xs font-semibold uppercase tracking-[.16em] text-[#18B952]">Vendor Panel</p><h1 className="m-0 mt-2 text-2xl font-bold text-[#0A0F0C]">Sign in to your account</h1></div>
       <p className="mb-6 text-sm text-muted-foreground">View your transactions and business analytics.</p>
       <form onSubmit={submit} className="space-y-4">
         <label className="grid gap-1.5 text-sm font-medium">Username<input autoComplete="username" required value={username} onChange={e => setUsername(e.target.value)} className="h-11 rounded-lg border px-3 font-normal" /></label>
         <label className="grid gap-1.5 text-sm font-medium">Password<input autoComplete="current-password" type="password" required value={password} onChange={e => setPassword(e.target.value)} className="h-11 rounded-lg border px-3 font-normal" /></label>
-        <div className="-mt-2 text-right"><button type="button" onClick={() => setShowForgotPassword(true)} className="text-sm font-medium text-green-700 hover:underline">Forgot password?</button></div>
+        <div className="-mt-2 text-right"><button type="button" onClick={() => setShowForgotPassword(true)} className="text-sm font-medium text-[#18B952] hover:underline">Forgot password?</button></div>
         {error && <p role="alert" className="rounded-lg bg-red-50 p-3 text-sm text-red-700">{error}</p>}
-        <button className="h-11 w-full rounded-lg bg-green-600 font-semibold text-white hover:bg-green-700 disabled:opacity-60" disabled={submitting}>{submitting ? 'Signing in…' : 'Sign in'}</button>
+        <button className="h-11 w-full rounded-lg bg-[#18B952] font-semibold text-[#0A0F0C] hover:brightness-95 disabled:opacity-60" disabled={submitting}>{submitting ? 'Signing in…' : 'Sign in'}</button>
       </form>
       <p className="mt-5 flex items-start gap-2 text-xs text-muted-foreground"><ShieldCheck className="mt-0.5 size-4 shrink-0" />Vendor data is available only to accounts assigned to that vendor.</p>
     </section>
@@ -176,13 +178,14 @@ function VendorShell({ session, page, navigate, onLogout, children }: { session:
     { id: 'transactions', label: 'Transactions', href: '/transactions', Icon: ReceiptText },
     { id: 'offers', label: 'Offers', href: '/offers', Icon: Tag },
     { id: 'profile', label: 'Business profile', href: '/profile', Icon: UserRound },
+    { id: 'contact', label: 'Contact Us', href: '/contact-us', Icon: Mail },
     { id: 'password', label: 'Password', href: '/password', Icon: KeyRound },
   ]
   const name = String(session.user.user_metadata?.full_name || session.user.user_metadata?.username || 'Vendor')
   return <div className="min-h-screen bg-[#f5f7f5] md:flex">
     <aside className="flex w-full shrink-0 flex-col border-b bg-white p-4 md:min-h-screen md:w-64 md:border-b-0 md:border-r md:p-5">
       <div className="mb-6 flex items-center gap-3"><div className="rounded-xl bg-green-100 p-2 text-green-700"><Building2 className="size-5" /></div><div><p className="m-0 text-sm font-bold">Vendor Panel</p><p className="m-0 text-xs text-muted-foreground">Business insights</p></div></div>
-      <nav className="flex gap-2 md:flex-col">{links.map(({ id, label, href, Icon }) => <button key={id} onClick={() => navigate(href)} className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm ${page === id ? 'bg-green-50 font-semibold text-green-800' : 'text-muted-foreground hover:bg-gray-50'}`}><Icon className="size-4" />{label}</button>)}</nav>
+      <nav className="flex flex-wrap gap-2 md:flex-col">{links.map(({ id, label, href, Icon }) => <button key={id} onClick={() => navigate(href)} className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm ${page === id ? 'bg-green-50 font-semibold text-green-800' : 'text-muted-foreground hover:bg-gray-50'}`}><Icon className="size-4" />{label}</button>)}</nav>
       <div className="mt-auto hidden border-t pt-4 md:block"><p className="m-0 truncate text-sm font-semibold">{name}</p><p className="m-0 truncate text-xs text-muted-foreground">{String(session.user.user_metadata?.username || session.user.email || '')}</p><button className="mt-3 flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground" onClick={onLogout}><LogOut className="size-4" />Sign out</button></div>
     </aside>
     <main className="min-w-0 flex-1"><header className="flex items-center justify-between border-b bg-white px-5 py-4 md:px-8"><div><p className="m-0 text-xs text-muted-foreground">Vendor Panel</p><h1 className="m-0 text-lg font-semibold">{links.find(link => link.id === page)?.label ?? 'Overview'}</h1></div><button className="flex items-center gap-2 text-sm text-muted-foreground md:hidden" onClick={onLogout}><LogOut className="size-4" />Sign out</button></header><div className="mx-auto w-full max-w-7xl p-4 md:p-8">{children}</div></main>

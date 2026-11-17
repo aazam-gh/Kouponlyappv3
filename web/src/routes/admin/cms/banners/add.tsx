@@ -103,9 +103,9 @@ function AddBannerPage() {
 
 
     return (
-        <div className="p-8 space-y-8 max-w-4xl mx-auto font-sans bg-white min-h-screen">
+        <div className="p-4 sm:p-8 space-y-8 max-w-4xl mx-auto font-sans bg-white min-h-screen">
             {/* Header */}
-            <div className="flex items-center justify-between">
+            <div className="flex flex-wrap items-center justify-between gap-2">
                 <div className="flex items-center gap-4">
                     <Button
                         variant="ghost"
@@ -144,7 +144,7 @@ function AddBannerPage() {
                 <div className="max-w-xl mx-auto">
                     {/* Banner Upload */}
                     <div className="space-y-4">
-                        <div className="flex items-center justify-between px-2">
+                        <div className="flex flex-wrap items-center justify-between gap-2 px-2">
                             <p className="text-sm font-bold text-gray-900 uppercase tracking-wider">Banner Image</p>
                             <span className="text-[10px] text-gray-400 font-bold">Recommended: 1080x460</span>
                         </div>

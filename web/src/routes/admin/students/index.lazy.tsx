@@ -52,7 +52,7 @@ function Students() {
     finally { setExporting(false) }
   }
   return <div className="mx-auto w-full max-w-7xl space-y-6 p-4 sm:p-8">
-    <div className="flex items-start justify-between gap-4"><div><h1 className="text-2xl font-semibold">Students & profiles</h1>
+    <div className="flex flex-wrap items-start justify-between gap-4"><div><h1 className="text-2xl font-semibold">Students & profiles</h1>
       <p className="mt-1 text-sm text-muted-foreground">Email verification, monthly offer access and personal invites from the mobile app.</p></div>
       <Button variant="outline" onClick={() => void exportCsv()} disabled={exporting}>{exporting ? 'Preparing export…' : 'Export CSV'}</Button>
       <Button variant="outline" onClick={() => void query.refetch()} disabled={query.isFetching}>Refresh</Button></div>
@@ -71,7 +71,7 @@ function Students() {
           <TableCell className="font-mono">{student.inviteCode ?? 'Not allocated'}</TableCell>
         </TableRow>)}{!query.data.students.length && <TableRow><TableCell colSpan={7} className="py-10 text-center">No students match your search.</TableCell></TableRow>}</TableBody>
       </Table></div>
-      <div className="flex items-center justify-between gap-3"><Button variant="outline" disabled={search.page === 1 || query.isFetching} onClick={() => void navigate({ search: { ...search, page: search.page - 1 } })}>Previous</Button>
+      <div className="flex flex-wrap items-center justify-between gap-3"><Button variant="outline" disabled={search.page === 1 || query.isFetching} onClick={() => void navigate({ search: { ...search, page: search.page - 1 } })}>Previous</Button>
         <span className="text-sm text-muted-foreground">Page {search.page} · {query.data.total} students</span>
         <Button variant="outline" disabled={search.page * search.pageSize >= query.data.total || query.isFetching} onClick={() => void navigate({ search: { ...search, page: search.page + 1 } })}>Next</Button></div>
     </>}

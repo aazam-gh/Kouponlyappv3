@@ -93,8 +93,8 @@ function AddBrandPage() {
     }
 
     return (
-        <div className="p-8 space-y-8 max-w-4xl mx-auto font-sans bg-white min-h-screen">
-            <div className="flex items-center justify-between">
+        <div className="p-4 sm:p-8 space-y-8 max-w-4xl mx-auto font-sans bg-white min-h-screen">
+            <div className="flex flex-wrap items-center justify-between gap-2">
                 <div className="flex items-center gap-4">
                     <Button
                         variant="ghost"
@@ -132,7 +132,7 @@ function AddBrandPage() {
             <div className="bg-[#F8F9F9] rounded-[2.5rem] p-10 space-y-10 border border-gray-100 shadow-sm">
                 <div className="max-w-md mx-auto">
                     <div className="space-y-4">
-                        <div className="flex items-center justify-between px-2">
+                        <div className="flex flex-wrap items-center justify-between gap-2 px-2">
                             <p className="text-sm font-bold text-gray-900 uppercase tracking-wider">Brand Logo</p>
                         </div>
                         <div
