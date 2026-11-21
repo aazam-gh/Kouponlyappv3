@@ -1,6 +1,6 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
-import { RouterProvider, createRouter } from '@tanstack/react-router'
+import { RouterProvider, createLazyRoute, createRouter } from '@tanstack/react-router'
 
 import { routeTree } from './routeTree.gen'
 import { AuthContextProvider, useAuth } from './auth'
@@ -21,6 +21,15 @@ const router = createRouter({
     queryClient: queryClient,
   },
 })
+for (const route of Object.values(router.routesById)) {
+  const load = route.lazyFn
+  if (load) {
+    // Render lazy module failures through the route boundary instead of rejecting route setup.
+    route.lazy(() => load().catch((error: unknown) => createLazyRoute(route.id)({
+      component: () => { throw error },
+    })))
+  }
+}
 router.subscribe('onResolved', () => capturePageView(router.state.matches.at(-1)?.routeId ?? '/'))
 
 // Register things for typesafety
@@ -32,9 +41,15 @@ declare module '@tanstack/react-router' {
 
 function InnerApp() {
   const auth = useAuth()
+  const hasResolvedAuth = React.useRef(false)
   React.useEffect(() => {
-    if (!auth.isInitialLoading) void router.invalidate()
-  }, [auth.isInitialLoading, auth.isAuthenticated, auth.isAdmin])
+    if (auth.isInitialLoading) return
+    if (hasResolvedAuth.current) void router.invalidate()
+    hasResolvedAuth.current = true
+  }, [auth.isInitialLoading, auth.user?.id, auth.isAdmin])
+  if (auth.isInitialLoading) {
+    return <p role="status" className="grid min-h-screen place-items-center text-sm text-muted-foreground">Restoring your session…</p>
+  }
   return <RouterProvider router={router} context={{ auth, queryClient }} />
 }
 

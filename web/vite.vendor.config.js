@@ -9,6 +9,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url))
 export default defineConfig({
   configFile: false,
   root: path.resolve(__dirname, 'vendor-src'),
+  cacheDir: path.resolve(__dirname, 'node_modules/.vite-vendor'),
   envDir: __dirname,
   server: { fs: { allow: [__dirname] } },
   plugins: [tailwindcss(), react()],

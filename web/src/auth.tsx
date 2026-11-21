@@ -57,7 +57,7 @@ export function AuthContextProvider({children}:{children:React.ReactNode}) {
       receivedAuthEvent=true;
       const next=asAdminUser(session?.user||null);
       const request=++roleRequest.current;
-      if(owner.current!==next?.id){queryClient.clear();setAdmin(false);}
+      if(owner.current!==(next?.id??null)){queryClient.clear();setAdmin(false);}
       owner.current=next?.id??null;
       setUser(next);
       if(!next){setAdmin(false);setInitialLoading(false);return;}
@@ -77,7 +77,7 @@ export function AuthContextProvider({children}:{children:React.ReactNode}) {
         const session=data.session;
         const next=asAdminUser(session?.user||null);
         const request=++roleRequest.current;
-        if(owner.current!==next?.id){queryClient.clear();setAdmin(false);}
+        if(owner.current!==(next?.id??null)){queryClient.clear();setAdmin(false);}
         owner.current=next?.id??null;
         setUser(next);
         if(!next){setAdmin(false);setInitialLoading(false);return;}

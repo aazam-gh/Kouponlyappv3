@@ -1,4 +1,4 @@
-import { getCmsDocument, saveCmsDocument } from '@/lib/admin-cms'
+import { getCmsDocument, saveBannerDocument, type BannerDocument } from '@/lib/admin-cms'
 import { useState, useRef, useEffect } from 'react'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import {
@@ -77,25 +77,14 @@ function AddBannerPage() {
 
         setLoading(true)
         try {
-            const cmsSnap = await getCmsDocument('banner')
-
-            let bannersList: BannerItem[] = []
-            if (cmsSnap) {
-                bannersList = cmsSnap.banners || []
-            }
-
-            bannersList.push(banner)
-
-            await saveCmsDocument('banner', {
-                banners: bannersList,
-                lastUpdated: new Date().toISOString()
-            }, { merge: true })
+            const snapshot = await getCmsDocument<BannerDocument>('banner')
+            await saveBannerDocument(snapshot, [...(snapshot?.banners ?? []), banner])
 
             toast.success('Banner added successfully')
             navigate({ to: '/admin/cms/banners' })
         } catch (error) {
             console.error('Error saving banner:', error)
-            toast.error('Failed to add banner')
+            toast.error(error instanceof Error ? error.message : 'Failed to add banner')
         } finally {
             setLoading(false)
         }

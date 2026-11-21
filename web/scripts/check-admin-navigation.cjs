@@ -21,8 +21,12 @@ assert.deepEqual(adminBreadcrumbs('/admin/students/student-id/settings').map(c =
 assert.deepEqual(adminBreadcrumbs('/admin/vendors/vendor-id/settings/offers').map(c => c.title), ['Vendors & offers', 'Offers'])
 assert.deepEqual(adminBreadcrumbs('/admin/cms/banners/add').map(c => c.title), ['Home content', 'Partner banners', 'Add new'])
 assert.deepEqual(adminBreadcrumbs('/admin/cms/categories/food').map(c => c.title), ['Home content', 'Categories', 'Edit category'])
+const routeTree = fs.readFileSync(path.resolve(__dirname, '../src/routeTree.gen.ts'), 'utf8')
+const fullPathInterface = routeTree.match(/export interface FileRoutesByFullPath \{([^}]+)\}/)?.[1] ?? ''
+const routePaths = new Set([...fullPathInterface.matchAll(/^  '([^']+)':/gm)].map(match => match[1]))
+assert.ok(routePaths.size > 0, 'Could not read generated route paths')
 for (const link of homeContentLinks) {
   assert.deepEqual(adminBreadcrumbs(link.url + '/').map(c => c.title), ['Home content', link.title])
-  assert.ok(fs.existsSync(path.resolve(__dirname, '../src/routes', link.url.slice(1), 'index.tsx')), `Missing route for ${link.url}`)
+  assert.ok(routePaths.has(link.url) || routePaths.has(`${link.url}/`), `Missing route for ${link.url}`)
 }
 console.log('Admin navigation: nested links, path boundaries and breadcrumbs passed')

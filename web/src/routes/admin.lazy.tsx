@@ -12,10 +12,12 @@ export const Route = createLazyFileRoute('/admin')({
 })
 
 function AdminLayout() {
-    const { user, logout } = useAuth()
+    const { user, logout, isAdmin } = useAuth()
     const router = useRouter()
     // Use useNavigate from the route
     const navigate = Route.useNavigate()
+
+    if (!isAdmin) return null
 
     const handleLogout = () => {
         if (window.confirm('Are you sure you want to logout?')) {

@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import type { QueryClient } from '@tanstack/react-query'
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
-import { vendorChartDataQueryOptions, vendorQueryOptions, vendorStatsQueryOptions, vendorTransactionsQueryOptions, type ChartRange } from '@/queries'
+import { VENDOR_TRANSACTION_PAGE_SIZE, vendorChartDataQueryOptions, vendorQueryOptions, vendorStatsQueryOptions, vendorTransactionsQueryOptions, type ChartRange } from '@/queries'
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import { ArrowLeft, BarChart3, Building2, CalendarDays, CircleDollarSign, Clock3, KeyRound, LayoutDashboard, LogOut, Mail, ReceiptText, ShieldCheck, Tag, UserRound } from 'lucide-react'
 import type { User } from '@supabase/supabase-js'
@@ -36,14 +36,24 @@ async function getVendorMembership(userId: string) {
 }
 
 export function VendorPanelApp({ queryClient }: VendorPanelAppProps) {
-  if (window.location.pathname === '/credentials') return <VendorCredentialLink />
+  if (normalizeVendorPath(window.location.pathname) === '/credentials') return <VendorCredentialLink />
   return <AuthenticatedVendorPanel queryClient={queryClient} />
 }
+
+function normalizeVendorPath(path: string) {
+  return path.replace(/\/+$/, '') || '/'
+}
+
+const vendorPages = new Map([
+  ['/', 'dashboard'], ['/login', 'dashboard'], ['/dashboard', 'dashboard'],
+  ['/transactions', 'transactions'], ['/offers', 'offers'], ['/profile', 'profile'],
+  ['/contact-us', 'contact'], ['/password', 'password'],
+])
 
 function AuthenticatedVendorPanel({ queryClient }: VendorPanelAppProps) {
   const [session, setSession] = useState<VendorSession | null>(null)
   const [loading, setLoading] = useState(true)
-  const [path, setPath] = useState(window.location.pathname)
+  const [path, setPath] = useState(() => normalizeVendorPath(window.location.pathname))
 
   useEffect(() => {
     let alive = true
@@ -66,7 +76,7 @@ function AuthenticatedVendorPanel({ queryClient }: VendorPanelAppProps) {
       queryClient.clear()
       queueMicrotask(() => { void applySession(authSession?.user ?? null) })
     })
-    const onPopState = () => setPath(window.location.pathname)
+    const onPopState = () => setPath(normalizeVendorPath(window.location.pathname))
     window.addEventListener('popstate', onPopState)
     return () => { alive = false; subscription.unsubscribe(); window.removeEventListener('popstate', onPopState) }
   }, [queryClient])
@@ -76,15 +86,18 @@ function AuthenticatedVendorPanel({ queryClient }: VendorPanelAppProps) {
     setPath(to)
   }
 
+  const page = vendorPages.get(path)
+  if (!page) return <main className="grid min-h-screen place-content-center gap-3 p-4 text-center"><h1 className="text-2xl font-semibold">Page not found</h1><a href="/" className="underline">Go to Vendor Panel</a></main>
   if (loading) return <div className="flex min-h-screen items-center justify-center text-sm text-muted-foreground">Loading Vendor Panel…</div>
   if (!session) return <LoginPage onSuccess={async (user) => {
     const vendorId = await getVendorMembership(user.id)
     setSession({ user, vendorId })
-    setPath('/dashboard')
-    window.history.replaceState({}, '', '/dashboard')
+    if (path === '/' || path === '/login') {
+      setPath('/dashboard')
+      window.history.replaceState({}, '', '/dashboard')
+    }
   }} />
 
-  const page = path.startsWith('/transactions') ? 'transactions' : path.startsWith('/offers') ? 'offers' : path.startsWith('/profile') ? 'profile' : path.startsWith('/contact-us') ? 'contact' : path.startsWith('/password') ? 'password' : 'dashboard'
   return <VendorShell session={session} page={page} navigate={navigate} onLogout={async () => {
     await supabase.auth.signOut()
     queryClient.clear()
@@ -205,7 +218,6 @@ function DashboardPage({ vendorId }: { vendorId: string }) {
     { label: 'Discounts given', value: money(stats.data?.totalDiscount), Icon: CircleDollarSign },
     { label: 'Unique customers', value: count(stats.data?.uniqueCustomers), Icon: UserRound },
     { label: 'Active offers', value: count(stats.data?.activeOffers), Icon: BarChart3 },
-    { label: 'Pending transactions', value: count(stats.data?.pendingTransactions), Icon: Clock3 },
   ]
   if (stats.isLoading || chart.isLoading) return <Loading />
   if (stats.isError || chart.isError) return <ErrorPanel message="Analytics could not be loaded. Check your connection and try again." onRetry={() => void Promise.all([stats.refetch(), chart.refetch()])} />
@@ -222,11 +234,11 @@ function TransactionsPage({ vendorId }: { vendorId: string }) {
   const [from, setFrom] = useState('')
   const [to, setTo] = useState('')
   const [page, setPage] = useState(0)
-  const query = useQuery(vendorTransactionsQueryOptions(vendorId, from, to, page * 100))
+  const query = useQuery(vendorTransactionsQueryOptions(vendorId, from, to, page * VENDOR_TRANSACTION_PAGE_SIZE))
   if (query.isLoading) return <Loading />
   if (query.isError) return <ErrorPanel message="Transactions could not be loaded. Check your connection and try again." onRetry={() => void query.refetch()} />
   return <section className="space-y-4"><div className="flex flex-wrap items-end justify-between gap-3"><div><h2 className="m-0 text-2xl font-bold">Transaction history</h2><p className="mb-0 mt-1 text-sm text-muted-foreground">All transactions for your vendor account, newest first.</p></div><div className="flex flex-wrap items-end gap-2"><label className="grid gap-1 text-xs text-muted-foreground">From<input type="date" value={from} max={to || undefined} onChange={e => { setFrom(e.target.value); setPage(0) }} className="rounded-md border bg-white px-2 py-1.5" /></label><label className="grid gap-1 text-xs text-muted-foreground">To<input type="date" value={to} min={from || undefined} onChange={e => { setTo(e.target.value); setPage(0) }} className="rounded-md border bg-white px-2 py-1.5" /></label>{(from || to) && <button onClick={() => { setFrom(''); setTo(''); setPage(0) }} className="px-2 py-1.5 text-sm underline">Clear</button>}</div></div>
-    <div className="overflow-hidden rounded-xl border bg-white shadow-sm"><div className="overflow-x-auto"><table className="w-full min-w-[850px] text-left text-sm"><thead className="border-b bg-gray-50 text-muted-foreground"><tr>{['Date', 'Student', 'Offer', 'Bill amount', 'Discount', 'Amount paid', 'Status'].map(label => <th key={label} className="px-4 py-3 font-medium">{label}</th>)}</tr></thead><tbody className="divide-y">{query.data?.map(tx => <tr key={tx.id}><td className="whitespace-nowrap px-4 py-3 text-muted-foreground">{new Date(tx.createdAt).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })}</td><td className="px-4 py-3">{tx.studentName || 'Student'}{tx.studentPhone && <span className="block text-xs text-muted-foreground">{tx.studentPhone}</span>}</td><td className="px-4 py-3">{tx.offerTitle || '—'}</td><td className="px-4 py-3">{money(tx.totalAmount)}</td><td className="px-4 py-3">{money(tx.discountAmount)}</td><td className="px-4 py-3 font-semibold">{money(tx.finalAmount)}</td><td className="px-4 py-3"><span className={`rounded-full px-2 py-1 text-xs ${tx.status === 'completed' ? 'bg-green-100 text-green-800' : tx.status === 'pending' ? 'bg-amber-100 text-amber-800' : 'bg-gray-100 text-gray-700'}`}>{tx.status}</span></td></tr>)}{!query.data?.length && <tr><td colSpan={7} className="px-4 py-12 text-center text-muted-foreground">No transactions found for this period.</td></tr>}</tbody></table></div><footer className="flex items-center justify-between border-t px-4 py-3 text-sm text-muted-foreground"><span>{page * 100 + 1}–{page * 100 + (query.data?.length ?? 0)} records</span><div className="flex gap-2"><button disabled={page === 0} onClick={() => setPage(value => value - 1)} className="rounded-md border px-3 py-1.5 disabled:opacity-40">Previous</button><button disabled={(query.data?.length ?? 0) < 100} onClick={() => setPage(value => value + 1)} className="rounded-md border px-3 py-1.5 disabled:opacity-40">Next</button></div></footer></div>
+    <div className="overflow-hidden rounded-xl border bg-white shadow-sm"><div className="overflow-x-auto"><table className="w-full min-w-[850px] text-left text-sm"><thead className="border-b bg-gray-50 text-muted-foreground"><tr>{['Date', 'Student', 'Offer', 'Bill amount', 'Discount', 'Amount paid', 'Status'].map(label => <th key={label} className="px-4 py-3 font-medium">{label}</th>)}</tr></thead><tbody className="divide-y">{query.data?.map(tx => <tr key={tx.id}><td className="whitespace-nowrap px-4 py-3 text-muted-foreground">{new Date(tx.createdAt).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })}</td><td className="px-4 py-3">{tx.studentName || 'Student'}{tx.studentPhone && <span className="block text-xs text-muted-foreground">{tx.studentPhone}</span>}</td><td className="px-4 py-3">{tx.offerTitle || '—'}</td><td className="px-4 py-3">{money(tx.totalAmount)}</td><td className="px-4 py-3">{money(tx.discountAmount)}</td><td className="px-4 py-3 font-semibold">{money(tx.finalAmount)}</td><td className="px-4 py-3"><span className={`rounded-full px-2 py-1 text-xs ${tx.status === 'completed' ? 'bg-green-100 text-green-800' : tx.status === 'pending' ? 'bg-amber-100 text-amber-800' : 'bg-gray-100 text-gray-700'}`}>{tx.status}</span></td></tr>)}{!query.data?.length && <tr><td colSpan={7} className="px-4 py-12 text-center text-muted-foreground">No transactions found for this period.</td></tr>}</tbody></table></div><footer className="flex items-center justify-between border-t px-4 py-3 text-sm text-muted-foreground"><span>{page * VENDOR_TRANSACTION_PAGE_SIZE + 1}–{page * VENDOR_TRANSACTION_PAGE_SIZE + (query.data?.length ?? 0)} records</span><div className="flex gap-2"><button disabled={page === 0} onClick={() => setPage(value => value - 1)} className="rounded-md border px-3 py-1.5 disabled:opacity-40">Previous</button><button disabled={(query.data?.length ?? 0) < VENDOR_TRANSACTION_PAGE_SIZE} onClick={() => setPage(value => value + 1)} className="rounded-md border px-3 py-1.5 disabled:opacity-40">Next</button></div></footer></div>
   </section>
 }
 

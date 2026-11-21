@@ -25,7 +25,19 @@ export const Route = createRootRouteWithContext<MyRouterContext>()({
         <p className="text-muted-foreground max-w-md">{error.message || 'An unexpected error occurred.'}</p>
       </div>
       <div className="flex gap-3">
-        <Button onClick={() => reset()} variant="outline">Try Again</Button>
+        <Button
+          onClick={() => {
+            // A failed route import needs a new page load to fetch the module again.
+            if (/^(Failed to fetch dynamically imported module|error loading dynamically imported module|Importing a module script failed)/.test(error.message)) {
+              window.location.reload()
+            } else {
+              reset()
+            }
+          }}
+          variant="outline"
+        >
+          Try Again
+        </Button>
         <Button onClick={() => window.location.href = '/'} className="bg-brand-green hover:bg-brand-green/90 text-white">
           Go Home
         </Button>

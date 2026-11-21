@@ -1,4 +1,4 @@
-import { getCmsDocument, saveCmsDocument } from '@/lib/admin-cms'
+import { getCmsDocument, saveBannerDocument, type BannerDocument } from '@/lib/admin-cms'
 import { useState, useEffect, useRef } from 'react'
 import { createLazyFileRoute, useNavigate } from '@tanstack/react-router'
 import {
@@ -26,7 +26,8 @@ export const Route = createLazyFileRoute('/admin/cms/banners/')({
 function BannersManagement() {
     const navigate = useNavigate()
     const [banners, setBanners] = useState<BannerItem[]>([])
-    const [lastUpdated, setLastUpdated] = useState<string>('')
+    const [snapshot, setSnapshot] = useState<BannerDocument | null>()
+    const [saving, setSaving] = useState(false)
     const [loading, setLoading] = useState(true)
     const [uploading, setUploading] = useState<string | null>(null)
     const [activeBannerId, setActiveBannerId] = useState<string | null>(null)
@@ -44,16 +45,9 @@ function BannersManagement() {
     const fetchData = async () => {
         setLoading(true)
         try {
-            const cmsSnap = await getCmsDocument('banner')
-
-            if (cmsSnap) {
-                const data = cmsSnap
-                setBanners(data.banners || [])
-                setLastUpdated(data.lastUpdated || '')
-            } else {
-                setBanners([])
-                setLastUpdated('')
-            }
+            const document = await getCmsDocument<BannerDocument>('banner')
+            setSnapshot(document)
+            setBanners(document?.banners ?? [])
         } catch (error) {
             console.error('Error fetching data:', error)
             toast.error('Failed to load data')
@@ -62,38 +56,36 @@ function BannersManagement() {
         }
     }
 
-    const saveBanners = async (updatedBanners: BannerItem[]) => {
+    const saveBanners = async (updatedBanners: BannerItem[], removedImage?: string) => {
+        if (snapshot === undefined || saving || uploading) return
+        setSaving(true)
         try {
-            const lastUpdated = new Date().toISOString()
-
-            await saveCmsDocument('banner', {
-                banners: updatedBanners,
-                lastUpdated: lastUpdated
-            })
-
-            if (pendingDeletions.length > 0) {
-                await Promise.all(pendingDeletions.map(async (url) => {
-                    try {
-                        await deletePublicMedia(url)
-                    } catch (err) {
-                        console.error('Failed to delete storage object:', url, err)
-                    }
-                }))
-                setPendingDeletions([])
-            }
-
-            setLastUpdated(lastUpdated)
+            const saved = await saveBannerDocument(snapshot, updatedBanners)
+            setSnapshot(saved)
             setBanners(updatedBanners)
+
+            const usedImages = new Set(updatedBanners.map(banner => banner.images.mobile))
+            const removedImages = new Set(removedImage ? [...pendingDeletions, removedImage] : pendingDeletions)
+            await Promise.all([...removedImages].filter(url => !usedImages.has(url)).map(async url => {
+                try {
+                    await deletePublicMedia(url)
+                } catch (error) {
+                    console.error('Failed to delete storage object:', url, error)
+                }
+            }))
+            setPendingDeletions([])
             toast.success('Banners updated successfully')
         } catch (error) {
             console.error('Error saving banners:', error)
-            toast.error('Failed to save changes')
+            toast.error(error instanceof Error ? error.message : 'Failed to save changes')
+        } finally {
+            setSaving(false)
         }
     }
 
     const onFileChange = async (e: React.ChangeEvent<HTMLInputElement>, bannerId: string, type: 'mobile') => {
         const file = e.target.files?.[0]
-        if (!file) return
+        if (!file || saving || uploading) return
 
         setUploading(type)
         try {
@@ -131,35 +123,9 @@ function BannersManagement() {
     }
 
     const handleDeleteBanner = async (bannerId: string) => {
-        if (!confirm('Are you sure you want to delete this banner?')) return
-        try {
-            const bannerToDelete = banners.find(b => b.bannerId === bannerId)
-            const remainingBanners = banners.filter(b => b.bannerId !== bannerId)
-
-            if (bannerToDelete) {
-                const urls: string[] = []
-                if (bannerToDelete.images.mobile) urls.push(bannerToDelete.images.mobile)
-                await saveCmsDocument('banner', {
-                    banners: remainingBanners,
-                    lastUpdated: new Date().toISOString()
-                })
-
-                if (urls.length > 0) {
-                    await Promise.all(urls.map(async (url) => {
-                        try {
-                        await deletePublicMedia(url)
-                        } catch (err) {
-                            console.error('Failed to delete storage object:', url, err)
-                        }
-                    }))
-                }
-            }
-            setBanners(remainingBanners)
-            toast.success('Banner deleted')
-        } catch (error) {
-            console.error('Error deleting banner:', error)
-            toast.error('Failed to delete banner')
-        }
+        const banner = banners.find(item => item.bannerId === bannerId)
+        if (!banner || !confirm('Are you sure you want to delete this banner?')) return
+        await saveBanners(banners.filter(item => item.bannerId !== bannerId), banner.images.mobile)
     }
 
     const handleUpdateBanner = (bannerId: string, updates: Partial<BannerItem>) => {
@@ -179,6 +145,14 @@ function BannersManagement() {
         )
     }
 
+    if (snapshot === undefined) {
+        return <div role="alert" className="space-y-3 p-6">
+            <p>Could not load the saved banners.</p>
+            <Button variant="outline" onClick={() => void fetchData()}>Retry</Button>
+        </div>
+    }
+
+    const lastUpdated = snapshot?.lastUpdated
     return (
         <div className="p-4 sm:p-8 space-y-8 w-full max-w-6xl mx-auto font-sans bg-white min-h-screen">
             {/* Header */}
@@ -212,7 +186,8 @@ function BannersManagement() {
                         </p>
                     </div>
                     <Button
-                        onClick={() => saveBanners(banners)}
+                        onClick={() => void saveBanners(banners)}
+                        disabled={saving || Boolean(uploading)}
                         className="bg-primary hover:bg-primary/90 text-white rounded-xl px-6 h-10 font-bold shadow-sm transition-all"
                     >
                         Save All Changes
@@ -241,7 +216,7 @@ function BannersManagement() {
             </div>
 
             {/* Banner Cards */}
-            <div className="grid grid-cols-1 gap-6">
+            <fieldset disabled={saving || Boolean(uploading)} className="grid min-w-0 grid-cols-1 gap-6">
                 {banners.map((banner, index) => (
                     <div key={banner.bannerId} className="bg-[#F8F9F9] rounded-2xl p-6 space-y-5 border border-gray-100 shadow-sm relative group">
                         <div className="flex flex-col lg:flex-row gap-6">
@@ -370,7 +345,8 @@ function BannersManagement() {
                                             variant="outline"
                                             size="icon"
                                             aria-label={`Delete banner ${index + 1}`}
-                                            onClick={() => handleDeleteBanner(banner.bannerId)}
+                                            onClick={() => void handleDeleteBanner(banner.bannerId)}
+                                            disabled={saving || Boolean(uploading)}
                                             className="rounded-xl h-9 w-9 border-gray-100 text-red-400 hover:text-red-600 hover:bg-red-50"
                                         >
                                             <Trash2 className="h-4 w-4" />
@@ -391,7 +367,7 @@ function BannersManagement() {
                         <p className="text-sm">Click 'Add New Banner' to create your first one.</p>
                     </div>
                 )}
-            </div>
+            </fieldset>
 
             <div className="h-20" />
         </div>

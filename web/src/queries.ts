@@ -125,6 +125,7 @@ export interface VendorPortalTransaction {
     id: string; source: 'transaction' | 'redemption'; createdAt: string; type: string; totalAmount: number; discountAmount: number
     finalAmount: number; status: string; offerTitle: string; studentName: string; studentPhone: string | null
 }
+export const VENDOR_TRANSACTION_PAGE_SIZE = 100
 
 export const vendorQueryOptions = (vendorId: string) => queryOptions({
     queryKey: ['vendor', vendorId],
@@ -156,7 +157,7 @@ export const vendorTransactionsQueryOptions = (vendorId: string, from = '', to =
     queryFn: async () => {
         if (!vendorId) return []
         const { data, error } = await supabase.rpc('kouponly_vendor_transactions', {
-            p_vendor_id: vendorId, p_from: from || null, p_to: to || null, p_offset: offset, p_limit: 100,
+            p_vendor_id: vendorId, p_from: from || null, p_to: to || null, p_offset: offset, p_limit: VENDOR_TRANSACTION_PAGE_SIZE,
         })
         if (error) throw error
         return (data ?? []).map((row: any) => ({ id: row.transaction_id, source: row.transaction_type === 'coupon_redemption' ? 'redemption' : 'transaction', createdAt: row.created_at, type: row.transaction_type, totalAmount: Number(row.total_amount), discountAmount: Number(row.discount_amount), finalAmount: Number(row.final_amount), status: row.status, offerTitle: row.offer_title, studentName: row.student_name, studentPhone: row.student_phone })) as VendorPortalTransaction[]
@@ -196,18 +197,18 @@ export const vendorChartDataQueryOptions = (vendorId: string, range: ChartRange,
         const rangeDays = range === '7d' ? 7 : range === '30d' ? 30 : 90
         const result: Record<string, DailyChartPoint> = {}
 
-        const start = from ? new Date(`${from}T00:00:00`) : to ? new Date(`${to}T00:00:00`) : new Date()
+        const { data, error } = from || to
+            ? await supabase.rpc('couponly_vendor_dashboard_range', { p_vendor_id: vendorId, p_from: from || null, p_to: to || null })
+            : await supabase.rpc('couponly_vendor_dashboard_chart', { p_vendor_id: vendorId, p_range_days: rangeDays })
+        if (error) throw error
+        const firstDate = from || (to ? String(data?.[0]?.date ?? to) : '')
+        const start = firstDate ? new Date(`${firstDate}T00:00:00`) : new Date()
         const end = to ? new Date(`${to}T00:00:00`) : new Date()
         if (!from && !to) start.setDate(start.getDate() - rangeDays + 1)
         for (const date = new Date(start); date <= end; date.setDate(date.getDate() + 1)) {
             const dateStr = localDateKey(date)
             result[dateStr] = { date: dateStr, redemptions: 0, revenue: 0 }
         }
-
-        const { data, error } = from || to
-            ? await supabase.rpc('couponly_vendor_dashboard_range', { p_vendor_id: vendorId, p_from: from || null, p_to: to || null })
-            : await supabase.rpc('couponly_vendor_dashboard_chart', { p_vendor_id: vendorId, p_range_days: rangeDays })
-        if (error) throw error
         for (const point of data ?? []) {
             const date = String(point.date)
             if (result[date]) {
