@@ -2,9 +2,9 @@ import { useEffect, useMemo, useState } from 'react'
 import type { QueryClient } from '@tanstack/react-query'
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
-import { VENDOR_TRANSACTION_PAGE_SIZE, vendorChartDataQueryOptions, vendorQueryOptions, vendorStatsQueryOptions, vendorTransactionsQueryOptions, type ChartRange } from '@/queries'
+import { VENDOR_TRANSACTION_PAGE_SIZE, vendorChartDataQueryOptions, vendorQueryOptions, vendorStatsQueryOptions, vendorTransactionsQueryOptions, type ChartRange, type VendorPortalTransaction } from '@/queries'
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
-import { ArrowLeft, BarChart3, Building2, CalendarDays, CircleDollarSign, Clock3, KeyRound, LayoutDashboard, LogOut, Mail, ReceiptText, ShieldCheck, Tag, UserRound } from 'lucide-react'
+import { ArrowLeft, BarChart3, Building2, CalendarDays, CircleDollarSign, Clock3, Download, KeyRound, LayoutDashboard, LogOut, Mail, ReceiptText, ShieldCheck, Tag, UserRound } from 'lucide-react'
 import type { User } from '@supabase/supabase-js'
 import { VendorCredentials, VendorCredentialLink } from '@/components/vendor-credentials'
 import { VendorAccountManager } from '@/components/vendor-account-manager'
@@ -104,7 +104,7 @@ function AuthenticatedVendorPanel({ queryClient }: VendorPanelAppProps) {
     setSession(null)
     navigate('/login')
   }}>
-    {page === 'transactions' ? <TransactionsPage vendorId={session.vendorId} /> : page === 'offers' ? <OffersPage vendorId={session.vendorId} queryClient={queryClient} /> : page === 'profile' ? <ProfilePage vendorId={session.vendorId} /> : page === 'contact' ? <section className="max-w-2xl space-y-4"><h2 className="text-xl font-semibold">Contact Account Manager</h2><VendorAccountManager vendorId={session.vendorId} /></section> : page === 'password' ? <VendorCredentials /> : <DashboardPage vendorId={session.vendorId} />}
+    {page === 'transactions' ? <TransactionsPage vendorId={session.vendorId} queryClient={queryClient} /> : page === 'offers' ? <OffersPage vendorId={session.vendorId} queryClient={queryClient} /> : page === 'profile' ? <ProfilePage vendorId={session.vendorId} /> : page === 'contact' ? <section className="max-w-2xl space-y-4"><h2 className="text-xl font-semibold">Contact Account Manager</h2><VendorAccountManager vendorId={session.vendorId} /></section> : page === 'password' ? <VendorCredentials /> : <DashboardPage vendorId={session.vendorId} />}
   </VendorShell>
 }
 
@@ -230,14 +230,50 @@ function DashboardPage({ vendorId }: { vendorId: string }) {
   </div>
 }
 
-function TransactionsPage({ vendorId }: { vendorId: string }) {
+function TransactionsPage({ vendorId, queryClient }: { vendorId: string; queryClient: QueryClient }) {
   const [from, setFrom] = useState('')
   const [to, setTo] = useState('')
   const [page, setPage] = useState(0)
+  const [exporting, setExporting] = useState(false)
+  const [exportError, setExportError] = useState('')
   const query = useQuery(vendorTransactionsQueryOptions(vendorId, from, to, page * VENDOR_TRANSACTION_PAGE_SIZE))
+  const exportTransactions = async () => {
+    setExporting(true)
+    setExportError('')
+    try {
+      const XLSX = await import('xlsx')
+      const allTransactions: VendorPortalTransaction[] = []
+      for (let offset = 0; ; offset += VENDOR_TRANSACTION_PAGE_SIZE) {
+        const batch = await queryClient.fetchQuery({
+          ...vendorTransactionsQueryOptions(vendorId, from, to, offset),
+          staleTime: 0,
+        })
+        allTransactions.push(...batch)
+        if (batch.length < VENDOR_TRANSACTION_PAGE_SIZE) break
+      }
+      const rows = allTransactions.map(tx => ({
+        Date: new Date(tx.createdAt).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }),
+        Student: tx.studentName || 'Student',
+        Phone: tx.studentPhone || '',
+        Offer: tx.offerTitle || '',
+        Type: tx.source === 'redemption' ? 'Coupon redemption' : 'Transaction',
+        'Bill amount': tx.totalAmount,
+        Discount: tx.discountAmount,
+        'Amount paid': tx.finalAmount,
+        Status: tx.status,
+      }))
+      const workbook = XLSX.utils.book_new()
+      XLSX.utils.book_append_sheet(workbook, XLSX.utils.json_to_sheet(rows, { header: ['Date', 'Student', 'Phone', 'Offer', 'Type', 'Bill amount', 'Discount', 'Amount paid', 'Status'] }), 'Transactions')
+      XLSX.writeFile(workbook, `kouponly-transactions-${new Date().toISOString().slice(0, 10)}.xlsx`)
+    } catch (error) {
+      setExportError(error instanceof Error ? error.message : 'Could not export transactions.')
+    } finally {
+      setExporting(false)
+    }
+  }
   if (query.isLoading) return <Loading />
   if (query.isError) return <ErrorPanel message="Transactions could not be loaded. Check your connection and try again." onRetry={() => void query.refetch()} />
-  return <section className="space-y-4"><div className="flex flex-wrap items-end justify-between gap-3"><div><h2 className="m-0 text-2xl font-bold">Transaction history</h2><p className="mb-0 mt-1 text-sm text-muted-foreground">All transactions for your vendor account, newest first.</p></div><div className="flex flex-wrap items-end gap-2"><label className="grid gap-1 text-xs text-muted-foreground">From<input type="date" value={from} max={to || undefined} onChange={e => { setFrom(e.target.value); setPage(0) }} className="rounded-md border bg-white px-2 py-1.5" /></label><label className="grid gap-1 text-xs text-muted-foreground">To<input type="date" value={to} min={from || undefined} onChange={e => { setTo(e.target.value); setPage(0) }} className="rounded-md border bg-white px-2 py-1.5" /></label>{(from || to) && <button onClick={() => { setFrom(''); setTo(''); setPage(0) }} className="px-2 py-1.5 text-sm underline">Clear</button>}</div></div>
+  return <section className="space-y-4"><div className="flex flex-wrap items-end justify-between gap-3"><div><h2 className="m-0 text-2xl font-bold">Transaction history</h2><p className="mb-0 mt-1 text-sm text-muted-foreground">All transactions for your vendor account, newest first.</p></div><div className="flex flex-wrap items-end gap-2"><label className="grid gap-1 text-xs text-muted-foreground">From<input type="date" value={from} max={to || undefined} onChange={e => { setFrom(e.target.value); setPage(0) }} className="rounded-md border bg-white px-2 py-1.5" /></label><label className="grid gap-1 text-xs text-muted-foreground">To<input type="date" value={to} min={from || undefined} onChange={e => { setTo(e.target.value); setPage(0) }} className="rounded-md border bg-white px-2 py-1.5" /></label>{(from || to) && <button onClick={() => { setFrom(''); setTo(''); setPage(0) }} className="px-2 py-1.5 text-sm underline">Clear</button>}<button type="button" disabled={exporting} onClick={() => void exportTransactions()} className="inline-flex h-9 items-center rounded-md border bg-white px-3 text-sm font-medium hover:bg-gray-50 disabled:opacity-50"><Download className="mr-2 size-4" />{exporting ? 'Exporting…' : 'Export Excel'}</button></div></div>{exportError && <p role="alert" className="rounded-md bg-red-50 p-3 text-sm text-red-700">{exportError}</p>}
     <div className="overflow-hidden rounded-xl border bg-white shadow-sm"><div className="overflow-x-auto"><table className="w-full min-w-[850px] text-left text-sm"><thead className="border-b bg-gray-50 text-muted-foreground"><tr>{['Date', 'Student', 'Offer', 'Bill amount', 'Discount', 'Amount paid', 'Status'].map(label => <th key={label} className="px-4 py-3 font-medium">{label}</th>)}</tr></thead><tbody className="divide-y">{query.data?.map(tx => <tr key={tx.id}><td className="whitespace-nowrap px-4 py-3 text-muted-foreground">{new Date(tx.createdAt).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })}</td><td className="px-4 py-3">{tx.studentName || 'Student'}{tx.studentPhone && <span className="block text-xs text-muted-foreground">{tx.studentPhone}</span>}</td><td className="px-4 py-3">{tx.offerTitle || '—'}</td><td className="px-4 py-3">{money(tx.totalAmount)}</td><td className="px-4 py-3">{money(tx.discountAmount)}</td><td className="px-4 py-3 font-semibold">{money(tx.finalAmount)}</td><td className="px-4 py-3"><span className={`rounded-full px-2 py-1 text-xs ${tx.status === 'completed' ? 'bg-green-100 text-green-800' : tx.status === 'pending' ? 'bg-amber-100 text-amber-800' : 'bg-gray-100 text-gray-700'}`}>{tx.status}</span></td></tr>)}{!query.data?.length && <tr><td colSpan={7} className="px-4 py-12 text-center text-muted-foreground">No transactions found for this period.</td></tr>}</tbody></table></div><footer className="flex items-center justify-between border-t px-4 py-3 text-sm text-muted-foreground"><span>{page * VENDOR_TRANSACTION_PAGE_SIZE + 1}–{page * VENDOR_TRANSACTION_PAGE_SIZE + (query.data?.length ?? 0)} records</span><div className="flex gap-2"><button disabled={page === 0} onClick={() => setPage(value => value - 1)} className="rounded-md border px-3 py-1.5 disabled:opacity-40">Previous</button><button disabled={(query.data?.length ?? 0) < VENDOR_TRANSACTION_PAGE_SIZE} onClick={() => setPage(value => value + 1)} className="rounded-md border px-3 py-1.5 disabled:opacity-40">Next</button></div></footer></div>
   </section>
 }
