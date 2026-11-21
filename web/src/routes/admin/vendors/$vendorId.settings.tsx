@@ -38,7 +38,7 @@ function VendorSettingsLayout() {
             </div>
 
             <div className="w-full border-b">
-                <div className="grid w-full grid-cols-2 lg:grid-cols-5 bg-muted/50 p-1 rounded-xl gap-1">
+                <div className="grid w-full grid-cols-2 lg:grid-cols-4 bg-muted/50 p-1 rounded-xl gap-1">
                     <Link
                         to="/admin/vendors/$vendorId/settings/branding"
                         params={{ vendorId }}
@@ -48,16 +48,6 @@ function VendorSettingsLayout() {
                             }`}
                     >
                         Profile & appearance
-                    </Link>
-                    <Link
-                        to="/admin/vendors/$vendorId/settings/offers"
-                        params={{ vendorId }}
-                        className={`min-w-0 flex items-center justify-center h-10 rounded-md text-sm font-medium transition-all ${location.pathname.endsWith('offers')
-                            ? 'bg-white text-black shadow-sm'
-                            : 'text-muted-foreground hover:text-black hover:bg-white/50'
-                            }`}
-                    >
-                        Offers
                     </Link>
                     <Link
                         to="/admin/vendors/$vendorId/settings/location"
